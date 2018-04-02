@@ -9,8 +9,8 @@ folder or simply use a github online url.
 
 Download
 -----
-[https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.js](/RME/releases/download/v0.0.1-alpha/rme.js)
-[https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.js](/RME/releases/download/v0.0.1-alpha/rme.es5.js)
+[https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.js](https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.js)
+[https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.js)
 
 Lisence
 -----
