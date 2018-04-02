@@ -9,4 +9,4 @@ folder or simply use a github online url.
 
 Lisence
 -----
-This library is released under a [MIT License](/RME/blob/master/LICENSE)
+This library is released under a [MIT License](/LICENSE)
