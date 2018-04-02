@@ -7,6 +7,11 @@ JavaScript.
 The RME does not require any installation nor any other libraries. Just download a script file and place it to a project
 folder or simply use a github online url. 
 
+Download
+-----
+[https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.js](../releases/download/v0.0.1-alpha/rme.js)
+[https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.js](../releases/download/v0.0.1-alpha/rme.es5.js)
+
 Lisence
 -----
 This library is released under a [MIT License](/LICENSE)
