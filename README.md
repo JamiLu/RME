@@ -11,6 +11,7 @@ Download
 -----
 [https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.js](https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.js)
 [https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.js)
+[https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.min.js)
 
 Lisence
 -----
