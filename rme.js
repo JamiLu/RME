@@ -493,28 +493,26 @@ class Elem {
     }
 
     addClasses(classes) {
-        var orig = this.getClasses().split(" ");
         var toAdd = classes.trim().split(" ");
-        for(var i=0; i<orig.length; i++) {
-            for(var j=0; j<toAdd.length; j++) {
-                if(orig[i] !== toAdd[j])
-                    orig.push(toAdd[j]);
-            }
+        var origClass = this.getClasses();
+        for(var i=0; i<toAdd.length; i++) {
+            var clazz = toAdd[i];
+            if(origClass.search(clazz) === -1)
+                origClass += " "+clazz;
         }
-        this.html.className = orig.join(" ").trim();
+        this.html.className = origClass;
         return this;
     }
 
     removeClasses(classes) {
-        var orig = this.getClasses().split(" ");
         var toRm = classes.trim().split(" ");
-        for(var i=0; i<orig.length; i++) {
-            for(var j=0;j<toRm.length; j++) {
-                if(orig[i] === toRm[j])
-                    orig.splice(j);
-            }
+        var origClass = this.getClasses();
+        for(var i=0; i<toRm.length; i++) {
+            var clazz = toRm[i];
+            if(origClass.search(clazz) > -1)
+                origClass = origClass.replace(clazz, "").trim();
         }
-        this.html.className = orig.join(" ").trim();
+        this.html.className = origClass;
         return this;
     }
 
