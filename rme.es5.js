@@ -18,6 +18,9 @@ var RME = function () {
             this.instance = this;
             this.completeRun = function () {};
             this.runner = function () {};
+            this.onrmestoragechange = function (state) {};
+            this.components = {};
+            this.rmeState = {};
         }
 
         _createClass(RME, [{
@@ -41,6 +44,32 @@ var RME = function () {
                 this.runner = runnable;
                 return this.instance;
             }
+        }, {
+            key: "addComponent",
+            value: function addComponent(runnable) {
+                var comp = runnable();
+                for (var p in comp) {
+                    if (comp.hasOwnProperty(p)) {
+                        this.components[p] = comp[p];
+                    }
+                }
+            }
+        }, {
+            key: "getComponent",
+            value: function getComponent(name, props) {
+                return this.components[name].call(props);
+            }
+        }, {
+            key: "setRmeState",
+            value: function setRmeState(key, value) {
+                this.rmeState[key] = value;
+                this.onrmestoragechange(this.rmeState);
+            }
+        }, {
+            key: "getRmeState",
+            value: function getRmeState(key) {
+                return this.rmeState[key];
+            }
 
             /** 
              * Runs a runnable script immedeately
@@ -60,6 +89,21 @@ var RME = function () {
             key: "ready",
             value: function ready(runnable) {
                 if (runnable && Util.isFunction(runnable)) RME.getInstance().setComplete(runnable);
+            }
+        }, {
+            key: "component",
+            value: function component(runnable, props) {
+                if (runnable && Util.isFunction(runnable)) RME.getInstance().addComponent(runnable);else if (runnable && Util.isString(runnable)) return RME.getInstance().getComponent(runnable, props);
+            }
+        }, {
+            key: "storage",
+            value: function storage(key, value) {
+                if (!Util.isEmpty(key) && !Util.isEmpty(value)) RME.getInstance().setRmeState(key, value);else if (!Util.isEmpty(key) && Util.isEmpty(value)) return RME.getInstance().getRmeState(key);
+            }
+        }, {
+            key: "onrmestoragechange",
+            value: function onrmestoragechange(listener) {
+                if (listener && Util.isFunction(listener)) RME.getInstance().onrmestoragechange = listener;
             }
         }, {
             key: "config",
@@ -106,6 +150,9 @@ var RME = function () {
     return {
         run: RME.run,
         ready: RME.ready,
+        component: RME.component,
+        storage: RME.storage,
+        onrmestoragechange: RME.onrmestoragechange,
         config: RME.config
     };
 }();
@@ -570,6 +617,17 @@ var Elem = function () {
             return this.getAttribute("src").value;
         }
     }, {
+        key: "setHref",
+        value: function setHref(href) {
+            this.setAttribute("href", href);
+            return this;
+        }
+    }, {
+        key: "getHref",
+        value: function getHref() {
+            return this.getAttribute("href").value;
+        }
+    }, {
         key: "setChecked",
         value: function setChecked(boolean) {
             this.html.checked = boolean;
@@ -603,6 +661,19 @@ var Elem = function () {
             }
             this.html.className = origClass;
             return this;
+        }
+    }, {
+        key: "toggleClasses",
+        value: function toggleClasses(classes) {
+            var cArr = classes.split(" ");
+            var origClass = this.getClasses();
+            var toAdd = "";
+            var toRm = "";
+            for (var i = 0; i < cArr.length; i++) {
+                if (origClass.search(cArr[i]) > -1) toRm += " " + cArr[i];else toAdd += " " + cArr[i];
+            }
+            this.addClasses(toAdd.trim());
+            this.removeClasses(toRm.trim());
         }
     }, {
         key: "getClasses",
@@ -1332,108 +1403,113 @@ Key.HALF = "½";
 Key.SECTION = "§";
 Key.ONE = "1";
 
-/**
- * Cookies
- */
+var Cookie = function () {
+    /**
+     * Cookies
+     */
+    var Cookies = function () {
+        function Cookies() {
+            _classCallCheck(this, Cookies);
+        }
 
-var Cookies = function () {
-    function Cookies() {
-        _classCallCheck(this, Cookies);
-    }
-
-    _createClass(Cookies, null, [{
-        key: "get",
-        value: function get(cookieName) {
-            if (navigator.cookieEnabled) {
-                var retCookie = null;
-                var cookies = document.cookie.split(";");
-                for (var i in cookies) {
-                    if (cookies.hasOwnProperty(i)) {
-                        var cookie = cookies[i];
-                        var eq = cookie.search("=");
-                        var cn = cookie.substr(0, eq);
-                        var cv = cookie.substr(eq + 1, cookie.length);
-                        if (cn === cookieName) {
-                            retCookie = new Cookie(cn, cv);
-                            //return false;
-                            break;
+        _createClass(Cookies, null, [{
+            key: "get",
+            value: function get(name) {
+                if (navigator.cookieEnabled) {
+                    var retCookie = null;
+                    var cookies = document.cookie.split(";");
+                    for (var i in cookies) {
+                        if (cookies.hasOwnProperty(i)) {
+                            var cookie = cookies[i];
+                            var eq = cookie.search("=");
+                            var cn = cookie.substr(0, eq);
+                            var cv = cookie.substr(eq + 1, cookie.length);
+                            if (cn === name) {
+                                retCookie = new Cookie(cn, cv);
+                                //return false;
+                                break;
+                            }
                         }
                     }
+                    return retCookie;
                 }
-                return retCookie;
             }
-        }
-        /**
-         * Receives cookie object:
-         * {
-         *  name: "name",
-         *  value: "value",
-         *  expiresDate: "expiresDate e.g. Date.toUTCString()",
-         *  cookiePath: "cookiePath absolute dir",
-         *  cookieDomain: "cookieDomain e.g example.com",
-         *  setSecureBoolean: true|false
-         * }
-         */
+            /**
+             * Receives cookie object:
+             * {
+             *  name: "name",
+             *  value: "value",
+             *  expiresDate: "expiresDate e.g. Date.toUTCString()",
+             *  cookiePath: "cookiePath absolute dir",
+             *  cookieDomain: "cookieDomain e.g example.com",
+             *  setSecureBoolean: true|false
+             * }
+             */
 
-    }, {
-        key: "set",
-        value: function set(cookieObject) {
-            if (Util.isObject(cookieObject) && navigator.cookieEnabled) document.cookie = cookieObject.toString();
+        }, {
+            key: "set",
+            value: function set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+                if (navigator.cookieEnabled) {
+                    document.cookie = Cookie.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
+                }
+            }
+        }, {
+            key: "remove",
+            value: function remove(name) {
+                var co = Cookies.get(name);
+                if (!Util.isEmpty(co)) Cookies.set(co.setExpired());
+            }
+        }]);
+
+        return Cookies;
+    }();
+
+    /**
+    * Cookie object:
+    * {
+    *  name: "name",
+    *  value: "value",
+    *  expiresDate: "expiresDate e.g. Date.toUTCString()",
+    *  cookiePath: "cookiePath absolute dir",
+    *  cookieDomain: "cookieDomain e.g example.com",
+    *  setSecureBoolean: true|false
+    * }
+    */
+
+
+    var Cookie = function () {
+        function Cookie(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+            _classCallCheck(this, Cookie);
+
+            this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
+            this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
+            this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
+            this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
+            this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
+            this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
         }
-    }, {
-        key: "delete",
-        value: function _delete(cookieName) {
-            var co = Cookies.get(cookieName);
-            if (!Util.isEmpty(co)) Cookies.set(co.setExpired());
-        }
-    }]);
+
+        _createClass(Cookie, [{
+            key: "setExpired",
+            value: function setExpired() {
+                this.cookieExpires = new Date(1970, 0, 1).toString();
+            }
+        }, {
+            key: "toString",
+            value: function toString() {
+                return "\"" + this.cookieName + "=" + this.cookieValue + "; expires=" + this.cookieExpires + "; path=" + this.cookiePath + "; domain=" + this.cookieDomain + "; " + this.cookieSecurity + "\"";
+            }
+        }], [{
+            key: "create",
+            value: function create(name, value, expires, cpath, cdomain, setSecure) {
+                return new Cookie(name, value, expires, cpath, cdomain, setSecure);
+            }
+        }]);
+
+        return Cookie;
+    }();
 
     return Cookies;
-}();
-
-/**
- * Cookie object:
- * {
- *  name: "name",
- *  value: "value",
- *  expiresDate: "expiresDate e.g. Date.toUTCString()",
- *  cookiePath: "cookiePath absolute dir",
- *  cookieDomain: "cookieDomain e.g example.com",
- *  setSecureBoolean: true|false
- * }
- */
-
-
-var Cookie = function () {
-    function Cookie(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-        _classCallCheck(this, Cookie);
-
-        this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
-        this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
-        this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
-        this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
-        this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
-        this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
-    }
-
-    _createClass(Cookie, [{
-        key: "setExpired",
-        value: function setExpired() {
-            this.cookieExpires = new Date(1970, 0, 1).toString();
-        }
-    }, {
-        key: "toString",
-        value: function toString() {
-            return "\"" + this.cookieName + "=" + this.cookieValue + "; expires=" + this.cookieExpires + "; path=" + this.cookiePath + "; domain=" + this.cookieDomain + "; " + this.cookieSecurity + "\"";
-        }
-    }], [{
-        key: "create",
-        value: function create(name, value, expires, cpath, cdomain, setSecure) {
-            return new Cookie(name, value, expires, cpath, cdomain, setSecure);
-        }
-    }]);
-
-    return Cookie;
 }();
 
 var Session = function () {

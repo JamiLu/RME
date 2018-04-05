@@ -10,6 +10,9 @@ let RME = (function() {
             this.instance = this;
             this.completeRun = function() {};
             this.runner = function() {};
+            this.onrmestoragechange = function(state) {};
+            this.components = {};
+            this.rmeState = {};
         }
 
         complete() {
@@ -29,6 +32,28 @@ let RME = (function() {
             return this.instance;
         }
 
+        addComponent(runnable) {
+            var comp = runnable();
+            for(var p in comp) {
+                if(comp.hasOwnProperty(p)) {
+                    this.components[p] = comp[p];
+                }
+            }
+        }
+
+        getComponent(name, props) {
+            return this.components[name].call(props);
+        }
+
+        setRmeState(key, value) {
+            this.rmeState[key] = value;
+            this.onrmestoragechange(this.rmeState);
+        }
+
+        getRmeState(key) {
+            return this.rmeState[key];
+        }
+
         /** 
          * Runs a runnable script immedeately
          */
@@ -43,6 +68,25 @@ let RME = (function() {
         static ready(runnable) {
             if(runnable && Util.isFunction(runnable))
                 RME.getInstance().setComplete(runnable);
+        }
+
+        static component(runnable, props) {
+            if(runnable && Util.isFunction(runnable))
+                RME.getInstance().addComponent(runnable);
+            else if(runnable && Util.isString(runnable))
+                return RME.getInstance().getComponent(runnable, props)
+        }
+
+        static storage(key, value) {
+            if(!Util.isEmpty(key) && !Util.isEmpty(value))
+                RME.getInstance().setRmeState(key, value);
+            else if(!Util.isEmpty(key) && Util.isEmpty(value))
+                return RME.getInstance().getRmeState(key);
+        }
+
+        static onrmestoragechange(listener) {
+            if(listener && Util.isFunction(listener))
+                RME.getInstance().onrmestoragechange = listener;
         }
 
         static config() {
@@ -86,6 +130,9 @@ let RME = (function() {
     return {
         run: RME.run,
         ready: RME.ready,
+        component: RME.component,
+        storage: RME.storage,
+        onrmestoragechange: RME.onrmestoragechange,
         config: RME.config
     }
 }());
@@ -483,6 +530,15 @@ class Elem {
         return this.getAttribute("src").value;
     }
 
+    setHref(href) {
+        this.setAttribute("href", href);
+        return this;
+    }
+
+    getHref() {
+        return this.getAttribute("href").value;
+    }
+
     setChecked(boolean) {
         this.html.checked = boolean;
         return this;
@@ -514,6 +570,21 @@ class Elem {
         }
         this.html.className = origClass;
         return this;
+    }
+
+    toggleClasses(classes) {
+        var cArr = classes.split(" ");
+        var origClass = this.getClasses();
+        var toAdd = "";
+        var toRm = "";
+        for(var i=0; i<cArr.length; i++) {
+            if(origClass.search(cArr[i]) > -1)
+                toRm += " "+cArr[i];
+            else
+                toAdd += " "+cArr[i];
+        }
+        this.addClasses(toAdd.trim());
+        this.removeClasses(toRm.trim());
     }
 
     getClasses() {
@@ -1103,11 +1174,12 @@ Key.SECTION = "§";
 Key.ONE = "1";
 
 
-/**
- * Cookies
- */
-class Cookies {
-		static get(cookieName) {
+let Cookie = (function() {
+    /**
+     * Cookies
+     */
+    class Cookies {
+        static get(name) {
             if(navigator.cookieEnabled) {
                 var retCookie = null;
                 var cookies = document.cookie.split(";");
@@ -1117,7 +1189,7 @@ class Cookies {
                         var eq = cookie.search("=");
                         var cn = cookie.substr(0, eq);
                         var cv = cookie.substr(eq + 1, cookie.length);
-                        if(cn === cookieName) {
+                        if(cn === name) {
                             retCookie = new Cookie(cn, cv);
                             //return false;
                             break;
@@ -1126,7 +1198,7 @@ class Cookies {
                 }
                 return retCookie;
             }
-		}
+        }
         /**
          * Receives cookie object:
          * {
@@ -1138,49 +1210,53 @@ class Cookies {
          *  setSecureBoolean: true|false
          * }
          */
-        static set(cookieObject) {
-            if(Util.isObject(cookieObject) && navigator.cookieEnabled)
-                document.cookie = cookieObject.toString();
+        static set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+            if(navigator.cookieEnabled) {
+                document.cookie = Cookie.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
+            }
         }
-        static delete(cookieName) {
-            var co = Cookies.get(cookieName);
+        static remove(name) {
+            var co = Cookies.get(name);
             if(!Util.isEmpty(co))
                 Cookies.set(co.setExpired());
         }
-}
-
-/**
- * Cookie object:
- * {
- *  name: "name",
- *  value: "value",
- *  expiresDate: "expiresDate e.g. Date.toUTCString()",
- *  cookiePath: "cookiePath absolute dir",
- *  cookieDomain: "cookieDomain e.g example.com",
- *  setSecureBoolean: true|false
- * }
- */
-class Cookie {
-    constructor(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-        this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
-        this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
-        this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
-        this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
-        this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
-        this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
     }
 
-    setExpired() {
-        this.cookieExpires = new Date(1970,0,1).toString();
+    /**
+    * Cookie object:
+    * {
+    *  name: "name",
+    *  value: "value",
+    *  expiresDate: "expiresDate e.g. Date.toUTCString()",
+    *  cookiePath: "cookiePath absolute dir",
+    *  cookieDomain: "cookieDomain e.g example.com",
+    *  setSecureBoolean: true|false
+    * }
+    */
+    class Cookie {
+        constructor(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+            this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
+            this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
+            this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
+            this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
+            this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
+            this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
+        }
+
+        setExpired() {
+            this.cookieExpires = new Date(1970,0,1).toString();
+        }
+
+        toString() {
+            return "\""+this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity+"\"";
+        }
+        static create(name, value, expires, cpath, cdomain, setSecure) {
+                return new Cookie(name, value, expires, cpath, cdomain, setSecure);
+        }
     }
 
-    toString() {
-        return "\""+this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity+"\"";
-    }
-    static create(name, value, expires, cpath, cdomain, setSecure) {
-            return new Cookie(name, value, expires, cpath, cdomain, setSecure);
-    }
-}
+    return Cookies;
+}());
 
 class Session {
     static set(key, value) {
