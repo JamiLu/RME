@@ -42,7 +42,7 @@ RME.component(function() {
   }
 });
 //this is how to use a component
-console.log(RME.component("myFirstComponent", {x: 2, y: 5});
+console.log(RME.component("myFirstComponent", {x: 2, y: 5}));
 ```
 
 ```javascript
