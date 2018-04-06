@@ -120,8 +120,8 @@ Classes & Functions
 >Not comprehensive. Just to name few.
 
 * RME
-  - run(runnable) **Runs application script type fuction _(runnable)_ immediately**
-  - ready(runnable) **Runs application script type function _(runnable)_ when body is ready**
+  - run(runnable) **Runs application script type fuction _(runnable)_ immediately _MAX 1 run per RME application_**
+  - ready(runnable) **Runs application script type function _(runnable)_ when body is ready _MAX 1 ready per RME application_**
   - component(function(){}) **Create and return created component on the callback**
   - component("componentName", {param: 1, param: 2}) **Get and invoke the component**
   - storage(key, val) **Store data in RME instance**
