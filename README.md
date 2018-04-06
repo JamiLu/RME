@@ -101,6 +101,7 @@ RME.ready(function() {
       Tree.get("#myDiv").render(state.show ? text : []);
   }
 
+  //This Text is only a simple basic function which enables grouping or wrapping one or bunch of Elemens into a one resusable Object.
   function Text() {
       return new Elem("span").setText("showing text");
   }
