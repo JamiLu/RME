@@ -113,6 +113,12 @@ Classes & Functions
   > Side note, fetch having two **then** is just how it works, dont believe check fetch manual. 
 * Elem
   - constructor(type|html) **If type is string creates a new JavaScript element of that type _OR_ If type is JavaScript html object then only wraps that object inside of this Elem object**
+  - render(elem, elem, elem|arrayOfElems|arrayOfElems, arrayOfElems, elem) **Renders the Elem instance objects that contain html data to insert into the HTML document tree. Can render multiple elements.**
+  - append(elem) **Appends an element inside this Elem**
+  - remove(elem) **Removes an element from thie Elem**
+  - replace(elem) **Replaces _THIS_ elemet with _NEW_**
+  - before(elem) **Inserts new element before this**
+  - after(elem) **Inserts new element after this**
   - wrap(html) **Returns wrapped html object (Elem instance)**
   - create(type) **Returns new JavaScript html object (Elem instance)**
   - wrapElems(elemArray) **Returns an Array of wrapped html objects if many or one if only one. (Elem instances)**
