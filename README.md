@@ -85,6 +85,36 @@ RME.component(function() {
 });
 ```
 
+```javascript
+//Conditional rendering
+RME.ready(function() {
+  var state = {
+    show: true
+  }
+  var text = new Text();
+  Tree.getBody().append(new Elem("div").setId("myDiv").render(state.show ? text : []));
+  
+  Tree.getBody().append(RME.component("showB", {clickFuntion: toggle}));
+  
+  function toggle() {
+      state.show = !state.show;
+      Tree.get("#myDiv").render(state.show ? text : []);
+  }
+
+  function Text() {
+      return new Elem("span").setText("showing text");
+  }
+});
+
+RME.component(function() {
+    return {
+        showB : function() {
+            return new Elem("button").setText("show&hide").onclick(this.clickFuntion);
+        }
+    }
+});
+```
+
 Classes & Functions
 ----
 >Not comprehensive. Just to name few.
@@ -123,6 +153,7 @@ Classes & Functions
   - create(type) **Returns new JavaScript html object (Elem instance)**
   - wrapElems(elemArray) **Returns an Array of wrapped html objects if many or one if only one. (Elem instances)**
   - dom() **Returns the javascript html object that this (Elem instance) holds**
+  - and many many many more methods. All setter methods and methods that does not return some value are so called Builder methods that they can chained as follows setText("text").setName("name").setId("id").setType("text").addClasses("one two three");
 * Tree
   - get(cssSelector) **Returns an Array of Elem objects or one Elem object**
   - getFirst(cssSelector) **Returns one Elem object**
