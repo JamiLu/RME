@@ -84,6 +84,27 @@ let RME = (function() {
                 return RME.getInstance().getRmeState(key);
         }
 
+        static script(source, id, type, text, defer, crossOrigin, charset, async) {
+            if(!Util.isEmpty(source)) {
+                var sc = new Elem("script").setSource(source);
+                if(!Util.isEmpty(id))
+                    sc.setId(id);
+                if(!Util.isEmpty(type))
+                    sc.setType(type);
+                if(!Util.isEmpty(text))
+                    sc.setText(text);
+                if(!Util.isEmpty(defer))
+                    sc.setAttribute("defer", defer);
+                if(!Util.isEmpty(crossOrigin))
+                    sc.setAttribute("crossOrigin", crossOrigin);
+                if(!Util.isEmpty(charset))
+                    sc.setAttribute("charset", charset);
+                if(!Util.isEmpty(async))
+                    sc.setAttribute("async", async);
+                RME.config().addScript(sc);
+            }
+        }
+
         static onrmestoragechange(listener) {
             if(listener && Util.isFunction(listener))
                 RME.getInstance().onrmestoragechange = listener;
@@ -132,6 +153,7 @@ let RME = (function() {
         ready: RME.ready,
         component: RME.component,
         storage: RME.storage,
+        script: RME.script,
         onrmestoragechange: RME.onrmestoragechange,
         config: RME.config
     }
