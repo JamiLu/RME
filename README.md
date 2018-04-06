@@ -58,19 +58,23 @@ console.log(RME.storage("foo"));
 
 ```javascript
 //This is how to create a Hello World Application.
-Tree.getBody().append(new Elem("div").setText("Hello World"));
+RME.ready(function() {
+  Tree.getBody().append(new Elem("div").setText("Hello World"));
+});
 ```
 
 ```javascript
 //This is how to create a bit more complex Hello World
-var abc = [
-  new Elem("li").setText("JavaScript rules"),
-  new Elem("li").setText("RME is the best"),
-  new Elem("li").setText("You really should try it out")
-]
+RME.ready(function() {
+  var abc = [
+    new Elem("li").setText("JavaScript rules"),
+    new Elem("li").setText("RME is the best"),
+    new Elem("li").setText("You really should try it out")
+  ]
 
-//Rendering a list inside the Body is not necessary to be done inside the component but it explains how these components might be very handy. (as they can be anything and have any functionality)
-Tree.getBody().append(RME.component("lister", {list: abc}));
+  //Rendering a list inside the Body is not necessary to be done inside the component but it explains how these components might be very handy. (as they can be anything and have any functionality)
+  Tree.getBody().append(RME.component("lister", {list: abc}));
+});
 
 RME.component(function() {
   return {
@@ -106,7 +110,7 @@ Classes & Functions
   - fetch().put()...
   - fetch().delete()....
   - fetch().do(custom).then(success).then(response).catch(error)
-  > Side note, fetch having to **then** is just how it works, dont believe check fetch manual. 
+  > Side note, fetch having two **then** is just how it works, dont believe check fetch manual. 
 * Elem
   - constructor(type|html) **If type is string creates a new JavaScript element of that type _OR_ If type is JavaScript html object then only wraps that object inside of this Elem object**
   - wrap(html) **Returns wrapped html object (Elem instance)**
