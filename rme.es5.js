@@ -1853,8 +1853,8 @@ var Browser = function () {
             return location.pathname;
         }
     }, {
-        key: "setPathnem",
-        value: function setPathnem(pathname) {
+        key: "setPathname",
+        value: function setPathname(pathname) {
             location.pathname;
         }
     }, {

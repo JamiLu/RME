@@ -74,7 +74,7 @@ let RME = (function() {
             if(runnable && Util.isFunction(runnable))
                 RME.getInstance().addComponent(runnable);
             else if(runnable && Util.isString(runnable))
-                return RME.getInstance().getComponent(runnable, props)
+                return RME.getInstance().getComponent(runnable, props);
         }
 
         static storage(key, value) {
@@ -1508,7 +1508,7 @@ class Browser {
         return location.pathname;
     }
 
-    static setPathnem(pathname) {
+    static setPathname(pathname) {
         location.pathname;
     }
 
