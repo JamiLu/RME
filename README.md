@@ -47,7 +47,7 @@ console.log(RME.component("myFirstComponent", {x: 2, y: 5});
 
 ```javascript
 //this is how to add script files on the go. (it will be done easier)
-RME.config().addScript(new Elem("script").setSource("myComponentLib.js"));
+RME.script("myComponentLib.js");
 ```
 
 ```javascript
@@ -129,6 +129,7 @@ Classes & Functions
   - storage(key, val) **Store data in RME instance**
   - storage(key) **Read data from RME instance storage**
   - onrmestoragechange(rmeState) **If defined, will be invoked every time when something was saved into the storage. Changed state will be given as parameter to the callback**
+  - script(source, id, type, text, defer, crossOrigin, charset, async) **Other way to add a script file on the go _source is required other parameters optional_**
   - config().addScript(Elem) **Add a Script element to the head on the fly**
   - config().removeScript(id|source) **Finds a script according to ID or source property**
 * Http
