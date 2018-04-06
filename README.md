@@ -27,7 +27,7 @@ RME.run(function() {
 
 ```javascript
 RME.ready(function() {
-  Tree.getBody().append("this script waits untill body is ready and then is runs");
+  Tree.getBody().setText("this script waits untill body is ready and then is runs");
 });
 ```
 
