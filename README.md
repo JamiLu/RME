@@ -50,7 +50,7 @@ RME.config().addScript(new Elem("script").setSource("myComponentLib.js"));
 ```
 
 ```javascript
-//this is how to use RME.instance storage that is available for all RME functions to use (run(), ready(), component()),
+//this is how to use RME instance storage that is available for all RME functions to use (run(), ready(), component()),
 RME.storage("foo", "bar");
 //this is how to get stored data. (that can be anything)
 console.log(RME.storage("foo"));
