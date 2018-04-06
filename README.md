@@ -164,10 +164,15 @@ Classes & Functions
   - getByName(name) **Returns an Array of Elem objects or one Elem object**
   - getByClass(classname) **Returns an Array of Elem objects or one Elem object**
   - getByTag(tag) **Returns an array of Elem objects or one Elem object**
+  - getBody() **Returns the body wrapped in Elem instance**
+  - getHead() **Retuns the head wrapped in Elem instance**
+  - getTitle() **Returns document title string**
+  - setTitle(string) **Sets document title string**
+  - and other methods that searches elements from the html document tree, _but does not return an Elem instance_
 * Key
   - no methods, only **Key** constants for keyevent such as Key.ENTER
 * Cookie
-  - set(name, value, ..other params)
+  - set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) **name and value are necessary parameters**
   - get(name)
   - remove(name)
 * Session
@@ -183,17 +188,21 @@ Classes & Functions
 * Util
   - many utility methods that this Framework also uses such as.
   - isEmpty(value) **Returns true if null | undefined | ""**
+  - getType(value) **Returns the type of the given value**
+  - isType(value, type) **Checks if value is a given type and returns true false accordigly**
   - isFunction(value) 
+  - isBoolean(value)
   - isString(value)
   - isNumber(value)
+  - isSymbol(value)
+  - isObject(value)
   - isArray(value)
-  - isObject(value)....
-  - encodeBase64String(string)
-  - decodeBase64String(string)
-  - setInterval()
-  - clearInterval()
-  - setTimeout()
-  - clearTimeout()
+  - setTimeout(callback, ms) **Returns timeout object**
+  - clearTimeout(timoutObject)
+  - setInterval(callback, ms) **Returns interval object**
+  - clearInterval(intervalObject)
+  - encodeBase64String(string) **Returns base64 encoded string**
+  - decodeBase64String(string) **Returns base64 decoded string**
 * Browser
   - All other methods that you might think of that JavaScript has from **Window**, **Navigator**, **History**, **Location** and **Screen** objects.
 
