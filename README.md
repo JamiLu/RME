@@ -5,13 +5,153 @@ RME is a functional JavaScript library that enables user to make small and mediu
 JavaScript. 
 
 The RME does not require any installation nor any other libraries. Just download a script file and place it to a project
-folder or simply use a github online url. 
+folder or simply use a github online url as follows: 
+<script src="https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.min.js"/></script>
+
+I am currenlty working on comprehensive documentation, hopefully coming soon.
 
 Download
 -----
 [https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.js](https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.js)
 [https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.js)
 [https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.min.js)
+
+Basics
+-----
+
+```javascript
+RME.run(function() {
+  alert("this script is run immediately");
+});
+```
+
+```javascript
+RME.ready(function() {
+  Tree.getBody().append("this script waits untill body is ready and then is runs");
+});
+```
+
+```javascript
+//this is how to create a component. (components does not even need to be in the same JS file.)
+RME.component(function() {
+  return {
+    myFirstComponent: function() {
+      return this.x * this.y;
+    }
+  }
+});
+//this is how to use a component
+console.log(RME.component("myFirstComponent", {x: 2, y: 5});
+```
+
+```javascript
+//this is how to add script files on the go. (it will be done easier)
+RME.config().addScript(new Elem("script").setSource("myComponentLib.js"));
+```
+
+```javascript
+//this is how to use RME.instance storage that is available for all RME functions to use (run(), ready(), component()),
+RME.storage("foo", "bar");
+//this is how to get stored data. (that can be anything)
+console.log(RME.storage("foo"));
+```
+
+```javascript
+//This is how to create a Hello World Application.
+Tree.getBody().append(new Elem("div").setText("Hello World"));
+```
+
+```javascript
+//This is how to create a bit more complex Hello World
+var abc = [
+  new Elem("li").setText("JavaScript rules"),
+  new Elem("li").setText("RME is the best"),
+  new Elem("li").setText("You really should try it out")
+]
+
+//Rendering a list inside the Body is not necessary to be done inside the component but it explains how these components might be very handy. (as they can be anything and have any functionality)
+Tree.getBody().append(RME.component("lister", {list: abc}));
+
+RME.component(function() {
+  return {
+    lister: function() {
+      return new Elem("ul").render(this.list));
+    }
+  }
+});
+```
+
+Classes & Functions
+----
+>Not comprehensive. Just to name few.
+
+* RME
+  - run(runnable) **Runs application script type fuction _(runnable)_ immediately**
+  - ready(runnable) **Runs application script type function _(runnable)_ when body is ready**
+  - component(function(){}) **Create and return created component on the callback**
+  - component("componentName", {param: 1, param: 2}) **Get and invoke the component**
+  - storage(key, val) **Store data in RME instance**
+  - storage(key) **Read data from RME instance storage**
+  - onrmestoragechange(rmeState) **If defined, will be invoked every time when something was saved into the storage. Changed state will be given as parameter to the callback**
+  - config().addScript(Elem) **Add a Script element to the head on the fly**
+  - config().removeScript(id|source) **Finds a script according to ID or source property**
+* Http
+  - get(url).then(success).catch(error)
+  - post()...
+  - put()...
+  - delete()...
+  - do(customObject).then(success).catch(error)
+  - fetch().get(url).then(success).then(response).catch(error)
+  - fetch().post().....
+  - fetch().put()...
+  - fetch().delete()....
+  - fetch().do(custom).then(success).then(response).catch(error)
+  > Side note, fetch having to **then** is just how it works, dont believe check fetch manual. 
+* Elem
+  - constructor(type|html) **If type is string creates a new JavaScript element of that type _OR_ If type is JavaScript html object then only wraps that object inside of this Elem object**
+  - wrap(html) **Returns wrapped html object (Elem instance)**
+  - create(type) **Returns new JavaScript html object (Elem instance)**
+  - wrapElems(elemArray) **Returns an Array of wrapped html objects if many or one if only one. (Elem instances)**
+  - dom() **Returns the javascript html object that this (Elem instance) holds**
+* Tree
+  - get(cssSelector) **Returns an Array of Elem objects or one Elem object**
+  - getFirst(cssSelector) **Returns one Elem object**
+  - getById(id) **Returns one Elem object**
+  - getByName(name) **Returns an Array of Elem objects or one Elem object**
+  - getByClass(classname) **Returns an Array of Elem objects or one Elem object**
+  - getByTag(tag) **Returns an array of Elem objects or one Elem object**
+* Key
+  - no methods, only **Key** constants for keyevent such as Key.ENTER
+* Cookie
+  - set(name, value, ..other params)
+  - get(name)
+  - remove(name)
+* Session
+  - set(key, value)
+  - get(key)
+  - remove(key)
+  - clear()
+* Storage **html web storage**
+  - set(key, value)
+  - get(key)
+  - remove(key)
+  - clear()
+* Util
+  - many utility methods that this Framework also uses such as.
+  - isEmpty(value) **Returns true if null | undefined | ""**
+  - isFunction(value) 
+  - isString(value)
+  - isNumber(value)
+  - isArray(value)
+  - isObject(value)....
+  - encodeBase64String(string)
+  - decodeBase64String(string)
+  - setInterval()
+  - clearInterval()
+  - setTimeout()
+  - clearTimeout()
+* Browser
+  - All other methods that you might think of that JavaScript has from **Window**, **Navigator**, **History**, **Location** and **Screen** objects.
 
 Lisence
 -----
