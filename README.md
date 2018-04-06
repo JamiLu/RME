@@ -79,7 +79,7 @@ RME.ready(function() {
 RME.component(function() {
   return {
     lister: function() {
-      return new Elem("ul").render(this.list));
+      return new Elem("ul").render(this.list);
     }
   }
 });
