@@ -46,7 +46,7 @@ console.log(RME.component("myFirstComponent", {x: 2, y: 5});
 ```
 
 ```javascript
-//this is how to add script files on the go. (it will be done easier)
+//this is how to add script files on the go.
 RME.script("myComponentLib.js");
 ```
 
