@@ -548,7 +548,7 @@ class Elem {
         return this;
     }
 
-    getSoure() {
+    getSource() {
         return this.getAttribute("src").value;
     }
 
