@@ -127,7 +127,7 @@ RME.component(function() {
 });
 ```
 
-```
+```javascript
 //an extra example, an interactive form.
 RME.ready(function() {
   var state = {
