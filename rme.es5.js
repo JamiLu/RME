@@ -644,6 +644,39 @@ var Elem = function () {
             return this.getAttribute("href").value;
         }
     }, {
+        key: "setPlaceholder",
+        value: function setPlaceholder(placeholder) {
+            this.setAttribute("placeholder", placeholder);
+            return this;
+        }
+    }, {
+        key: "getPlaceholder",
+        value: function getPlaceholder() {
+            return this.getAttribute("placeholder").value;
+        }
+    }, {
+        key: "setSize",
+        value: function setSize(size) {
+            this.setAttribute("size", size);
+            return this;
+        }
+    }, {
+        key: "getSize",
+        value: function getSize() {
+            return this.getAttribute("size").value;
+        }
+    }, {
+        key: "setDisabled",
+        value: function setDisabled(boolean) {
+            this.html.disabled = boolean;
+            return this;
+        }
+    }, {
+        key: "getDisabled",
+        value: function getDisabled() {
+            return this.html.disabled;
+        }
+    }, {
         key: "setChecked",
         value: function setChecked(boolean) {
             this.html.checked = boolean;
@@ -1700,6 +1733,11 @@ var Util = function () {
                 throw "the given parameter is not a string: " + string;
             }
             return window.atob(string);
+        }
+    }, {
+        key: "eval",
+        value: function _eval(string) {
+            return eval(string);
         }
     }]);
 
