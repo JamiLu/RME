@@ -106,8 +106,8 @@ RME.ready(function() {
   function Table() {
        var borders = {border: "1px solid #000000", borderCollapse: "collapse"};
        return new Elem("table").setStyles(borders).render(
-           new Row("I love this Script", "Feel the same burn?", borders),
-           new Row("The inventer", "Jami Lu", borders));
+           new Row("I love this Script", "Feel the same burn?"),
+           new Row("The inventer", "Jami Lu"));
 
         
         function Row(col1Text, col2Text) {
