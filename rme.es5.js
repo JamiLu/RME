@@ -9,7 +9,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 var RME = function () {
     /**
      * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create RESTfull webpages with ease and speed.
-     * This library is free to use anyhow without warranty of any kind.
+     * This library is free to use under the MIT License.
      */
     var RME = function () {
         function RME() {
@@ -628,8 +628,8 @@ var Elem = function () {
             return this;
         }
     }, {
-        key: "getSoure",
-        value: function getSoure() {
+        key: "getSource",
+        value: function getSource() {
             return this.getAttribute("src").value;
         }
     }, {

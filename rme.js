@@ -3,7 +3,7 @@
 let RME = (function() {
     /**
      * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create RESTfull webpages with ease and speed.
-     * This library is free to use anyhow without warranty of any kind.
+     * This library is free to use under the MIT License.
      */
     class RME {
         constructor() {
@@ -559,6 +559,33 @@ class Elem {
 
     getHref() {
         return this.getAttribute("href").value;
+    }
+
+    setPlaceholder(placeholder) {
+        this.setAttribute("placeholder", placeholder);
+        return this;
+    }
+
+    getPlaceholder() {
+        return this.getAttribute("placeholder").value;
+    }
+
+    setSize(size) {
+        this.setAttribute("size", size);
+        return this;
+    }
+
+    getSize() {
+        return this.getAttribute("size").value;
+    }
+
+    setDisabled(boolean) {
+        this.html.disabled = boolean;
+        return this;
+    }
+
+    getDisabled() {
+        return this.html.disabled;
     }
 
     setChecked(boolean) {
@@ -1400,6 +1427,10 @@ class Util {
             throw "the given parameter is not a string: " +string;
         }
         return window.atob(string);
+    }
+
+    static eval(string) {
+        return eval(string);
     }
 }
 
