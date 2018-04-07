@@ -92,26 +92,70 @@ RME.ready(function() {
   var state = {
     show: true
   }
-  var text = new Text();
-  Tree.getBody().append(new Elem("div").setId("myDiv").render(state.show ? text : []));
+  var table = new Table();
+  Tree.getBody().append(new Elem("div").setId("myDiv").render(state.show ? table : []));
   
   Tree.getBody().append(RME.component("showB", {clickFuntion: toggle}));
   
   function toggle() {
       state.show = !state.show;
-      Tree.get("#myDiv").render(state.show ? text : []);
+      Tree.get("#myDiv").render(state.show ? table : []);
   }
 
-  //This Text is only a simple basic function which enables grouping or wrapping one or bunch of Elemens into a one resusable Object.
-  function Text() {
-      return new Elem("span").setText("showing text");
-  }
+  //This Table is only a simple basic function which enables grouping or wrapping one or bunch of Elemens into a one resusable Object. This could also be done as component.
+  function Table() {
+       var borders = {border: "1px solid #000000", borderCollapse: "collapse"};
+       return new Elem("table").setStyles(borders).render(
+           new Row("I love this Script", "Feel the same burn?"),
+           new Row("The inventer", "Jami Lu"));
+
+        
+        function Row(col1Text, col2Text) {
+        return new Elem("tr")
+            .append(new Elem("td").setStyles(borders).setText(col1Text))
+            .append(new Elem("td").setStyles(borders).setText(col2Text));
+        }
+    }
 });
 
 RME.component(function() {
     return {
         showB : function() {
             return new Elem("button").setText("show&hide").onclick(this.clickFuntion);
+        }
+    }
+});
+```
+
+```javascript
+//an extra example, an interactive form.
+RME.ready(function() {
+  var state = {
+        firstName: "",
+        lastName: "",
+    }
+
+    function print(event) {
+        if(event.target.name === "fname")
+            state.firstName = event.target.value;
+        else
+            state.lastName = event.target.value;
+
+        //You can render interactive content by render method. But render only renders elements.
+        Tree.get("#screen").render(new Elem("span").setText(state.firstName +" "+state.lastName));
+        //Or this way use setContent to set interactive text content.
+        // Tree.get("#screen").setContent(state.firstName +" "+state.lastName);
+    }
+    Tree.getBody().append(RME.component("form", {input: print}));
+    Tree.getBody().append(new Elem("div").setId("screen"));
+});
+
+RME.component(function() {
+    return {
+        form: function() {
+            return new Elem("div")
+                .append(new Elem("div").append(new Elem("input").setName("fname").setType("text").setPlaceholder("First name").oninput(this.input)))
+                .append(new Elem("div").append(new Elem("input").setName("lname").setType("text").setPlaceholder("Last name").oninput(this.input)));
         }
     }
 });
@@ -129,7 +173,7 @@ Classes & Functions
   - storage(key, val) **Store data in RME instance**
   - storage(key) **Read data from RME instance storage**
   - onrmestoragechange(rmeState) **If defined, will be invoked every time when something was saved into the storage. Changed state will be given as parameter to the callback**
-  - script(source, id, type, text, defer, crossOrigin, charset, async) **Other way to add a script file on the go _source is required other parameters optional_**
+  - script(source, id, type, text, defer, crossOrigin, charset, async) **Recommended way to add a script file on the go _source is required other parameters are optional_**
   - config().addScript(Elem) **Add a Script element to the head on the fly**
   - config().removeScript(id|source) **Finds a script according to ID or source property**
 * Http
