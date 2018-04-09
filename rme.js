@@ -579,6 +579,15 @@ class Elem {
         return this.getAttribute("size").value;
     }
 
+    setEditable(boolean) {
+        this.setAttribute("contenteditable", boolean);
+        return this;
+    }
+
+    getEditable() {
+        return this.getAttribute("contenteditable").value;
+    }
+
     setDisabled(boolean) {
         this.html.disabled = boolean;
         return this;
@@ -605,7 +614,7 @@ class Elem {
             if(origClass.search(clazz) === -1)
                 origClass += " "+clazz;
         }
-        this.html.className = origClass;
+        this.html.className = origClass.trim();
         return this;
     }
 
@@ -617,7 +626,7 @@ class Elem {
             if(origClass.search(clazz) > -1)
                 origClass = origClass.replace(clazz, "").trim();
         }
-        this.html.className = origClass;
+        this.html.className = origClass.trim();
         return this;
     }
 
@@ -1158,7 +1167,7 @@ class Tree {
     }
 
     static getActiveElement() {
-        return document.activeElement;
+        return Elem.wrap(document.activeElement);
     }
 
     static getAnchors() {
@@ -1236,11 +1245,10 @@ let Cookie = (function() {
                     if(cookies.hasOwnProperty(i)) {
                         var cookie = cookies[i];
                         var eq = cookie.search("=");
-                        var cn = cookie.substr(0, eq);
-                        var cv = cookie.substr(eq + 1, cookie.length);
+                        var cn = cookie.substr(0, eq).trim();
+                        var cv = cookie.substr(eq + 1, cookie.length).trim();
                         if(cn === name) {
                             retCookie = new Cookie(cn, cv);
-                            //return false;
                             break;
                         }
                     }
@@ -1266,8 +1274,10 @@ let Cookie = (function() {
         }
         static remove(name) {
             var co = Cookies.get(name);
-            if(!Util.isEmpty(co))
-                Cookies.set(co.setExpired());
+            if(!Util.isEmpty(co)) {
+                co.setExpired();
+                document.cookie = co.toString();
+            }
         }
     }
 
@@ -1297,7 +1307,7 @@ let Cookie = (function() {
         }
 
         toString() {
-            return "\""+this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity+"\"";
+            return this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity;
         }
         static create(name, value, expires, cpath, cdomain, setSecure) {
                 return new Cookie(name, value, expires, cpath, cdomain, setSecure);

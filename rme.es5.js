@@ -666,6 +666,17 @@ var Elem = function () {
             return this.getAttribute("size").value;
         }
     }, {
+        key: "setEditable",
+        value: function setEditable(boolean) {
+            this.setAttribute("contenteditable", boolean);
+            return this;
+        }
+    }, {
+        key: "getEditable",
+        value: function getEditable() {
+            return this.getAttribute("contenteditable").value;
+        }
+    }, {
         key: "setDisabled",
         value: function setDisabled(boolean) {
             this.html.disabled = boolean;
@@ -696,7 +707,7 @@ var Elem = function () {
                 var clazz = toAdd[i];
                 if (origClass.search(clazz) === -1) origClass += " " + clazz;
             }
-            this.html.className = origClass;
+            this.html.className = origClass.trim();
             return this;
         }
     }, {
@@ -708,7 +719,7 @@ var Elem = function () {
                 var clazz = toRm[i];
                 if (origClass.search(clazz) > -1) origClass = origClass.replace(clazz, "").trim();
             }
-            this.html.className = origClass;
+            this.html.className = origClass.trim();
             return this;
         }
     }, {
@@ -1374,7 +1385,7 @@ var Tree = function () {
     }, {
         key: "getActiveElement",
         value: function getActiveElement() {
-            return document.activeElement;
+            return Elem.wrap(document.activeElement);
         }
     }, {
         key: "getAnchors",
@@ -1471,11 +1482,10 @@ var Cookie = function () {
                         if (cookies.hasOwnProperty(i)) {
                             var cookie = cookies[i];
                             var eq = cookie.search("=");
-                            var cn = cookie.substr(0, eq);
-                            var cv = cookie.substr(eq + 1, cookie.length);
+                            var cn = cookie.substr(0, eq).trim();
+                            var cv = cookie.substr(eq + 1, cookie.length).trim();
                             if (cn === name) {
                                 retCookie = new Cookie(cn, cv);
-                                //return false;
                                 break;
                             }
                         }
@@ -1506,7 +1516,10 @@ var Cookie = function () {
             key: "remove",
             value: function remove(name) {
                 var co = Cookies.get(name);
-                if (!Util.isEmpty(co)) Cookies.set(co.setExpired());
+                if (!Util.isEmpty(co)) {
+                    co.setExpired();
+                    document.cookie = co.toString();
+                }
             }
         }]);
 
@@ -1546,7 +1559,7 @@ var Cookie = function () {
         }, {
             key: "toString",
             value: function toString() {
-                return "\"" + this.cookieName + "=" + this.cookieValue + "; expires=" + this.cookieExpires + "; path=" + this.cookiePath + "; domain=" + this.cookieDomain + "; " + this.cookieSecurity + "\"";
+                return this.cookieName + "=" + this.cookieValue + "; expires=" + this.cookieExpires + "; path=" + this.cookiePath + "; domain=" + this.cookieDomain + "; " + this.cookieSecurity;
             }
         }], [{
             key: "create",
