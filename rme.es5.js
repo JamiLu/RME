@@ -72,7 +72,8 @@ var RME = function () {
             }
 
             /** 
-             * Runs a runnable script immedeately
+             * Runs a runnable script immedeately.
+             * Only one run method per RME application.
              */
 
         }], [{
@@ -82,7 +83,8 @@ var RME = function () {
             }
 
             /**
-             * Waits until body has been loaded and then runs a runnable script
+             * Waits until body has been loaded and then runs a runnable script.
+             * Only one ready method per RME application.
              */
 
         }, {
@@ -90,16 +92,52 @@ var RME = function () {
             value: function ready(runnable) {
                 if (runnable && Util.isFunction(runnable)) RME.getInstance().setComplete(runnable);
             }
+
+            /**
+             * Creates or retrieves a RME component. 
+             * If the first parameter is a function then this method will try to create a RME component and store it
+             * in the RME instance.
+             * If the first parameter is a string then this method will try to retrieve a RME component from the 
+             * RME instance.
+             * @param {*} runnable Type function or String.
+             * @param {Object} props 
+             */
+
         }, {
             key: "component",
             value: function component(runnable, props) {
                 if (runnable && Util.isFunction(runnable)) RME.getInstance().addComponent(runnable);else if (runnable && Util.isString(runnable)) return RME.getInstance().getComponent(runnable, props);
             }
+
+            /**
+             * Saves data to or get data from the RME instance storage.
+             * If key and value parameters are not empty then this method will try to save the give value by the given key
+             * into to the RME instance storage.
+             * If key is not empty and value is empty then this method will try to get data from the RME instance storage
+             * by the given key.
+             * @param {String} key 
+             * @param {Object} value 
+             */
+
         }, {
             key: "storage",
             value: function storage(key, value) {
                 if (!Util.isEmpty(key) && !Util.isEmpty(value)) RME.getInstance().setRmeState(key, value);else if (!Util.isEmpty(key) && Util.isEmpty(value)) return RME.getInstance().getRmeState(key);
             }
+
+            /**
+             * Adds a script file on runtime into the head of the current html document where the method is called on.
+             * Source is required other properties can be omitted.
+             * @param {String} source URL or file name. *Requied
+             * @param {String} id 
+             * @param {String} type 
+             * @param {String} text 
+             * @param {boolean} defer 
+             * @param {*} crossOrigin 
+             * @param {String} charset 
+             * @param {boolean} async 
+             */
+
         }, {
             key: "script",
             value: function script(source, id, type, text, defer, crossOrigin, charset, async) {
@@ -115,6 +153,14 @@ var RME = function () {
                     RME.config().addScript(sc);
                 }
             }
+
+            /**
+             * This is called when ever a new data is saved into the RME instance storage.
+             * Callback function has one paramater newState that is the latest snapshot of the 
+             * current instance storage.
+             * @param {function} listener 
+             */
+
         }, {
             key: "onrmestoragechange",
             value: function onrmestoragechange(listener) {
@@ -168,8 +214,7 @@ var RME = function () {
         component: RME.component,
         storage: RME.storage,
         script: RME.script,
-        onrmestoragechange: RME.onrmestoragechange,
-        config: RME.config
+        onrmestoragechange: RME.onrmestoragechange
     };
 }();
 
@@ -253,6 +298,10 @@ var Http = function () {
 
     Http.JSON = "application/json;charset=UTF-8";
 
+    /**
+     * Old Fashion XMLHttpRequest made into the Promise pattern.
+     */
+
     var Ajax = function () {
         function Ajax(config) {
             _classCallCheck(this, Ajax);
@@ -298,6 +347,11 @@ var Http = function () {
 
         return Ajax;
     }();
+
+    /**
+     * XMLHttpRequest using the Promise.
+     */
+
 
     var PromiseAjax = function () {
         function PromiseAjax(config) {
@@ -433,7 +487,7 @@ var Http = function () {
     }
 
     function isContentTypeJson(contentType) {
-        return contentType === "application/json;charset=UTF-8";
+        return contentType === Http.JSON;
     }
 
     function tryParseJSON(text) {
@@ -458,75 +512,161 @@ var Elem = function () {
         }
     }
 
+    /**
+     * Set text of this element.
+     * Returns Elem instance.
+     * @param {String} text 
+     */
+
+
     _createClass(Elem, [{
         key: "setText",
         value: function setText(text) {
             this.html.appendChild(document.createTextNode(text));
             return this;
         }
+
+        /**
+         * Get text/content of this element.
+         */
+
     }, {
         key: "getContent",
         value: function getContent() {
             return this.html.innerHTML;
         }
+
+        /**
+         * Set content that can be text or html.
+         * Returns Elem instance.
+         * @param {String} html 
+         */
+
     }, {
         key: "setContent",
         value: function setContent(html) {
             this.html.innerHTML = html;
             return this;
         }
+
+        /**
+         * Set value of this element.
+         * Returns Elem instance.
+         * @param {String} value 
+         */
+
     }, {
         key: "setValue",
         value: function setValue(value) {
             this.html.value = value;
             return this;
         }
+
+        /**
+         * Get value of this element.
+         */
+
     }, {
         key: "getValue",
         value: function getValue() {
             return this.html.value;
         }
+
+        /**
+         * Set id of this element.
+         * Returns Elem instance.
+         * @param {String} id 
+         */
+
     }, {
         key: "setId",
         value: function setId(id) {
             this.html.id = id;
             return this;
         }
+
+        /**
+         * Get id of this element.
+         */
+
     }, {
         key: "getId",
         value: function getId() {
             return this.html.id;
         }
+
+        /**
+         * Append an element inside this element.
+         * Returns Elem instance.
+         * @param {Elem} elem 
+         */
+
     }, {
         key: "append",
         value: function append(elem) {
             this.html.appendChild(elem.dom());
             return this;
         }
+
+        /**
+         * Remove an element from this element.
+         * Returns Elem isntance.
+         * @param {Elem} elem 
+         */
+
     }, {
         key: "remove",
         value: function remove(elem) {
             this.html.removeChild(elem.dom());
             return this;
         }
+
+        /**
+         * Replace this element with a new element.
+         * Returns Elem instance.
+         * @param {Elem} newElem 
+         */
+
     }, {
         key: "replace",
         value: function replace(newElem) {
             this.html.parentElement.replaceChild(newElem.dom(), this.html);
             return this;
         }
+
+        /**
+         * Insert a new element before this element.
+         * Returns Elem instance.
+         * @param {Elem} newElem 
+         */
+
     }, {
         key: "before",
         value: function before(newElem) {
             this.html.parentElement.insertBefore(newElem.dom(), this.html);
             return this;
         }
+
+        /**
+         * Insert a new elem after this element.
+         * Returns Elem isntance.
+         * @param {Elem} newElem 
+         */
+
     }, {
         key: "after",
         value: function after(newElem) {
             if (this.html.nextElementSibling !== null) this.html.parentElement.insertBefore(newElem.dom(), this.html.nextElementSibling);else this.html.parentElement.appendChild(newElem.dom());
             return this;
         }
+
+        /**
+         * Renders an Array of Elements or a comma separated list of element arrays or a comma separated list of elements.
+         * If given an empty array or not a parameter at all then this element will be rendered as empty.
+         * Returns Elem instance.
+         * @param {Elem} elems 
+         */
+
     }, {
         key: "render",
         value: function render() {
@@ -545,42 +685,84 @@ var Elem = function () {
                 this.html.removeChild(this.html.firstChild);
             }
             for (var e in newState) {
-                if (newState.hasOwnProperty(e)) this.append(newState[e]);
+                if (newState.hasOwnProperty(e) && !Util.isEmpty(newState[e])) this.append(newState[e]);
             }
             return this;
         }
+
+        /**
+         * Get an array of children of this element.
+         */
+
     }, {
         key: "getChildren",
         value: function getChildren() {
             return this.html.children;
         }
+
+        /**
+         * Set a title of this element.
+         * Returns Elem instance.
+         * @param {String} text 
+         */
+
     }, {
         key: "setTitle",
         value: function setTitle(text) {
             this.html.title = text;
             return this;
         }
+
+        /**
+         * Get a title of this element.
+         */
+
     }, {
         key: "getTitle",
         value: function getTitle() {
             return this.html.title;
         }
+
+        /**
+         * Set a tab index of this element.
+         * Returns Elem instance.
+         * @param {Number} idx 
+         */
+
     }, {
         key: "setTabIndex",
         value: function setTabIndex(idx) {
             this.html.tabIndex = idx;
             return this;
         }
+
+        /**
+         * Get a tab index of this element.
+         */
+
     }, {
         key: "getTabIndex",
         value: function getTabIndex() {
             return this.html.tabIndex;
         }
+
+        /**
+         * Get a tag name of this element.
+         */
+
     }, {
         key: "getTagName",
         value: function getTagName() {
             return this.html.tagName;
         }
+
+        /**
+         * Set an attribute of this element.
+         * Returns Elem isntance.
+         * @param {String} attr Attribute
+         * @param {String} value Value
+         */
+
     }, {
         key: "setAttribute",
         value: function setAttribute(attr, value) {
@@ -589,115 +771,247 @@ var Elem = function () {
             this.html.setAttributeNode(attribute);
             return this;
         }
+
+        /**
+         * Get an attribute of this element.
+         * Returns an attribute object with name and value properties.
+         * @param {String} attr 
+         */
+
     }, {
         key: "getAttribute",
         value: function getAttribute(attr) {
             return this.html.getAttributeNode(attr);
         }
+
+        /**
+         * Removes an attribute of this element.
+         * Returns the removed attribute object with value and name parameters.
+         * @param {String} attr 
+         */
+
     }, {
         key: "removeAttribute",
         value: function removeAttribute(attr) {
             return this.html.removeAttributeNode(this.getAttribute(attr));
         }
+
+        /**
+         * Set a name of this element.
+         * Returns Elem instance.
+         * @param {String} name 
+         */
+
     }, {
         key: "setName",
         value: function setName(name) {
             this.setAttribute("name", name);
             return this;
         }
+
+        /**
+         * Get a name of this element.
+         * Returns name string.
+         */
+
     }, {
         key: "getName",
         value: function getName() {
             return this.getAttribute("name").value;
         }
+
+        /**
+         * Set a type of this element.
+         * Returns Elem instance.
+         * @param {String} type 
+         */
+
     }, {
         key: "setType",
         value: function setType(type) {
             this.setAttribute("type", type);
             return this;
         }
+
+        /**
+         * Get a type of this element.
+         * Returns type string.
+         */
+
     }, {
         key: "getType",
         value: function getType() {
             return this.getAttribute("type").value;
         }
+
+        /**
+         * Set a source of this element.
+         * Returns Elem instance.
+         * @param {String} source 
+         */
+
     }, {
         key: "setSource",
         value: function setSource(source) {
             this.setAttribute("src", source);
             return this;
         }
+
+        /**
+         * Get a source of this element.
+         * Returns source string.
+         */
+
     }, {
         key: "getSource",
         value: function getSource() {
             return this.getAttribute("src").value;
         }
+
+        /**
+         * Set a href of this element.
+         * Returns Elem instance.
+         * @param {String} href 
+         */
+
     }, {
         key: "setHref",
         value: function setHref(href) {
             this.setAttribute("href", href);
             return this;
         }
+
+        /**
+         * Get a href of this element.
+         */
+
     }, {
         key: "getHref",
         value: function getHref() {
             return this.getAttribute("href").value;
         }
+
+        /**
+         * Set a placeholder of this element.
+         * Returns Elem instance.
+         * @param {String} placeholder 
+         */
+
     }, {
         key: "setPlaceholder",
         value: function setPlaceholder(placeholder) {
             this.setAttribute("placeholder", placeholder);
             return this;
         }
+
+        /**
+         * Get a placeholder of this element.
+         */
+
     }, {
         key: "getPlaceholder",
         value: function getPlaceholder() {
             return this.getAttribute("placeholder").value;
         }
+
+        /**
+         * Sets size of this element.
+         * Return Elem instance.
+         * @param {*} size 
+         */
+
     }, {
         key: "setSize",
         value: function setSize(size) {
             this.setAttribute("size", size);
             return this;
         }
+
+        /**
+         * Get size of this element.
+         */
+
     }, {
         key: "getSize",
         value: function getSize() {
             return this.getAttribute("size").value;
         }
+
+        /**
+         * Set this element content editable.
+         * Return Elem instance.
+         * @param {boolean} boolean 
+         */
+
     }, {
         key: "setEditable",
         value: function setEditable(boolean) {
             this.setAttribute("contenteditable", boolean);
             return this;
         }
+
+        /**
+         * Get this element content editable.
+         */
+
     }, {
         key: "getEditable",
         value: function getEditable() {
             return this.getAttribute("contenteditable").value;
         }
+
+        /**
+         * Set this element disabled.
+         * Return Elem instance.
+         * @param {boolean} boolean 
+         */
+
     }, {
         key: "setDisabled",
         value: function setDisabled(boolean) {
             this.html.disabled = boolean;
             return this;
         }
+
+        /**
+         * Get this element disabled state.
+         */
+
     }, {
         key: "getDisabled",
         value: function getDisabled() {
             return this.html.disabled;
         }
+
+        /**
+         * Set this element checked.
+         * Return Elem instance.
+         * @param {boolean} boolean 
+         */
+
     }, {
         key: "setChecked",
         value: function setChecked(boolean) {
             this.html.checked = boolean;
             return this;
         }
+
+        /**
+         * Get this element checked state.
+         */
+
     }, {
         key: "getChecked",
         value: function getChecked() {
             return this.html.checked;
         }
+
+        /**
+         * Add classes to this element.
+         * Returns Elem instance.
+         * @param {String} classes 
+         */
+
     }, {
         key: "addClasses",
         value: function addClasses(classes) {
@@ -710,6 +1024,13 @@ var Elem = function () {
             this.html.className = origClass.trim();
             return this;
         }
+
+        /**
+         * Remove classes from this element.
+         * Returns Elem instance.
+         * @param {String} classes 
+         */
+
     }, {
         key: "removeClasses",
         value: function removeClasses(classes) {
@@ -722,6 +1043,12 @@ var Elem = function () {
             this.html.className = origClass.trim();
             return this;
         }
+
+        /**
+         * Toggle classes of this element.
+         * Returns Elem instance.
+         */
+
     }, {
         key: "toggleClasses",
         value: function toggleClasses(classes) {
@@ -734,12 +1061,25 @@ var Elem = function () {
             }
             this.addClasses(toAdd.trim());
             this.removeClasses(toRm.trim());
+            return this;
         }
+
+        /**
+         * Get classes string of this element.
+         */
+
     }, {
         key: "getClasses",
         value: function getClasses() {
             return this.html.className;
         }
+
+        /**
+         * Set styles of this element in the map e.g. {height: "10px",...}
+         * Returns Elem instance.
+         * @param {Object} styleMap 
+         */
+
     }, {
         key: "setStyles",
         value: function setStyles(styleMap) {
@@ -748,87 +1088,177 @@ var Elem = function () {
             }
             return this;
         }
+
+        /**
+         * Get style of this element. 
+         * @param {String} styleName Style name in camelCase e.g. maxHeight
+         */
+
     }, {
         key: "getStyle",
         value: function getStyle(styleName) {
             return this.html.style[styleName];
         }
+
+        /**
+         * Set visibility of this element hidden or visible.
+         * true = visible, false = hidden
+         * @param {boolean} boolean 
+         */
+
     }, {
         key: "setVisible",
         value: function setVisible(boolean) {
             this.html.style.visibility = boolean ? "visibile" : "hidden";
             return this;
         }
+
+        /**
+         * Set display state of this element initial or none.
+         * true = initial, false = none
+         * @param {boolean} boolean 
+         */
+
     }, {
         key: "display",
         value: function display(boolean) {
             this.html.style.display = boolean ? "initial" : "none";
             return this;
         }
+
+        /**
+         * Set this element draggable.
+         * @param {boolean} boolean 
+         */
+
     }, {
         key: "setDraggable",
         value: function setDraggable(boolean) {
             this.setAttribute("draggable", boolean);
             return this;
         }
+
+        /**
+         * Do click on this element.
+         * Returns Elem instance.
+         */
+
     }, {
         key: "click",
         value: function click() {
             this.html.click();
             return this;
         }
+
+        /**
+         * Do focus on this element.
+         * Returns Elem instance.
+         */
+
     }, {
         key: "focus",
         value: function focus() {
             this.html.focus();
             return this;
         }
+
+        /**
+         * Do blur on this element.
+         * Returns Elem instance.
+         */
+
     }, {
         key: "blur",
         value: function blur() {
             this.html.blur();
             return this;
         }
+
+        /**
+         * Returns a clone of this element. If deep is true children will be cloned also.
+         * @param {boolean} deep 
+         */
+
     }, {
         key: "clone",
         value: function clone(deep) {
             return Elem.wrap(this.html.cloneNode(deep));
         }
+
+        /**
+         * Returns HTML Document Element that this element contains.
+         */
+
     }, {
         key: "dom",
         value: function dom() {
             return this.html;
         }
+
+        /**
+         * Returns height of this element.
+         */
+
     }, {
         key: "height",
         value: function height() {
             return this.html.clientHeight;
         }
+
+        /**
+         * Returns width of this element.
+         */
+
     }, {
         key: "width",
         value: function width() {
             return this.html.clientWidth;
         }
+
+        /**
+         * Returns a parent of this element wrapped in Elem instance or null if no parent.
+         */
+
     }, {
         key: "parent",
         value: function parent() {
             return this.html.parentElement !== null ? Elem.wrap(this.html.parentElement) : null;
         }
+
+        /**
+         * Returns a next element of this element wrapped in Elem instance or null if no next.
+         */
+
     }, {
         key: "next",
         value: function next() {
             return this.html.nextElementSibling !== null ? Elem.wrap(this.html.nextElementSibling) : null;
         }
+
+        /**
+         * Returns a previous element of this element wrapped in Elem instance or null if no previous.
+         */
+
     }, {
         key: "previous",
         value: function previous() {
             return this.html.previousElementSibling !== null ? Elem.wrap(this.html.previousElementSibling) : null;
         }
+
+        /**
+         * Returns a first child element of this element wrapped in Elem instance or null if no children.
+         */
+
     }, {
         key: "getFirstChild",
         value: function getFirstChild() {
             return this.html.firstElementChild !== null ? Elem.wrap(this.html.firstElementChild) : null;
         }
+
+        /**
+         * Returns a last child element of this element wrapped in Elem instance or null if no children.
+         */
+
     }, {
         key: "getLastChild",
         value: function getLastChild() {
@@ -840,32 +1270,32 @@ var Elem = function () {
         //Animation events
 
     }, {
-        key: "onanimationstart",
-        value: function onanimationstart(handler) {
+        key: "onAnimationStart",
+        value: function onAnimationStart(handler) {
             this.html.onanimationstart = handler;
             // this.html.addEventListener("webkitAnimationStart", handler);
             // this.html.addEventListener("mozAnimationStart", handler);
             return this;
         }
     }, {
-        key: "onanimationiteration",
-        value: function onanimationiteration(handler) {
+        key: "onAnimationIteration",
+        value: function onAnimationIteration(handler) {
             this.html.onanimationiteration = handler;
             // this.html.addEventListener("webkitAnimationIteration", handler);
             // this.html.addEventListener("mozAnimationIteration", handler);
             return this;
         }
     }, {
-        key: "onanimationend",
-        value: function onanimationend(handler) {
+        key: "onAnimationEnd",
+        value: function onAnimationEnd(handler) {
             this.html.onanimationend = handler;
             // this.html.addEventListener("webkitAnimationEnd", handler);
             // this.html.addEventListener("mozAnimationEnd", handler);
             return this;
         }
     }, {
-        key: "ontransitionend",
-        value: function ontransitionend(handler) {
+        key: "onTransitionEnd",
+        value: function onTransitionEnd(handler) {
             this.html.ontransitionend = handler;
             // this.html.addEventListener("webkitTransitionEnd", handler);
             // this.html.addEventListener("mozTransitionEnd", handler);
@@ -876,38 +1306,38 @@ var Elem = function () {
         //Drag events
 
     }, {
-        key: "ondrag",
-        value: function ondrag(handler) {
+        key: "onDrag",
+        value: function onDrag(handler) {
             this.html.ondrag = handler;
             return this;
         }
     }, {
-        key: "ondragend",
-        value: function ondragend(handler) {
+        key: "onDragEnd",
+        value: function onDragEnd(handler) {
             this.html.ondragend = handler;
             return this;
         }
     }, {
-        key: "ondragenter",
-        value: function ondragenter(handler) {
+        key: "onDragEnter",
+        value: function onDragEnter(handler) {
             this.html.ondragenter = handler;
             return this;
         }
     }, {
-        key: "ondragover",
-        value: function ondragover(handler) {
+        key: "onDragOver",
+        value: function onDragOver(handler) {
             this.html.ondragover = handler;
             return this;
         }
     }, {
-        key: "ondragstart",
-        value: function ondragstart(handler) {
+        key: "onDragStart",
+        value: function onDragStart(handler) {
             this.html.ondragstart = handler;
             return this;
         }
     }, {
-        key: "ondrop",
-        value: function ondrop(handler) {
+        key: "onDrop",
+        value: function onDrop(handler) {
             this.html.ondrop = handler;
             return this;
         }
@@ -915,68 +1345,68 @@ var Elem = function () {
         //Mouse events
 
     }, {
-        key: "onclick",
-        value: function onclick(handler) {
+        key: "onClick",
+        value: function onClick(handler) {
             this.html.onclick = handler;
             return this;
         }
     }, {
-        key: "ondbclick",
-        value: function ondbclick(handler) {
+        key: "onDoubleClick",
+        value: function onDoubleClick(handler) {
             this.html.ondblclick = handler;
             return this;
         }
     }, {
-        key: "oncontextmenu",
-        value: function oncontextmenu(handler) {
+        key: "onContextMenu",
+        value: function onContextMenu(handler) {
             this.html.oncontextmenu = handler;
             return this;
         }
     }, {
-        key: "onmousedown",
-        value: function onmousedown(handler) {
+        key: "onMouseDown",
+        value: function onMouseDown(handler) {
             this.html.onmousedown = handler;
             return this;
         }
     }, {
-        key: "onmouseenter",
-        value: function onmouseenter(handler) {
+        key: "onMouseEnter",
+        value: function onMouseEnter(handler) {
             this.html.onmouseenter = handler;
             return this;
         }
     }, {
-        key: "onmouseleave",
-        value: function onmouseleave(handler) {
+        key: "onMmouseLeave",
+        value: function onMmouseLeave(handler) {
             this.html.onmouseleave = handler;
             return this;
         }
     }, {
-        key: "onmousemove",
-        value: function onmousemove(handler) {
+        key: "onMouseMove",
+        value: function onMouseMove(handler) {
             this.html.onmousemove = handler;
             return this;
         }
     }, {
-        key: "onmouseover",
-        value: function onmouseover(handler) {
+        key: "onMouseOver",
+        value: function onMouseOver(handler) {
             this.html.onmouseover = handler;
             return this;
         }
     }, {
-        key: "onmouseout",
-        value: function onmouseout(handler) {
+        key: "onMouseOut",
+        value: function onMouseOut(handler) {
             this.html.onmouseout = handler;
             return this;
         }
     }, {
-        key: "onmouseup",
-        value: function onmouseup(handler) {
+        key: "onMouseUp",
+        value: function onMouseUp(handler) {
             this.html.onmouseup = handler;
             return this;
         }
     }, {
-        key: "onwheel",
-        value: function onwheel(handler) {
+        key: "onWheel",
+        value: function onWheel(handler) {
             this.html.onwheel = handler;
             return this;
         }
@@ -984,44 +1414,44 @@ var Elem = function () {
         //UI events
 
     }, {
-        key: "onscroll",
-        value: function onscroll(handler) {
+        key: "onScroll",
+        value: function onScroll(handler) {
             this.html.onscroll = handler;
             return this;
         }
     }, {
-        key: "onresize",
-        value: function onresize(handler) {
+        key: "onResize",
+        value: function onResize(handler) {
             this.html.onresize = handler;
             return this;
         }
     }, {
-        key: "onabort",
-        value: function onabort(handler) {
+        key: "onAbort",
+        value: function onAbort(handler) {
             this.html.onabort = handler;
             return this;
         }
     }, {
-        key: "onerror",
-        value: function onerror(handler) {
+        key: "onError",
+        value: function onError(handler) {
             this.html.onerror = handler;
             return this;
         }
     }, {
-        key: "onload",
-        value: function onload(handler) {
+        key: "onLoad",
+        value: function onLoad(handler) {
             this.html.onload = handler;
             return this;
         }
     }, {
-        key: "onunload",
-        value: function onunload(handler) {
+        key: "onUnload",
+        value: function onUnload(handler) {
             this.html.onunload = handler;
             return this;
         }
     }, {
-        key: "onbeforeunload",
-        value: function onbeforeunload(handler) {
+        key: "onBeforeUnload",
+        value: function onBeforeUnload(handler) {
             this.html.onbeforeunload = handler;
             return this;
         }
@@ -1029,26 +1459,26 @@ var Elem = function () {
         //Key events
 
     }, {
-        key: "onkeyup",
-        value: function onkeyup(handler) {
+        key: "onKeyUp",
+        value: function onKeyUp(handler) {
             this.html.onkeyup = handler;
             return this;
         }
     }, {
-        key: "onkeydown",
-        value: function onkeydown(handler) {
+        key: "onKeyDown",
+        value: function onKeyDown(handler) {
             this.html.onkeydown = handler;
             return this;
         }
     }, {
-        key: "onkeypress",
-        value: function onkeypress(handler) {
+        key: "onKeyPress",
+        value: function onKeyPress(handler) {
             this.html.onkeypress = handler;
             return this;
         }
     }, {
-        key: "oninput",
-        value: function oninput(handler) {
+        key: "onInput",
+        value: function onInput(handler) {
             this.html.oninput = handler;
             return this;
         }
@@ -1056,50 +1486,50 @@ var Elem = function () {
         //Events (changing state)
 
     }, {
-        key: "onchange",
-        value: function onchange(handler) {
+        key: "onChange",
+        value: function onChange(handler) {
             this.html.onchange = handler;
             return this;
         }
     }, {
-        key: "onsubmit",
-        value: function onsubmit(handler) {
+        key: "onSubmit",
+        value: function onSubmit(handler) {
             this.html.onsubmit = handler;
             return this;
         }
     }, {
-        key: "onselect",
-        value: function onselect(handler) {
+        key: "onSelect",
+        value: function onSelect(handler) {
             this.html.onselect = handler;
             return this;
         }
     }, {
-        key: "onreset",
-        value: function onreset(handler) {
+        key: "onReset",
+        value: function onReset(handler) {
             this.html.onreset = handler;
             return this;
         }
     }, {
-        key: "onfocus",
-        value: function onfocus(handler) {
+        key: "onFocus",
+        value: function onFocus(handler) {
             this.html.onfocus = handler;
             return this;
         }
     }, {
-        key: "onfocusin",
-        value: function onfocusin(handler) {
+        key: "onFocusIn",
+        value: function onFocusIn(handler) {
             this.html.onfocusin = handler;
             return this;
         }
     }, {
-        key: "onfocusout",
-        value: function onfocusout(handler) {
+        key: "onFocusOut",
+        value: function onFocusOut(handler) {
             this.html.onfocusout = handler;
             return this;
         }
     }, {
-        key: "onblur",
-        value: function onblur(handler) {
+        key: "onBlur",
+        value: function onBlur(handler) {
             this.html.onblur = handler;
             return this;
         }
@@ -1107,20 +1537,20 @@ var Elem = function () {
         //Clipboard events
 
     }, {
-        key: "oncopy",
-        value: function oncopy(handler) {
+        key: "onCopy",
+        value: function onCopy(handler) {
             this.html.oncopy = handler;
             return this;
         }
     }, {
-        key: "oncut",
-        value: function oncut(handler) {
+        key: "onCut",
+        value: function onCut(handler) {
             this.html.oncut = handler;
             return this;
         }
     }, {
-        key: "onpaste",
-        value: function onpaste(handler) {
+        key: "onPaste",
+        value: function onPaste(handler) {
             this.html.onpaste = handler;
             return this;
         }
@@ -1128,116 +1558,116 @@ var Elem = function () {
         //Media events
 
     }, {
-        key: "onwaiting",
-        value: function onwaiting(handler) {
+        key: "onWaiting",
+        value: function onWaiting(handler) {
             this.html.onwaiting = handler;
             return this;
         }
     }, {
-        key: "onvolumechange",
-        value: function onvolumechange(handler) {
+        key: "onVolumeChange",
+        value: function onVolumeChange(handler) {
             this.html.onvolumechange = handler;
             return this;
         }
     }, {
-        key: "ontimeupdate",
-        value: function ontimeupdate(handler) {
+        key: "onTimeUpdate",
+        value: function onTimeUpdate(handler) {
             this.html.ontimeupdate = handler;
             return this;
         }
     }, {
-        key: "onseeking",
-        value: function onseeking(handler) {
+        key: "onSeeking",
+        value: function onSeeking(handler) {
             this.html.onseeking = handler;
             return this;
         }
     }, {
-        key: "onseekend",
-        value: function onseekend(handler) {
+        key: "onSeekEnd",
+        value: function onSeekEnd(handler) {
             this.html.onseekend = handler;
             return this;
         }
     }, {
-        key: "onratechange",
-        value: function onratechange(handler) {
+        key: "onRateChange",
+        value: function onRateChange(handler) {
             this.html.onratechange = handler;
             return this;
         }
     }, {
-        key: "onprogress",
-        value: function onprogress(handler) {
+        key: "onProgress",
+        value: function onProgress(handler) {
             this.html.onprogress = handler;
             return this;
         }
     }, {
-        key: "onloadmetadata",
-        value: function onloadmetadata(handler) {
+        key: "onLoadMetadata",
+        value: function onLoadMetadata(handler) {
             this.html.onloadmetadata = handler;
             return this;
         }
     }, {
-        key: "onloadeddata",
-        value: function onloadeddata(handler) {
+        key: "onLoadedData",
+        value: function onLoadedData(handler) {
             this.html.onloadeddata = handler;
             return this;
         }
     }, {
-        key: "onloadstart",
-        value: function onloadstart(handler) {
+        key: "onLoadStart",
+        value: function onLoadStart(handler) {
             this.html.onloadstart = handler;
             return this;
         }
     }, {
-        key: "onplaying",
-        value: function onplaying(handler) {
+        key: "onPlaying",
+        value: function onPlaying(handler) {
             this.html.onplaying = handler;
             return this;
         }
     }, {
-        key: "onplay",
-        value: function onplay(handler) {
+        key: "onPlay",
+        value: function onPlay(handler) {
             this.html.onplay = handler;
             return this;
         }
     }, {
-        key: "onpause",
-        value: function onpause(handler) {
+        key: "onPause",
+        value: function onPause(handler) {
             this.html.onpause = handler;
             return this;
         }
     }, {
-        key: "onended",
-        value: function onended(handler) {
+        key: "onEnded",
+        value: function onEnded(handler) {
             this.html.onended = handler;
             return this;
         }
     }, {
-        key: "ondurationchange",
-        value: function ondurationchange(handler) {
+        key: "onDurationChange",
+        value: function onDurationChange(handler) {
             this.html.ondurationchange = handler;
             return this;
         }
     }, {
-        key: "oncanplay",
-        value: function oncanplay(handler) {
+        key: "onCanPlay",
+        value: function onCanPlay(handler) {
             this.html.oncanplay = handler;
             return this;
         }
     }, {
-        key: "oncanplaythrough",
-        value: function oncanplaythrough(handler) {
+        key: "onCanPlayThrough",
+        value: function onCanPlayThrough(handler) {
             this.html.oncanplaythrough = handler;
             return this;
         }
     }, {
-        key: "onstalled",
-        value: function onstalled(handler) {
+        key: "onStalled",
+        value: function onStalled(handler) {
             this.html.onstalled = handler;
             return this;
         }
     }, {
-        key: "onsuspend",
-        value: function onsuspend(handler) {
+        key: "onSuspend",
+        value: function onSuspend(handler) {
             this.html.onsuspend = handler;
             return this;
         }
@@ -1245,44 +1675,44 @@ var Elem = function () {
         //Browser events
 
     }, {
-        key: "onpopstate",
-        value: function onpopstate(handler) {
+        key: "onPopState",
+        value: function onPopState(handler) {
             this.html.onpopstate = handler;
             return this;
         }
     }, {
-        key: "onstorage",
-        value: function onstorage(handler) {
+        key: "onStorage",
+        value: function onStorage(handler) {
             this.html.onstorage = handler;
             return this;
         }
     }, {
-        key: "onhashchange",
-        value: function onhashchange(handler) {
+        key: "onHashChange",
+        value: function onHashChange(handler) {
             this.html.onhashchange = handler;
             return this;
         }
     }, {
-        key: "onafterprint",
-        value: function onafterprint(handler) {
+        key: "onAfterPrint",
+        value: function onAfterPrint(handler) {
             this.html.onafterprint = handler;
             return this;
         }
     }, {
-        key: "onbeforeprint",
-        value: function onbeforeprint(handler) {
+        key: "onBeforePrint",
+        value: function onBeforePrint(handler) {
             this.html.onbeforeprint = handler;
             return this;
         }
     }, {
-        key: "onpagehide",
-        value: function onpagehide(handler) {
+        key: "onPageHide",
+        value: function onPageHide(handler) {
             this.html.onpagehide = handler;
             return this;
         }
     }, {
-        key: "onpageshow",
-        value: function onpageshow(handler) {
+        key: "onPageShow",
+        value: function onPageShow(handler) {
             this.html.onpageshow = handler;
             return this;
         }
@@ -1311,13 +1741,20 @@ var Elem = function () {
         value: function wrap(html) {
             if (!Util.isEmpty(html)) return new Elem(html);else throw "Could not wrap a html element - html: " + html;
         }
+
+        /**
+         * Takes an array of HTMLDocument elements and wraps them inside an Elem instance.
+         * Returns an array of the Elem objects if the given array contains more than one htmlDoc element otherwise a single Elem instance is returned.
+         * @param {Array} htmlDoc 
+         */
+
     }, {
         key: "wrapElems",
-        value: function wrapElems(elems) {
+        value: function wrapElems(htmlDoc) {
             var eArr = [];
-            for (var i in elems) {
-                if (elems.hasOwnProperty(i)) {
-                    eArr.push(Elem.wrap(elems[i]));
+            for (var i in htmlDoc) {
+                if (htmlDoc.hasOwnProperty(i)) {
+                    eArr.push(Elem.wrap(htmlDoc[i]));
                 }
             }
             return eArr.length === 1 ? eArr[0] : eArr;
@@ -1432,6 +1869,11 @@ var Tree = function () {
     return Tree;
 }();
 
+/**
+ * No methods, only Key mappings for keyevent.
+ */
+
+
 var Key = function Key() {
     _classCallCheck(this, Key);
 };
@@ -1440,28 +1882,85 @@ Key.ENTER = "Enter";
 Key.ESC = "Escape";
 Key.TAB = "Tab";
 Key.F1 = "F1";
+Key.F2 = "F2";
+Key.F3 = "F3";
+Key.F4 = "F4";
+Key.F5 = "F5";
+Key.F6 = "F6";
+Key.F7 = "F7";
+Key.F8 = "F8";
+Key.F9 = "F9";
+Key.F10 = "F10";
+Key.F11 = "F11";
+Key.F12 = "F12";
 Key.A = "a";
-Key.CAPSLOCK = "CapsLock";
-Key.NUMLOCK = "NumLock";
-Key.SCROLLLOCK = "ScrollLock";
+Key.B = "b";
+Key.C = "c";
+Key.D = "d";
+Key.E = "e";
+Key.F = "f";
+Key.G = "g";
+Key.H = "h";
+Key.I = "i";
+Key.J = "j";
+Key.L = "l";
+Key.M = "m";
+Key.N = "n";
+Key.O = "o";
+Key.P = "p";
+Key.Q = "q";
+Key.R = "r";
+Key.S = "s";
+Key.T = "t";
+Key.U = "u";
+Key.V = "v";
+Key.W = "w";
+Key.X = "x";
+Key.Y = "y";
+Key.Z = "z";
+// Key.SWEDISH_O = "å";
+// Key.A_WITH_2_DOTS = "ä";
+// Key.O_WITH_2_DOTS = "ö";
+Key.CAPS_LOCK = "CapsLock";
+Key.NUM_LOCK = "NumLock";
+Key.SCROLL_LOCK = "ScrollLock";
 Key.PAUSE = "Pause";
-Key.PRINTSCREEN = "PrintScreen";
-Key.PAGEUP = "PageUp";
-Key.PAGEDOWN = "PageDown";
+Key.PRINT_SCREEN = "PrintScreen";
+Key.PAGE_UP = "PageUp";
+Key.PAGE_DOWN = "PageDown";
 Key.END = "End";
 Key.HOME = "Home";
 Key.DELETE = "Delete";
 Key.INSERT = "Insert";
 Key.ALT = "Alt";
 Key.CTRL = "Control";
-Key.CONTEXTMENU = "ContextMenu";
+Key.CONTEXT_MENU = "ContextMenu";
 Key.OS = "OS"; // META
 Key.ALTGR = "AltGraph";
 Key.SHIFT = "Shift";
 Key.BACKSPACE = "Backspace";
-Key.HALF = "½";
+// Key.HALF = "½";
 Key.SECTION = "§";
 Key.ONE = "1";
+Key.TWO = "2";
+Key.THREE = "3";
+Key.FOUR = "4";
+Key.FIVE = "5";
+Key.SIX = "6";
+Key.SEVEN = "7";
+Key.EIGHT = "8";
+Key.NINE = "9";
+Key.ZERO = "0";
+Key.PLUS = "+";
+Key.MINUS = "-";
+Key.STAR = "*";
+Key.SLASH = "/";
+Key.ARROW_UP = "ArrowUp";
+Key.ARROW_RIGHT = "ArrowRight";
+Key.ARROW_DOWN = "ArrowDown";
+Key.ARROW_LEFT = "ArrowLeft";
+Key.COMMA = ",";
+Key.DOT = ".";
 
 var Cookie = function () {
     /**
@@ -1474,6 +1973,20 @@ var Cookie = function () {
 
         _createClass(Cookies, null, [{
             key: "get",
+
+            /**
+             * Get a cookie by name.
+             * Returns the cookie object 
+             * {
+             *  name: "name",
+             *  value: "value",
+             *  expiresDate: "expiresDate e.g. Date.toUTCString()",
+             *  cookiePath: "cookiePath absolute dir",
+             *  cookieDomain: "cookieDomain e.g example.com",
+             *  setSecureBoolean: true|false
+             * }
+             * @param {String} name 
+             */
             value: function get(name) {
                 if (navigator.cookieEnabled) {
                     var retCookie = null;
@@ -1494,7 +2007,7 @@ var Cookie = function () {
                 }
             }
             /**
-             * Receives cookie object:
+             * Receives cookie parameters.
              * {
              *  name: "name",
              *  value: "value",
@@ -1512,6 +2025,10 @@ var Cookie = function () {
                     document.cookie = Cookie.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
                 }
             }
+            /**
+             * Remove a cookie by name.
+             */
+
         }, {
             key: "remove",
             value: function remove(name) {
@@ -1574,6 +2091,10 @@ var Cookie = function () {
     return Cookies;
 }();
 
+/**
+ * Session interface.
+ */
+
 var Session = function () {
     function Session() {
         _classCallCheck(this, Session);
@@ -1594,6 +2115,10 @@ var Session = function () {
         value: function remove(key) {
             sessionStorage.removeItem(key);
         }
+        /**
+         * Clears the Session.
+         */
+
     }, {
         key: "clear",
         value: function clear() {
@@ -1603,6 +2128,11 @@ var Session = function () {
 
     return Session;
 }();
+
+/**
+ * HTML local storage interface.
+ */
+
 
 var Storage = function () {
     function Storage() {
@@ -1624,6 +2154,10 @@ var Storage = function () {
         value: function remove(key) {
             localStorage.removeItem(key);
         }
+        /**
+         * Clears the storage.
+         */
+
     }, {
         key: "clear",
         value: function clear() {
