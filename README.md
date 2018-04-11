@@ -11,7 +11,7 @@ folder or simply use a github online url as follows.
 
 Documentation
 -----
- - http://jlcv.sytes.net/files/index.html(http://jlcv.sytes.net/files/index.html)
+ - [http://jlcv.sytes.net/files/index.html](http://jlcv.sytes.net/files/index.html)
 
 Download
 -----
