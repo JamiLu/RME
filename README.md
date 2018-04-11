@@ -9,7 +9,9 @@ folder or simply use a github online url as follows.
 
 `<script src="https://github.com/JamiLu/RME/releases/download/v0.5.0-beta/rme.es5.min.js"></script>`
 
-I am currenlty working on comprehensive documentation, hopefully coming soon.
+Documentation
+-----
+ - http://jlcv.sytes.net/files/index.html(http://jlcv.sytes.net/files/index.html)
 
 Download
 -----
