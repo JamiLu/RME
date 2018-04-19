@@ -7,15 +7,17 @@ JavaScript.
 The RME does not require any installation nor any other libraries. Just download a script file and place it to a project
 folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v0.5.0-beta/rme.es5.min.js"></script>`
 
-I am currenlty working on comprehensive documentation, hopefully coming soon.
+Documentation
+-----
+ - [http://jlcv.sytes.net/files/index.html](http://jlcv.sytes.net/files/index.html)
 
 Download
 -----
-[https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.js](https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.js)
-[https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.js)
-[https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v0.0.1-alpha/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v0.5.0-beta/rme.js](https://github.com/JamiLu/RME/releases/download/v0.5.0-beta/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v0.5.0-beta/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v0.5.0-beta/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v0.5.0-beta/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v0.5.0-beta/rme.es5.min.js)
 
 Basics
 -----
@@ -46,7 +48,7 @@ console.log(RME.component("myFirstComponent", {x: 2, y: 5}));
 ```
 
 ```javascript
-//this is how to add script files on the go.
+//this is how to add script files on the go. This method should be invoked before run() or ready()
 RME.script("myComponentLib.js");
 ```
 
@@ -71,7 +73,7 @@ RME.ready(function() {
     new Elem("li").setText("JavaScript rules"),
     new Elem("li").setText("RME is the best"),
     new Elem("li").setText("You really should try it out")
-  ]
+  ];
 
   //Rendering a list inside the Body is not necessary to be done inside the component but it explains how these components might be very handy. (as they can be anything and have any functionality)
   Tree.getBody().append(RME.component("lister", {list: abc}));
@@ -92,10 +94,6 @@ RME.ready(function() {
   var state = {
     show: true
   }
-  var table = new Table();
-  Tree.getBody().append(new Elem("div").setId("myDiv").render(state.show ? table : []));
-  
-  Tree.getBody().append(RME.component("showB", {clickFuntion: toggle}));
   
   function toggle() {
       state.show = !state.show;
@@ -107,7 +105,7 @@ RME.ready(function() {
        var borders = {border: "1px solid #000000", borderCollapse: "collapse"};
        return new Elem("table").setStyles(borders).render(
            new Row("I love this Script", "Feel the same burn?"),
-           new Row("The inventer", "Jami Lu"));
+           new Row("The inventor", "Jami Lu"));
 
         
         function Row(col1Text, col2Text) {
@@ -116,12 +114,16 @@ RME.ready(function() {
             .append(new Elem("td").setStyles(borders).setText(col2Text));
         }
     }
+    
+    var table = new Table();
+    Tree.getBody().append(new Elem("div").setId("myDiv").render(state.show ? table : []));
+    Tree.getBody().append(RME.component("showB", {clickFuntion: toggle}));
 });
 
 RME.component(function() {
     return {
         showB : function() {
-            return new Elem("button").setText("show&hide").onclick(this.clickFuntion);
+            return new Elem("button").setText("show&hide").onClick(this.clickFuntion);
         }
     }
 });
@@ -154,8 +156,8 @@ RME.component(function() {
     return {
         form: function() {
             return new Elem("div")
-                .append(new Elem("div").append(new Elem("input").setName("fname").setType("text").setPlaceholder("First name").oninput(this.input)))
-                .append(new Elem("div").append(new Elem("input").setName("lname").setType("text").setPlaceholder("Last name").oninput(this.input)));
+                .append(new Elem("div").append(new Elem("input").setName("fname").setType("text").setPlaceholder("First name").onInput(this.input)))
+                .append(new Elem("div").append(new Elem("input").setName("lname").setType("text").setPlaceholder("Last name").onInput(this.input)));
         }
     }
 });
@@ -173,9 +175,7 @@ Classes & Functions
   - storage(key, val) **Store data in RME instance**
   - storage(key) **Read data from RME instance storage**
   - onrmestoragechange(rmeState) **If defined, will be invoked every time when something was saved into the storage. Changed state will be given as parameter to the callback**
-  - script(source, id, type, text, defer, crossOrigin, charset, async) **Recommended way to add a script file on the go _source is required other parameters are optional_**
-  - config().addScript(Elem) **Add a Script element to the head on the fly**
-  - config().removeScript(id|source) **Finds a script according to ID or source property**
+  - script(source, id, type, text, defer, crossOrigin, charset, async) **Add a script file on the go _source is required other parameters are optional_**
 * Http
   - get(url).then(success).catch(error)
   - post()...
