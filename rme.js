@@ -110,11 +110,11 @@ let RME = (function() {
          * @param {String} source URL or file name. *Requied
          * @param {String} id 
          * @param {String} type 
-         * @param {String} text 
-         * @param {boolean} defer 
+         * @param {String} text Content of the script element if any.
+         * @param {boolean} defer If true script is executed when page has finished parsing.
          * @param {*} crossOrigin 
          * @param {String} charset 
-         * @param {boolean} async 
+         * @param {boolean} async If true script is executed asynchronously when available.
          */
         static script(source, id, type, text, defer, crossOrigin, charset, async) {
             if(!Util.isEmpty(source)) {
@@ -152,7 +152,7 @@ let RME = (function() {
             return {
                 addScript: function(elem){
                     var scripts = Tree.getScripts();
-                    var lastScript = Elem.wrap(scripts[scripts.length -1]);
+                    var lastScript = scripts[scripts.length -1];
                     lastScript.after(elem);
                 },
                 removeScript: function(sourceOrId) {
@@ -162,9 +162,9 @@ let RME = (function() {
                         var scripts = Tree.getScripts();
                         for(var s in scripts) {
                             if(scripts.hasOwnProperty(s)) {
-                                var src = scripts[s].src !== null ? scripts[s].src : "";
+                                var src = !Util.isEmpty(scripts[s].getSource()) ? scripts[s].getSource() : "";
                                 if(src.search(sourceOrId) > -1 && src.search(sourceOrId) === src.length - sourceOrId.length) {
-                                    Tree.getHead().remove(Elem.wrap(scripts[s]));
+                                    Tree.getHead().remove(scripts[s]);
                                     break;
                                 }
                             }
@@ -233,26 +233,88 @@ let Http = (function() {
             return this.self;
         }
 
+        /**
+         * Do GET XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+         * @param {string} url *Required
+         * @param {string} requestContentType 
+         */
         static get(url, requestContentType) {
             return new Http({method: "GET", url: url, data: undefined, contentType: requestContentType}).instance();
         }
 
+        /**
+         * Do POST XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+         * @param {string} url *Required
+         * @param {*} data 
+         * @param {string} requestContentType 
+         */
         static post(url, data, requestContentType) {
             return new Http({method: "POST", url: url, data: data, contentType: requestContentType}).instance();
         }
 
+        /**
+         * Do PUT XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+         * @param {string} url *Required
+         * @param {*} data 
+         * @param {string} requestContentType 
+         */
         static put(url, data, requestContentType) {
             return new Http({method: "PUT", url: url, data: data, contentType: requestContentType}).instance();
         }
 
+        /**
+         * Do DELETE XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+         * @param {string} url *Required
+         * @param {*} requestContentType 
+         */
         static delete(url, requestContentType) {
             return new Http({method: "DELETE", url: url, data: undefined, contentType: requestContentType}).instance();
         }
 
+        /**
+         * Does any XMLHttpRequest that is defined by a given config object. Promise will be used if available.
+         * 
+         * Config object can contain parameters:
+         * {
+         *    method: method,
+         *    url: url,
+         *    data: data,
+         *    contentType: contentType,
+         *    onProgress: function(event),
+         *    headers: headersObject{"header": "value"},
+         *    useFetch: true|false **determines that is fetch used or not.
+         *  }
+         * @param {object} config 
+         */
         static do(config) {
             return new Http(config).instance();
         }
 
+        /**
+         * Uses Fetch interface to make a request to server.
+         * 
+         * Before using fetch you should also be familiar on how to use fetch since usage of this function
+         * will be quite similar to fetch except predefined candy that is added.
+         *
+         * The fetch interface adds some predefined candy over the JavaScript Fetch interface.
+         * get|post|put|delete methods will automatically use JSON as a Content-Type
+         * and request methods will be predefined also.
+         *
+         * FOR Fetch
+         * A Config object supports following:
+         *  {
+         *      url: url,
+         *      method: method,
+         *      contentType: contentType,
+         *      init: init
+         *  }
+         *
+         *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
+         *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+         *
+         *  If a total custom request is desired you should use a method do({}) e.g.
+         *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
+         */
         static fetch() {
             return new Http({useFetch: true}).instance();
         }
@@ -295,7 +357,7 @@ let Http = (function() {
         }
         catch(errorHandler) {
             this.xhr.onerror = () => {
-                this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
+                this.xhr.responseJSON = tryParseJSON(this.xhr.responrenderseText);
                 if(errorHandler)
                     errorHandler(this.xhr);
             }
@@ -360,33 +422,67 @@ let Http = (function() {
      */
     class FetchRequest {
         constructor() {}
+        /**
+         * Does Fetch GET request. Content-Type JSON is used.
+         * @param {stirng} url *Required
+         * @param {*} init 
+         */
         get(url, init) {
             if(!init) init = {};
             init.method = "GET";
             return this.do({url: url, init: init, contentType: Http.JSON});
         }
+        /**
+         * Does Fetch POST request. Content-Type JSON is used.
+         * @param {string} url *Required
+         * @param {*} body 
+         * @param {*} init 
+         */
         post(url, body, init) {
             if(!init) init = {};
             init.method = "POST";
             init.body = body;
             return this.do({url: url, init: init, contentType: Http.JSON});
         }
+        /**
+         * Does Fetch PUT request. Content-Type JSON is used.
+         * @param {string} url *Required
+         * @param {*} body 
+         * @param {*} init 
+         */
         put(url, body, init) {
             if(!init) init = {};
             init.method = "PUT";
             init.body = body;
             return this.do({url: url, init: init, contentType: Http.JSON});
         }
+        /**
+         * Does Fetch DELETE request. Content-Type JSON is used.
+         * @param {string} url 
+         * @param {*} init 
+         */
         delete(url, init) {
             if(!init) init = {};
             init.method = "DELETE";
             return this.do({url: url,  init: init, contentType: Http.JSON});
         }
+        /**
+         * Does any Fetch request a given config object defines.
+         * 
+         * Config object can contain parameters:
+         * {
+         *      url: url,
+         *      method: method,
+         *      contentType: contentType,
+         *      init: init
+         *  }
+         * @param {object} config 
+         */
         do(config) {
             if(!config.init) config.init = {};
             if(config.contentType) {
                 if(!config.init.headers)
-                    config.init.headers = new Headers({})
+                    config.init.headers = new Headers({});
 
                 config.init.headers.set("Content-Type", config.contentType);
             }
@@ -406,12 +502,11 @@ let Http = (function() {
 
     function isResponseOK(status) {
         var okResponses = [200, 201, 202, 203, 204, 205, 206, 207, 208, 226];
-        for(var i in okResponses) {
-            if(okResponses.hasOwnProperty(i)) {
-                var code = okResponses[i];
-                if(code === status)
-                    return true;
-            }
+        var i = 0;
+        while(i < okResponses.length) {
+            if(okResponses[i] === status)
+                return true;
+            i++;
         }
         return false;
     }
@@ -430,1217 +525,2097 @@ let Http = (function() {
 }());
 
 
-
-
-
-
-
-class Elem {
-    constructor(type) {
-        if(Util.isString(type)) {
-            this.html = document.createElement(type);
-        } else if(type.nodeType !== undefined && type.ownerDocument !== undefined && type.nodeType >= 1 && type.ownerDocument instanceof HTMLDocument) {
-            this.html = type;
-        } else {
-            throw "type must be a string or a html dom object";
-        }
-    }
-
+let Elem = (function() {
     /**
-     * Set text of this element.
-     * Returns Elem instance.
-     * @param {String} text 
+     * Elem class is a wrapper class for HTMLDocument element JavaScript object. This object constructor 
+     * takes one parameter that can be either type of a string or a HTMLDocument. If the parameter is type of the string
+     * then a new HTMLDocument of that type will be created otherwise if the type is the HTMLDocument then 
+     * that HTMLDocument will be wrapped with this Elem instance and new element wont be created. All setter methods and event listener
+     * methods will return an instance of this class which enables chaining of methods that makes code even more compact. This class also
+     * has many shortcut helper methods defined. 
+     * 
+     * The most notabled method of this class is probably render method. This method is very special method that renders other Elem objects. 
+     * The main principle is that only an Elem object may render other child Elem objects. The render method renders objects dynamically.
      */
-    setText(text) {
-        this.html.appendChild(document.createTextNode(text));
-        return this;
-    }
-
-    /**
-     * Get text/content of this element.
-     */
-    getContent() {
-        return this.html.innerHTML;
-    }
-
-    /**
-     * Set content that can be text or html.
-     * Returns Elem instance.
-     * @param {String} html 
-     */
-    setContent(html) {
-        this.html.innerHTML = html;
-        return this;
-    }
-
-    /**
-     * Set value of this element.
-     * Returns Elem instance.
-     * @param {String} value 
-     */
-    setValue(value) {
-        this.html.value = value;
-        return this;
-    }
-
-    /**
-     * Get value of this element.
-     */
-    getValue() {
-        return this.html.value;
-    }
-
-    /**
-     * Set id of this element.
-     * Returns Elem instance.
-     * @param {String} id 
-     */
-    setId(id) {
-        this.html.id = id;
-        return this;
-    }
-
-    /**
-     * Get id of this element.
-     */
-    getId() {
-        return this.html.id;
-    }
-
-    /**
-     * Append an element inside this element.
-     * Returns Elem instance.
-     * @param {Elem} elem 
-     */
-    append(elem) {
-        this.html.appendChild(elem.dom());
-        return this;
-    }
-
-    /**
-     * Remove an element from this element.
-     * Returns Elem isntance.
-     * @param {Elem} elem 
-     */
-    remove(elem) {
-        this.html.removeChild(elem.dom());
-        return this;
-    }
-
-    /**
-     * Replace this element with a new element.
-     * Returns Elem instance.
-     * @param {Elem} newElem 
-     */
-    replace(newElem) {
-        this.html.parentElement.replaceChild(newElem.dom(), this.html);
-        return this;
-    }
-
-    /**
-     * Insert a new element before this element.
-     * Returns Elem instance.
-     * @param {Elem} newElem 
-     */
-    before(newElem) {
-        this.html.parentElement.insertBefore(newElem.dom(), this.html);
-        return this;
-    }
-
-    /**
-     * Insert a new elem after this element.
-     * Returns Elem isntance.
-     * @param {Elem} newElem 
-     */
-    after(newElem) {
-        if(this.html.nextElementSibling !== null)
-            this.html.parentElement.insertBefore(newElem.dom(), this.html.nextElementSibling);
-        else
-            this.html.parentElement.appendChild(newElem.dom());
-        return this;
-    }
-
-    /**
-     * Renders an Array of Elements or a comma separated list of element arrays or a comma separated list of elements.
-     * If given an empty array or not a parameter at all then this element will be rendered as empty.
-     * Returns Elem instance.
-     * @param {Elem} elems 
-     */
-    render(...elems) {
-        var newState = [];
-        for(var e in elems) {
-            if(elems.hasOwnProperty(e)) {
-                if(Util.isArray(elems[e]))
-                    newState = newState.concat(elems[e]);
-                else
-                    newState.push(elems[e]);
+    class Elem {
+        constructor(type) {
+            if(Util.isString(type)) {
+                this.html = document.createElement(type);
+            } else if(type.nodeType !== undefined && type.ownerDocument !== undefined && type.nodeType >= 1 && type.ownerDocument instanceof HTMLDocument) {
+                this.html = type;
+            } else {
+                throw "type must be a string or a HTMLDocument";
             }
         }
-        while(this.html.firstChild) {
-            this.html.removeChild(this.html.firstChild);
+
+        /**
+         * Set text of this element.
+         * 
+         * @param {String} text 
+         * @returns Elem instance.
+         */
+        setText(text) {
+            if(this.html.hasChildNodes()) {
+                this.html.replaceChild(document.createTextNode(text), this.html.childNodes[0]);
+            } else {
+                this.html.appendChild(document.createTextNode(text));
+            }
+            return this;
         }
-        for(var e in newState) {
-            if(newState.hasOwnProperty(e) && !Util.isEmpty(newState[e]))
-                this.append(newState[e]);
+
+        /**
+         * Get text of this element.
+         * @returns text of this element.
+         */
+        getText() {
+            return this.html.textContent;
         }
-        return this;
-    }
 
-    /**
-     * Get an array of children of this element.
-     */
-    getChildren() {
-        return this.html.children;
-    }
-
-    /**
-     * Set a title of this element.
-     * Returns Elem instance.
-     * @param {String} text 
-     */
-    setTitle(text) {
-        this.html.title = text;
-        return this;
-    }
-
-    /**
-     * Get a title of this element.
-     */
-    getTitle() {
-        return this.html.title;
-    }
-
-    /**
-     * Set a tab index of this element.
-     * Returns Elem instance.
-     * @param {Number} idx 
-     */
-    setTabIndex(idx) {
-        this.html.tabIndex = idx;
-        return this;
-    }
-
-    /**
-     * Get a tab index of this element.
-     */
-    getTabIndex() {
-        return this.html.tabIndex;
-    }
-
-    /**
-     * Get a tag name of this element.
-     */
-    getTagName() {
-        return this.html.tagName;
-    }
-
-    /**
-     * Set an attribute of this element.
-     * Returns Elem isntance.
-     * @param {String} attr Attribute
-     * @param {String} value Value
-     */
-    setAttribute(attr, value) {
-        var attribute = document.createAttribute(attr);
-        attribute.value = value;
-        this.html.setAttributeNode(attribute);
-        return this;
-    }
-
-    /**
-     * Get an attribute of this element.
-     * Returns an attribute object with name and value properties.
-     * @param {String} attr 
-     */
-    getAttribute(attr) {
-        return this.html.getAttributeNode(attr);
-    }
-
-    /**
-     * Removes an attribute of this element.
-     * Returns the removed attribute object with value and name parameters.
-     * @param {String} attr 
-     */
-    removeAttribute(attr) {
-        return this.html.removeAttributeNode(this.getAttribute(attr));
-    }
-
-    /**
-     * Set a name of this element.
-     * Returns Elem instance.
-     * @param {String} name 
-     */
-    setName(name) {
-        this.setAttribute("name", name);
-        return this;
-    }
-
-    /**
-     * Get a name of this element.
-     * Returns name string.
-     */
-    getName() {
-        return this.getAttribute("name").value;
-    }
-
-
-    /**
-     * Set a type of this element.
-     * Returns Elem instance.
-     * @param {String} type 
-     */
-    setType(type) {
-        this.setAttribute("type", type);
-        return this;
-    }
-
-    /**
-     * Get a type of this element.
-     * Returns type string.
-     */
-    getType() {
-        return this.getAttribute("type").value;
-    }
-
-    /**
-     * Set a source of this element.
-     * Returns Elem instance.
-     * @param {String} source 
-     */
-    setSource(source) {
-        this.setAttribute("src", source);
-        return this;
-    }
-
-    /**
-     * Get a source of this element.
-     * Returns source string.
-     */
-    getSource() {
-        return this.getAttribute("src").value;
-    }
-
-    /**
-     * Set a href of this element.
-     * Returns Elem instance.
-     * @param {String} href 
-     */
-    setHref(href) {
-        this.setAttribute("href", href);
-        return this;
-    }
-
-    /**
-     * Get a href of this element.
-     */
-    getHref() {
-        return this.getAttribute("href").value;
-    }
-
-    /**
-     * Set a placeholder of this element.
-     * Returns Elem instance.
-     * @param {String} placeholder 
-     */
-    setPlaceholder(placeholder) {
-        this.setAttribute("placeholder", placeholder);
-        return this;
-    }
-
-    /**
-     * Get a placeholder of this element.
-     */
-    getPlaceholder() {
-        return this.getAttribute("placeholder").value;
-    }
-
-    /**
-     * Sets size of this element.
-     * Return Elem instance.
-     * @param {*} size 
-     */
-    setSize(size) {
-        this.setAttribute("size", size);
-        return this;
-    }
-
-    /**
-     * Get size of this element.
-     */
-    getSize() {
-        return this.getAttribute("size").value;
-    }
-
-    /**
-     * Set this element content editable.
-     * Return Elem instance.
-     * @param {boolean} boolean 
-     */
-    setEditable(boolean) {
-        this.setAttribute("contenteditable", boolean);
-        return this;
-    }
-
-    /**
-     * Get this element content editable.
-     */
-    getEditable() {
-        return this.getAttribute("contenteditable").value;
-    }
-
-    /**
-     * Set this element disabled.
-     * Return Elem instance.
-     * @param {boolean} boolean 
-     */
-    setDisabled(boolean) {
-        this.html.disabled = boolean;
-        return this;
-    }
-
-    /**
-     * Get this element disabled state.
-     */
-    getDisabled() {
-        return this.html.disabled;
-    }
-
-    /**
-     * Set this element checked.
-     * Return Elem instance.
-     * @param {boolean} boolean 
-     */
-    setChecked(boolean) {
-        this.html.checked = boolean;
-        return this;
-    }
-
-    /**
-     * Get this element checked state.
-     */
-    getChecked() {
-        return this.html.checked;
-    }
-
-    /**
-     * Add classes to this element.
-     * Returns Elem instance.
-     * @param {String} classes 
-     */
-    addClasses(classes) {
-        var toAdd = classes.trim().split(" ");
-        var origClass = this.getClasses();
-        for(var i=0; i<toAdd.length; i++) {
-            var clazz = toAdd[i];
-            if(origClass.search(clazz) === -1)
-                origClass += " "+clazz;
+        /**
+         * Get text/content of this element.
+         * 
+         * @returns text or content of this element.
+         */
+        getContent() {
+            return this.html.innerHTML;
         }
-        this.html.className = origClass.trim();
-        return this;
-    }
 
-    /**
-     * Remove classes from this element.
-     * Returns Elem instance.
-     * @param {String} classes 
-     */
-    removeClasses(classes) {
-        var toRm = classes.trim().split(" ");
-        var origClass = this.getClasses();
-        for(var i=0; i<toRm.length; i++) {
-            var clazz = toRm[i];
-            if(origClass.search(clazz) > -1)
-                origClass = origClass.replace(clazz, "").trim();
+        /**
+         * Set content that can be text or html.
+         * 
+         * @param {String} html 
+         * @returns Elem instance.
+         */
+        setContent(html) {
+            this.html.innerHTML = html;
+            return this;
         }
-        this.html.className = origClass.trim();
-        return this;
-    }
 
-    /**
-     * Toggle classes of this element.
-     * Returns Elem instance.
-     */
-    toggleClasses(classes) {
-        var cArr = classes.split(" ");
-        var origClass = this.getClasses();
-        var toAdd = "";
-        var toRm = "";
-        for(var i=0; i<cArr.length; i++) {
-            if(origClass.search(cArr[i]) > -1)
-                toRm += " "+cArr[i];
+        /**
+         * Set value of this element.
+         * 
+         * @param {String} value 
+         * @returns Elem instance.
+         */
+        setValue(value) {
+            this.html.value = value;
+            return this;
+        }
+
+        /**
+         * Get value of this element.
+         * 
+         * @returns value of this element.
+         */
+        getValue() {
+            return this.html.value;
+        }
+
+        /**
+         * Set id of this element.
+         * 
+         * @param {String} id 
+         * @returns Elem instance.
+         */
+        setId(id) {
+            this.html.id = id;
+            return this;
+        }
+
+        /**
+         * Get id of this element.
+         * 
+         * @returns id of this element.
+         */
+        getId() {
+            return this.html.id;
+        }
+
+        /**
+         * Append an element inside this element.
+         * 
+         * @param {Elem} elem 
+         * @returns Elem instance.
+         */
+        append(elem) {
+            this.html.appendChild(elem.dom());
+            return this;
+        }
+
+        /**
+         * Remove an element from this element.
+         * 
+         * @param {Elem} elem 
+         * @returns Elem isntance.
+         */
+        remove(elem) {
+            this.html.removeChild(elem.dom());
+            return this;
+        }
+
+        /**
+         * Replace this element with a new element.
+         * 
+         * @param {Elem} newElem 
+         * @returns Elem instance.
+         */
+        replace(newElem) {
+            this.html.parentElement.replaceChild(newElem.dom(), this.html);
+            return this;
+        }
+
+        /**
+         * Insert a new element before this element.
+         * 
+         * @param {Elem} newElem 
+         * @returns Elem instance.
+         */
+        before(newElem) {
+            this.html.parentElement.insertBefore(newElem.dom(), this.html);
+            return this;
+        }
+
+        /**
+         * Insert a new elem after this element.
+         * 
+         * @param {Elem} newElem 
+         * @returns Elem isntance.
+         */
+        after(newElem) {
+            if(this.html.nextElementSibling !== null)
+                this.html.parentElement.insertBefore(newElem.dom(), this.html.nextElementSibling);
             else
-                toAdd += " "+cArr[i];
+                this.html.parentElement.appendChild(newElem.dom());
+            return this;
         }
-        this.addClasses(toAdd.trim());
-        this.removeClasses(toRm.trim());
-        return this;
-    }
 
-    /**
-     * Get classes string of this element.
-     */
-    getClasses() {
-        return this.html.className;
-    }
-
-    /**
-     * Set styles of this element in the map e.g. {height: "10px",...}
-     * Returns Elem instance.
-     * @param {Object} styleMap 
-     */
-    setStyles(styleMap) {
-        for(var style in styleMap) {
-            if(styleMap.hasOwnProperty(style))
-                this.html.style[style] = styleMap[style];
+        /**
+         * @returns String presentation of this component.
+         */
+        toString() {
+            return "<"+this.getTagName().toLowerCase()+">"+this.getContent();
         }
-        return this;
+
+        /**
+         * Method is able to render child elements dynamically as illustrated below:
+         * Renders: [Elem, Elem, Elem.....] | Elem, Elem, Elem | [Elem, Elem], Elem.
+         * 
+         * Empty arrays, null, or undefined values will not be rendered.
+         * If this method is invoked empty (without parameters), with empty array, undefined or null value
+         * then this element will render itself empty. As this method renders given elements dynamically and
+         * renderable content may change by user written application logic.
+         * 
+         * @param {Elem} elems 
+         * @returns Elem instance.
+         */
+        render(...elems) {
+            var newState = [];
+            var i = 0;
+            var max = elems.length;
+            while(i < max) {
+                if(Util.isArray(elems[i]))
+                    newState = newState.concat(elems[i]);
+                else
+                    newState.push(elems[i]);
+                i++;
+            }
+            if(!RenderHelper.isNewStateEqualToPrevState(newState)) {
+                while(this.html.firstChild) {
+                    this.html.removeChild(this.html.firstChild);
+                }
+                i = 0;
+                max = newState.length;
+                while(i < max) {
+                    if(!Util.isEmpty(newState[i]))
+                        this.append(newState[i]);
+                    i++;
+                }
+            }
+            RenderHelper.setPrevState(newState);
+            return this;
+        }
+
+        /**
+         * Get an array of children of this element.
+         * 
+         * @returns A HTMLDocument object array of child elements.
+         */
+        getChildren() {
+            return this.html.children;
+        }
+
+        /**
+         * Set a title of this element.
+         * 
+         * @param {String} text 
+         * @returns Elem instance.
+         */
+        setTitle(text) {
+            this.html.title = text;
+            return this;
+        }
+
+        /**
+         * Get a title of this element.
+         * 
+         * @returns The title of this element.
+         */
+        getTitle() {
+            return this.html.title;
+        }
+
+        /**
+         * Set a tab index of this element.
+         * 
+         * @param {Number} idx 
+         * @returns Elem instance.
+         */
+        setTabIndex(idx) {
+            this.html.tabIndex = idx;
+            return this;
+        }
+
+        /**
+         * Get a tab index of this element.
+         * 
+         * @returns A tab index value of this element.
+         */
+        getTabIndex() {
+            return this.html.tabIndex;
+        }
+
+        /**
+         * Get a tag name of this element.
+         * 
+         * @returns A tag name of this element.
+         */
+        getTagName() {
+            return this.html.tagName;
+        }
+
+        /**
+         * Set an attribute of this element.
+         * 
+         * @param {String} attr Attribute
+         * @param {String} value Value
+         * @returns Elem isntance.
+         */
+        setAttribute(attr, value) {
+            var attribute = document.createAttribute(attr);
+            attribute.value = value;
+            this.html.setAttributeNode(attribute);
+            return this;
+        }
+
+        /**
+         * Get an attribute of this element.
+         * 
+         * @param {String} attr 
+         * @returns an attribute object with name and value properties.
+         */
+        getAttribute(attr) {
+            return this.html.getAttributeNode(attr);
+        }
+
+        /**
+         * Removes an attribute of this element.
+         * 
+         * @param {String} attr 
+         * @returns the removed attribute object with value and name parameters.
+         */
+        removeAttribute(attr) {
+            return this.html.removeAttributeNode(this.getAttribute(attr));
+        }
+
+        /**
+         * Set a name of this element.
+         * 
+         * @param {String} name 
+         * @returns Elem instance.
+         */
+        setName(name) {
+            this.setAttribute("name", name);
+            return this;
+        }
+
+        /**
+         * Get a name of this element.
+         * 
+         * @returns name string of this element.
+         */
+        getName() {
+            return this.getAttribute("name").value;
+        }
+
+
+        /**
+         * Set a type of this element.
+         * 
+         * @param {String} type 
+         * @returns Elem instance.
+         */
+        setType(type) {
+            this.setAttribute("type", type);
+            return this;
+        }
+
+        /**
+         * Get a type of this element.
+         * 
+         * @returns type string of this element.
+         */
+        getType() {
+            return this.getAttribute("type").value;
+        }
+
+        /**
+         * Set a source of this element.
+         * 
+         * @param {String} source 
+         * @returns Elem instance.
+         */
+        setSource(source) {
+            this.setAttribute("src", source);
+            return this;
+        }
+
+        /**
+         * Get a source of this element.
+         * 
+         * @returns source string of this element.
+         */
+        getSource() {
+            return this.getAttribute("src").value;
+        }
+
+        /**
+         * Set a href of this element.
+         * 
+         * @param {String} href 
+         * @returns Elem instance.
+         */
+        setHref(href) {
+            this.setAttribute("href", href);
+            return this;
+        }
+
+        /**
+         * Get a href of this element.
+         * 
+         * @returns href of this element.
+         */
+        getHref() {
+            return this.getAttribute("href").value;
+        }
+
+        /**
+         * Set a placeholder of this element.
+         * 
+         * @param {String} placeholder 
+         * @returns Elem instance.
+         */
+        setPlaceholder(placeholder) {
+            this.setAttribute("placeholder", placeholder);
+            return this;
+        }
+
+        /**
+         * Get a placeholder of this element.
+         * 
+         * @returns placeholder of this element.
+         */
+        getPlaceholder() {
+            return this.getAttribute("placeholder").value;
+        }
+
+        /**
+         * Sets size of this element.
+         * 
+         * @param {*} size 
+         * @returns Elem instance.
+         */
+        setSize(size) {
+            this.setAttribute("size", size);
+            return this;
+        }
+
+        /**
+         * Get size of this element.
+         * 
+         * @returns size of this element.
+         */
+        getSize() {
+            return this.getAttribute("size").value;
+        }
+
+        /**
+         * Set this element content editable.
+         * 
+         * @param {boolean} boolean 
+         * @returns Elem instance.
+         */
+        setEditable(boolean) {
+            this.setAttribute("contenteditable", boolean);
+            return this;
+        }
+
+        /**
+         * Get this element content editable.
+         * 
+         * @returns content editable state of this element.
+         */
+        getEditable() {
+            return this.getAttribute("contenteditable").value;
+        }
+
+        /**
+         * Set this element disabled.
+         * 
+         * @param {boolean} boolean 
+         * @returns Elem instance.
+         */
+        setDisabled(boolean) {
+            this.html.disabled = boolean;
+            return this;
+        }
+
+        /**
+         * Get this element disabled state.
+         * 
+         * @returns disabled state of this element.
+         */
+        getDisabled() {
+            return this.html.disabled;
+        }
+
+        /**
+         * Set this element checked.
+         * 
+         * @param {boolean} boolean 
+         * @returns Elem instance.
+         */
+        setChecked(boolean) {
+            this.html.checked = boolean;
+            return this;
+        }
+
+        /**
+         * Get this element checked state.
+         * 
+         * @returns checked state of this element.
+         */
+        getChecked() {
+            return this.html.checked;
+        }
+
+        /**
+         * Add classes to this element.
+         * 
+         * @param {String} classes 
+         * @returns Elem instance.
+         */
+        addClasses(classes) {
+            var toAdd = classes.trim().split(" ");
+            var origClass = this.getClasses();
+            var i = 0;
+            while(i < toAdd.length) {
+                var clazz = toAdd[i];
+                if(origClass.search(clazz) === -1)
+                    origClass += " "+clazz;
+                i++;
+            }
+            this.html.className = origClass.trim();
+            return this;
+        }
+
+        /**
+         * Remove classes from this element.
+         * 
+         * @param {String} classes 
+         * @returns Elem instance.
+         */
+        removeClasses(classes) {
+            var toRm = classes.trim().split(" ");
+            var origClass = this.getClasses();
+            var i = 0;
+            while(i < toRm.length) {
+                var clazz = toRm[i];
+                if(origClass.search(clazz) > -1)
+                    origClass = origClass.replace(clazz, "").trim();
+                i++;
+            }
+            this.html.className = origClass.trim();
+            return this;
+        }
+
+        /**
+         * Toggle classes of this element. This method removes existing and adds non existing classes accordingly. 
+         * If given classes exist then they will be removed. If given classes does not exist then they will be added.
+         * 
+         * @returns Elem instance.
+         */
+        toggleClasses(classes) {
+            var cArr = classes.split(" ");
+            var origClass = this.getClasses();
+            var toAdd = "";
+            var toRm = "";
+            var i = 0;
+            while(i < cArr.length) {
+                if(origClass.search(cArr[i]) > -1)
+                    toRm += " "+cArr[i];
+                else
+                    toAdd += " "+cArr[i];
+                i++;
+            }
+            this.addClasses(toAdd.trim());
+            this.removeClasses(toRm.trim());
+            return this;
+        }
+
+        /**
+         * Get classes string of this element.
+         * 
+         * @returns class string of this element.
+         */
+        getClasses() {
+            return this.html.className;
+        }
+
+        /**
+         * Set styles of this element in camelCase in the JSON notation e.g. {height: "10px", maxHeight: "30px",...}
+         * 
+         * @param {Object} styleMap 
+         * @returns Elem instance.
+         */
+        setStyles(styleMap) {
+            for(var style in styleMap) {
+                if(styleMap.hasOwnProperty(style))
+                    this.html.style[style] = styleMap[style];
+            }
+            return this;
+        }
+
+        /**
+         * Get style of this element. 
+         * 
+         * @param {String} styleName Style name in camelCase if necessary e.g. maxHeight
+         * @returns value of the given style of this element.
+         */
+        getStyle(styleName) {
+            return this.html.style[styleName];
+        }
+
+        /**
+         * Set visibility of this element hidden or visible.
+         * true = visible, false = hidden
+         * @param {boolean} boolean 
+         * @returns Elem instance.
+         */
+        setVisible(boolean) {
+            this.html.style.visibility = boolean ? "visibile" : "hidden";
+            return this;
+        }
+
+        /**
+         * Set display state of this element initial or none.
+         * true = initial, false = none
+         * @param {boolean} boolean 
+         * @returns Elem instance.
+         */
+        display(boolean) {
+            this.html.style.display = boolean ? "initial" : "none";
+            return this;
+        }
+
+        /**
+         * Set this element draggable.
+         * @param {boolean} boolean 
+         * @returns Elem instance.
+         */
+        setDraggable(boolean) {
+            this.setAttribute("draggable", boolean);
+            return this;
+        }
+
+        /**
+         * Do click on this element.
+         * @returns Elem instance.
+         */
+        click() {
+            this.html.click();
+            return this;
+        }
+
+        /**
+         * Do focus on this element.
+         * @returns Elem instance.
+         */
+        focus() {
+            this.html.focus();
+            return this;
+        }
+
+        /**
+         * Do blur on this element.
+         * @returns Elem instance.
+         */
+        blur() {
+            this.html.blur();
+            return this;
+        }
+
+        /**
+         * Clones this element and child elements if deep true. Returned clone will be wrapped in Elem instance.
+         * 
+         * @param {boolean} deep if true children will be cloned too.
+         * @returns a clone of this element wrapped in Elem instance. If deep is true children will be cloned also.
+         */
+        clone(deep) {
+            return Elem.wrap(this.html.cloneNode(deep));
+        }
+
+        /**
+         * @returns HTML Document Element that this element contains.
+         */
+        dom() {
+            return this.html;
+        }
+
+        /**
+         * @returns height of this element.
+         */
+        height() {
+            return this.html.clientHeight;
+        }
+
+        /**
+         * @returns width of this element.
+         */
+        width() {
+            return this.html.clientWidth;
+        }
+
+        /**
+         * @returns a parent of this element wrapped in Elem instance or null if no parent.
+         */
+        parent() {
+            return this.html.parentElement !== null ? Elem.wrap(this.html.parentElement) : null;
+        }
+
+        /**
+         * @returns a next element of this element wrapped in Elem instance or null if no next.
+         */
+        next() {
+            return this.html.nextElementSibling !== null ? Elem.wrap(this.html.nextElementSibling) : null;
+        }
+
+        /**
+         * @returns a previous element of this element wrapped in Elem instance or null if no previous.
+         */
+        previous() {
+            return this.html.previousElementSibling !== null ? Elem.wrap(this.html.previousElementSibling) : null;
+        }
+
+        /**
+         * @returns a first child element of this element wrapped in Elem instance or null if no children.
+         */
+        getFirstChild() {
+            return this.html.firstElementChild !== null ? Elem.wrap(this.html.firstElementChild) : null;
+        }
+
+        /**
+         * @returns a last child element of this element wrapped in Elem instance or null if no children.
+         */
+        getLastChild() {
+            return this.html.lastElementChild !== null ? Elem.wrap(this.html.lastElementChild) : null;
+        }
+
+        //EVENTS BELOW
+
+        //Animation events
+        onAnimationStart(handler) {
+            this.html.onanimationstart = handler;
+            // this.html.addEventListener("webkitAnimationStart", handler);
+            // this.html.addEventListener("mozAnimationStart", handler);
+            return this;
+        }
+
+        onAnimationIteration(handler) {
+            this.html.onanimationiteration = handler;
+            // this.html.addEventListener("webkitAnimationIteration", handler);
+            // this.html.addEventListener("mozAnimationIteration", handler);
+            return this;
+        }
+
+        onAnimationEnd(handler) {
+            this.html.onanimationend = handler;
+            // this.html.addEventListener("webkitAnimationEnd", handler);
+            // this.html.addEventListener("mozAnimationEnd", handler);
+            return this;
+        }
+
+        onTransitionEnd(handler) {
+            this.html.ontransitionend = handler;
+            // this.html.addEventListener("webkitTransitionEnd", handler);
+            // this.html.addEventListener("mozTransitionEnd", handler);
+            // this.html.addEventListener("oTransitionEnd", handler);
+            return this;
+        }
+
+        //Drag events
+        /**
+         * Adds onDrag listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onDrag(handler) {
+            this.html.ondrag = handler;
+            return this;
+        }
+
+        /**
+         * Adds onDragEnd listener to this element.
+         * @param {function} handler 
+         * @return Elem instance.
+         */
+        onDragEnd(handler) {
+            this.html.ondragend = handler;
+            return this;
+        }
+
+        /**
+         * Adds onDragEnter listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onDragEnter(handler) {
+            this.html.ondragenter = handler;
+            return this;
+        }
+
+        /**
+         * Adds onDragOver listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onDragOver(handler) {
+            this.html.ondragover = handler;
+            return this;
+        }
+
+        /**
+         * Adds onDragStart listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onDragStart(handler) {
+            this.html.ondragstart = handler;
+            return this;
+        }
+
+        /**
+         * Adds onDrop listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onDrop(handler) {
+            this.html.ondrop = handler;
+            return this;
+        }
+
+        //Mouse events
+        /**
+         * Adds onClick listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onClick(handler) {
+            this.html.onclick = handler;
+            return this;
+        }
+
+        /**
+         * Adds onDoubleClick listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onDoubleClick(handler) {
+            this.html.ondblclick = handler;
+            return this;
+        }
+
+        /**
+         * Adds onContextMenu listener to this element. Usually fired by mouse right click.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onContextMenu(handler) {
+            this.html.oncontextmenu = handler;
+            return this;
+        }
+
+        /**
+         * Adds onMouseDown listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onMouseDown(handler) {
+            this.html.onmousedown = handler;
+            return this;
+        }
+
+        /**
+         * Adds onMouseEnter listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onMouseEnter(handler) {
+            this.html.onmouseenter = handler;
+            return this;
+        }
+
+        /**
+         * Adds onMouseLeave listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onMmouseLeave(handler) {
+            this.html.onmouseleave = handler;
+            return this;
+        }
+
+        /**
+         * Adds onMouseMove listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onMouseMove(handler) {
+            this.html.onmousemove = handler;
+            return this;
+        }
+
+        /**
+         * Adds onMouseOver listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onMouseOver(handler) {
+            this.html.onmouseover = handler;
+            return this;
+        }
+
+        /**
+         * Adds onMouseOut listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onMouseOut(handler) {
+            this.html.onmouseout = handler;
+            return this;
+        }
+
+        /**
+         * Adds onMouseUp listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onMouseUp(handler) {
+            this.html.onmouseup = handler;
+            return this;
+        }
+
+        /**
+         * Adds onWheel listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onWheel(handler) {
+            this.html.onwheel = handler;
+            return this;
+        }
+
+        //UI events
+        /**
+         * Adds onScroll listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onScroll(handler) {
+            this.html.onscroll = handler;
+            return this;
+        }
+
+        /**
+         * Adds onResize listener to this element (supported: body).
+         * @param {function} handler 
+         */
+        onResize(handler) {
+            this.html.onresize = handler;
+            return this;
+        }
+
+        /**
+         * Adds onError listener to this element (supported: img, input[type=img], object, link, script).
+         * Is fired when an error occurs while downloading an external file.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onError(handler) {
+            this.html.onerror = handler;
+            return this;
+        }
+
+        /**
+         * Adds onLoad listener to this element (supported: body, img, input[type=img], script, link, style, frame, iframe).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onLoad(handler) {
+            this.html.onload = handler;
+            return this;
+        }
+
+        /**
+         * Adds onUnload listener to this element. Is fired when the page is unloaded or browser window is closed (supported: body).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onUnload(handler) {
+            this.html.onunload = handler;
+            return this;
+        }
+
+        /**
+         * Adds onBeforeUnload listener to this element. Is fired before unload (supported: body).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onBeforeUnload(handler) {
+            this.html.onbeforeunload = handler;
+            return this;
+        }
+
+        //Key events
+        /**
+         * Adds onKeyUp listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onKeyUp(handler) {
+            this.html.onkeyup = handler;
+            return this;
+        }
+
+        /**
+         * Adds onKeyDown listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onKeyDown(handler) {
+            this.html.onkeydown = handler;
+            return this;
+        }
+
+        /**
+         * Adds onKeyPress listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onKeyPress(handler) {
+            this.html.onkeypress = handler;
+            return this;
+        }
+
+        /**
+         * Adds onInput listener to this element (supported: input, textarea).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onInput(handler) {
+            this.html.oninput = handler;
+            return this;
+        }
+
+        //Events (changing state)
+        /**
+         * Adds onChange listener to this element (supported: input, select, textarea).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onChange(handler) {
+            this.html.onchange = handler;
+            return this;
+        }
+
+        /**
+         * Adds onSubmit listener to this element (supported: form).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onSubmit(handler) {
+            this.html.onsubmit = handler;
+            return this;
+        }
+
+        /**
+         * Adds onSelect listener to this element. Is fired when a text is selected inside an input field (supported: input[type=text|password|file], textarea). 
+         * @param {function} handler 
+         * @returns Elem isntance.
+         */
+        onSelect(handler) {
+            this.html.onselect = handler;
+            return this;
+        }
+        
+        /**
+         * Adds onReset listener to this element (supported: form).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onReset(handler) {
+            this.html.onreset = handler;
+            return this;
+        }
+
+        /**
+         * Adds onFocus listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onFocus(handler) {
+            this.html.onfocus = handler;
+            return this;
+        }
+
+        /**
+         * Adds onFocusIn listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onFocusIn(handler) {
+            this.html.onfocusin = handler;
+            return this;
+        }
+
+        /**
+         * Adds onFocusOut listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onFocusOut(handler) {
+            this.html.onfocusout = handler;
+            return this;
+        }
+
+        /**
+         * Adds onBlur listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onBlur(handler) {
+            this.html.onblur = handler;
+            return this;
+        }
+
+        //Clipboard events
+        /**
+         * Adds onCopy listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onCopy(handler) {
+            this.html.oncopy = handler;
+            return this;
+        }
+
+        /**
+         * Adds onCut listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onCut(handler) {
+            this.html.oncut = handler;
+            return this;
+        }
+
+        /**
+         * Adds onPaste listener to this element.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onPaste(handler) {
+            this.html.onpaste = handler;
+            return this;
+        }
+
+        //Media events
+        /**
+         * Adds onAbort listener to this element. Is fired when media data download is aborted (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onAbort(handler) {
+            this.html.onabort = handler;
+            return this;
+        }
+
+        /**
+         * Adds onWaiting listener to this element. Is fired when video stops and waits to buffer next frame (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onWaiting(handler) {
+            this.html.onwaiting = handler;
+            return this;
+        }
+
+        /**
+         * Adds onVolumeChange listener to this element. Is fired when the volume is changed (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onVolumeChange(handler) {
+            this.html.onvolumechange = handler;
+            return this;
+        }
+
+        /**
+         * Adds onTimeTupdate listener to this element. Is fired when playing or a new position is selected on a seekbar (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onTimeUpdate(handler) {
+            this.html.ontimeupdate = handler;
+            return this;
+        }
+
+        /**
+         * Adds onSeeking listener to this element. Is fired when a new position was selected on a seekbar (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onSeeking(handler) {
+            this.html.onseeking = handler;
+            return this;
+        }
+
+        /**
+         * Adds onSeekEnd listener to this element. Is fired after a new position was selected on a seekbar (supported: audio, video).
+         * @param {*} handler 
+         * @returns Elem instance.
+         */
+        onSeekEnd(handler) {
+            this.html.onseekend = handler;
+            return this;
+        }
+
+        /**
+         * Adds onRateChange listener to this element. Is fired when playback rate (speed slow motion, fast forward) changes (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onRateChange(handler) {
+            this.html.onratechange = handler;
+            return this;
+        }
+
+        /**
+         * Adds onProgress listener on an element. Is fired when browser is downloading media (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onProgress(handler) {
+            this.html.onprogress = handler;
+            return this; 
+        }
+
+        /**
+         * Adds onLoadMetadata listener to this element. Is fired when media metadata was downloaded (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onLoadMetadata(handler) {
+            this.html.onloadmetadata = handler;
+            return this;
+        }
+
+        /**
+         * Adds onLoadedData listener on an element. Is fired when media frame data was loaded, but not enough data to play next frame (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onLoadedData(handler) {
+            this.html.onloadeddata = handler;
+            return this;
+        }
+
+        /**
+         * Adds onLoadStart listener on an element. Is fired when browser starts looking for media (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onLoadStart(handler) {
+            this.html.onloadstart = handler;
+            return this;
+        }
+
+        /**
+         * Adds onPlaying listener to this element. Is fired when the media is playing after paused by user or stopped for buffering (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onPlaying(handler) {
+            this.html.onplaying = handler;
+            return this;
+        }
+
+        /**
+         * Adds onPlay listener to this element. Is fired when the media starts to play e.g. play button is pressed. (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onPlay(handler) {
+            this.html.onplay = handler;
+            return this;
+        }
+
+        /**
+         * Adds onPause listener to this element. Is fired when the media is paused. (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onPause(handler) {
+            this.html.onpause = handler;
+            return this;
+        }
+
+        /**
+         * Adds onEnded listener to this element. Is fired when the end of media file has been reached (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onEnded(handler) {
+            this.html.onended = handler;
+            return this;
+        }
+
+        /**
+         * Adds onDurationChange listener to this element. Is fired when media duration changes (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onDurationChange(handler) {
+            this.html.ondurationchange = handler;
+            return this;
+        }
+
+        /**
+         * Adds onCanPlay listener to this element. Is fired when enough data to play (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onCanPlay(handler) {
+            this.html.oncanplay = handler;
+            return this;
+        }
+
+        /**
+         * Adds canPlayThrough listener to this element. Is fired when can play through without buffering (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onCanPlayThrough(handler) {
+            this.html.oncanplaythrough = handler;
+            return this;
+        }
+
+        /**
+         * Adds onStalled listener to this element. Is fired when browser is trying to get data but data not available (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onStalled(handler) {
+            this.html.onstalled = handler;
+            return this;
+        }
+
+        /**
+         * Adds onSuspend listener to this element. Is fired when browser intentionally does not retrive media data (supported: audio, video).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onSuspend(handler) {
+            this.html.onsuspend = handler;
+            return this;
+        }
+
+        //Browser events
+        /**
+         * Adds onPopState listener to this element. Is fired when window history changes.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onPopState(handler) {
+            this.html.onpopstate = handler;
+            return this;
+        }
+
+        /**
+         * Adds onStorage listener to this element. Is fired when WebStorage changes.
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onStorage(handler) {
+            this.html.onstorage = handler;
+            return this;
+        }
+
+        /**
+         * Add onHashChange listener to this element. Is fired when hash part of the url changes (supported: body).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onHashChange(handler) {
+            this.html.onhashchange = handler;
+            return this;
+        }
+
+        /**
+         * Adds onAfterPrint listener to this element. Is fired when a print dialogue is closed (Safari, Opera not supported).
+         * @param {function} handler 
+         * @returns Elem instance.
+         */
+        onAfterPrint(handler) {
+            this.html.onafterprint = handler;
+            return this;
+        }
+
+        /**
+         * Adds onBeforePrint listener to this element. Is fired when a print dialogue is opened (Safari, Opera not supported).
+         * @param {function} handler 
+         */
+        onBeforePrint(handler) {
+            this.html.onbeforeprint = handler;
+            return this;
+        }
+
+        /**
+         * Adds onPageHide listener to this element. Is fired when user navigates away from webpage (supported: body).
+         * @param {function} handler 
+         */
+        onPageHide(handler) {
+            this.html.onpagehide = handler;
+            return this;
+        }
+
+        /**
+         * Adds onPageShow listener to this element. Is fired when user navigates to webpage (supported: body).
+         * @param {function} handler 
+         */
+        onPageShow(handler) {
+            this.html.onpageshow = handler;
+            return this;
+        }
+
+        /**
+         * Creates a new HTML element and wraps it into this Elem instance.
+         * @param type
+         * @returns Elem instance.
+         */
+        static create(type) {
+            return new Elem(type);
+        }
+
+        /**
+         * Does not create a new HTML element, but merely wraps an existing instance of the HTML element into
+         * this Elem instance.
+         * @param html
+         * @returns Elem instance.
+         */
+        static wrap(html) {
+            if(!Util.isEmpty(html))
+                return new Elem(html);
+            else 
+                throw "Could not wrap a html element - html: " + html;
+        }
+
+        /**
+         * Takes an array of HTMLDocument elements and wraps them inside an Elem instance.
+         * If the given array contains more than one htmlDoc element otherwise then this method will
+         * return an array of Elem instances, otherwise single Elem instance is returned.
+         * 
+         * @param {Array} htmlDoc 
+         * @returns An array of the Elem objects a single Elem instance. 
+         */
+        static wrapElems(htmlDoc) {
+            var eArr = [];
+            var i = 0;
+            while(i < htmlDoc.length) {
+                    eArr.push(Elem.wrap(htmlDoc[i]));
+                i++;
+            }
+            return eArr.length === 1 ? eArr[0] : eArr;
+        }
     }
 
     /**
-     * Get style of this element. 
-     * @param {String} styleName Style name in camelCase e.g. maxHeight
+     * RenderHelper class is a helper class of the Elem class. The RenderHelper class chiefly
+     * stores previous state of the Elem in an array and in a string.
      */
-    getStyle(styleName) {
-        return this.html.style[styleName];
+    class RenderHelper {
+        constructor() {
+            this.instance;
+            this.prevState = [];
+            this.prevStateString = "";
+        }
+
+        /**
+         * Set previous state.
+         * @param {array} state 
+         */
+        static setPrevState(state) {
+            RenderHelper.getInstance().prevState = state;
+            RenderHelper.getInstance().prevStateString = state.toString();
+        }
+
+        /**
+         * @returns A previous state array.
+         */
+        static getPrevState() {
+            return RenderHelper.getInstance().prevState;
+        }
+
+        /**
+         * Compares new state previous state.
+         * @param {array} newState 
+         * @returns True if the new state and the previous state are equal otherwise false.
+         */
+        static isNewStateEqualToPrevState(newState) {
+            return RenderHelper.getInstance().prevStateString === newState.toString();
+        }
+
+        static getInstance() {
+            if(!this.instance)
+                this.instance = new RenderHelper();
+            return this.instance;
+        }
     }
 
+
+    return Elem;
+}());
+
+let Template = (function() {
     /**
-     * Set visibility of this element hidden or visible.
-     * true = visible, false = hidden
-     * @param {boolean} boolean 
+     * Template class reads a JSON or JSON alike format notation and creates an element tree from it.
+     * The Template class has only one public method resolve that takes the template as parameter and returns 
+     * the created element tree.
      */
-    setVisible(boolean) {
-        this.html.style.visibility = boolean ? "visibile" : "hidden";
-        return this;
-    }
-
-    /**
-     * Set display state of this element initial or none.
-     * true = initial, false = none
-     * @param {boolean} boolean 
-     */
-    display(boolean) {
-        this.html.style.display = boolean ? "initial" : "none";
-        return this;
-    }
-
-    /**
-     * Set this element draggable.
-     * @param {boolean} boolean 
-     */
-    setDraggable(boolean) {
-        this.setAttribute("draggable", boolean);
-        return this;
-    }
-
-    /**
-     * Do click on this element.
-     * Returns Elem instance.
-     */
-    click() {
-        this.html.click();
-        return this;
-    }
-
-    /**
-     * Do focus on this element.
-     * Returns Elem instance.
-     */
-    focus() {
-        this.html.focus();
-        return this;
-    }
-
-    /**
-     * Do blur on this element.
-     * Returns Elem instance.
-     */
-    blur() {
-        this.html.blur();
-        return this;
-    }
-
-    /**
-     * Returns a clone of this element. If deep is true children will be cloned also.
-     * @param {boolean} deep 
-     */
-    clone(deep) {
-        return Elem.wrap(this.html.cloneNode(deep));
-    }
-
-    /**
-     * Returns HTML Document Element that this element contains.
-     */
-    dom() {
-        return this.html;
-    }
-
-    /**
-     * Returns height of this element.
-     */
-    height() {
-        return this.html.clientHeight;
-    }
-
-    /**
-     * Returns width of this element.
-     */
-    width() {
-        return this.html.clientWidth;
-    }
-
-    /**
-     * Returns a parent of this element wrapped in Elem instance or null if no parent.
-     */
-    parent() {
-        return this.html.parentElement !== null ? Elem.wrap(this.html.parentElement) : null;
-    }
-
-    /**
-     * Returns a next element of this element wrapped in Elem instance or null if no next.
-     */
-    next() {
-        return this.html.nextElementSibling !== null ? Elem.wrap(this.html.nextElementSibling) : null;
-    }
-
-    /**
-     * Returns a previous element of this element wrapped in Elem instance or null if no previous.
-     */
-    previous() {
-        return this.html.previousElementSibling !== null ? Elem.wrap(this.html.previousElementSibling) : null;
-    }
-
-    /**
-     * Returns a first child element of this element wrapped in Elem instance or null if no children.
-     */
-    getFirstChild() {
-        return this.html.firstElementChild !== null ? Elem.wrap(this.html.firstElementChild) : null;
-    }
-
-    /**
-     * Returns a last child element of this element wrapped in Elem instance or null if no children.
-     */
-    getLastChild() {
-        return this.html.lastElementChild !== null ? Elem.wrap(this.html.lastElementChild) : null;
-    }
-
-    //EVENTS BELOW
-
-    //Animation events
-    onAnimationStart(handler) {
-        this.html.onanimationstart = handler;
-        // this.html.addEventListener("webkitAnimationStart", handler);
-        // this.html.addEventListener("mozAnimationStart", handler);
-        return this;
-    }
-
-    onAnimationIteration(handler) {
-        this.html.onanimationiteration = handler;
-        // this.html.addEventListener("webkitAnimationIteration", handler);
-        // this.html.addEventListener("mozAnimationIteration", handler);
-        return this;
-    }
-
-    onAnimationEnd(handler) {
-        this.html.onanimationend = handler;
-        // this.html.addEventListener("webkitAnimationEnd", handler);
-        // this.html.addEventListener("mozAnimationEnd", handler);
-        return this;
-    }
-
-    onTransitionEnd(handler) {
-        this.html.ontransitionend = handler;
-        // this.html.addEventListener("webkitTransitionEnd", handler);
-        // this.html.addEventListener("mozTransitionEnd", handler);
-        // this.html.addEventListener("oTransitionEnd", handler);
-        return this;
-    }
-
-    //Drag events
-    onDrag(handler) {
-        this.html.ondrag = handler;
-        return this;
-    }
-
-    onDragEnd(handler) {
-        this.html.ondragend = handler;
-        return this;
-    }
-
-    onDragEnter(handler) {
-        this.html.ondragenter = handler;
-        return this;
-    }
-
-    onDragOver(handler) {
-        this.html.ondragover = handler;
-        return this;
-    }
-
-    onDragStart(handler) {
-        this.html.ondragstart = handler;
-        return this;
-    }
-
-    onDrop(handler) {
-        this.html.ondrop = handler;
-        return this;
-    }
-
-    //Mouse events
-    onClick(handler) {
-        this.html.onclick = handler;
-        return this;
-    }
-
-    onDoubleClick(handler) {
-        this.html.ondblclick = handler;
-        return this;
-    }
-
-    onContextMenu(handler) {
-        this.html.oncontextmenu = handler;
-        return this;
-    }
-
-    onMouseDown(handler) {
-        this.html.onmousedown = handler;
-        return this;
-    }
-
-    onMouseEnter(handler) {
-        this.html.onmouseenter = handler;
-        return this;
-    }
-
-    onMmouseLeave(handler) {
-        this.html.onmouseleave = handler;
-        return this;
-    }
-
-    onMouseMove(handler) {
-        this.html.onmousemove = handler;
-        return this;
-    }
-
-    onMouseOver(handler) {
-        this.html.onmouseover = handler;
-        return this;
-    }
-
-    onMouseOut(handler) {
-        this.html.onmouseout = handler;
-        return this;
-    }
-
-    onMouseUp(handler) {
-        this.html.onmouseup = handler;
-        return this;
-    }
-
-    onWheel(handler) {
-        this.html.onwheel = handler;
-        return this;
-    }
-
-    //UI events
-    onScroll(handler) {
-        this.html.onscroll = handler;
-        return this;
-    }
-
-    onResize(handler) {
-        this.html.onresize = handler;
-        return this;
-    }
-
-    onAbort(handler) {
-        this.html.onabort = handler;
-        return this;
-    }
-
-    onError(handler) {
-        this.html.onerror = handler;
-        return this;
-    }
-
-    onLoad(handler) {
-        this.html.onload = handler;
-        return this;
-    }
-
-    onUnload(handler) {
-        this.html.onunload = handler;
-        return this;
-    }
-
-    onBeforeUnload(handler) {
-        this.html.onbeforeunload = handler;
-        return this;
-    }
-
-    //Key events
-    onKeyUp(handler) {
-        this.html.onkeyup = handler;
-        return this;
-    }
-
-    onKeyDown(handler) {
-        this.html.onkeydown = handler;
-        return this;
-    }
-
-    onKeyPress(handler) {
-        this.html.onkeypress = handler;
-        return this;
-    }
-
-    onInput(handler) {
-        this.html.oninput = handler;
-        return this;
-    }
-
-    //Events (changing state)
-    onChange(handler) {
-        this.html.onchange = handler;
-        return this;
-    }
-
-    onSubmit(handler) {
-        this.html.onsubmit = handler;
-        return this;
-    }
-
-    onSelect(handler) {
-        this.html.onselect = handler;
-        return this;
-    }
-    
-    onReset(handler) {
-        this.html.onreset = handler;
-        return this;
-    }
-
-    onFocus(handler) {
-        this.html.onfocus = handler;
-        return this;
-    }
-
-    onFocusIn(handler) {
-        this.html.onfocusin = handler;
-        return this;
-    }
-
-    onFocusOut(handler) {
-        this.html.onfocusout = handler;
-        return this;
-    }
-
-    onBlur(handler) {
-        this.html.onblur = handler;
-        return this;
-    }
-
-    //Clipboard events
-    onCopy(handler) {
-        this.html.oncopy = handler;
-        return this;
-    }
-
-    onCut(handler) {
-        this.html.oncut = handler;
-        return this;
-    }
-
-    onPaste(handler) {
-        this.html.onpaste = handler;
-        return this;
-    }
-
-    //Media events
-    onWaiting(handler) {
-        this.html.onwaiting = handler;
-        return this;
-    }
-
-    onVolumeChange(handler) {
-        this.html.onvolumechange = handler;
-        return this;
-    }
-
-    onTimeUpdate(handler) {
-        this.html.ontimeupdate = handler;
-        return this;
-    }
-
-    onSeeking(handler) {
-        this.html.onseeking = handler;
-        return this;
-    }
-
-    onSeekEnd(handler) {
-        this.html.onseekend = handler;
-        return this;
-    }
-
-    onRateChange(handler) {
-        this.html.onratechange = handler;
-        return this;
-    }
-
-    onProgress(handler) {
-        this.html.onprogress = handler;
-        return this; 
-    }
-
-    onLoadMetadata(handler) {
-        this.html.onloadmetadata = handler;
-        return this;
-    }
-
-    onLoadedData(handler) {
-        this.html.onloadeddata = handler;
-        return this;
-    }
-
-    onLoadStart(handler) {
-        this.html.onloadstart = handler;
-        return this;
-    }
-
-    onPlaying(handler) {
-        this.html.onplaying = handler;
-        return this;
-    }
-
-    onPlay(handler) {
-        this.html.onplay = handler;
-        return this;
-    }
-
-    onPause(handler) {
-        this.html.onpause = handler;
-        return this;
-    }
-
-    onEnded(handler) {
-        this.html.onended = handler;
-        return this;
-    }
-
-    onDurationChange(handler) {
-        this.html.ondurationchange = handler;
-        return this;
-    }
-
-    onCanPlay(handler) {
-        this.html.oncanplay = handler;
-        return this;
-    }
-
-    onCanPlayThrough(handler) {
-        this.html.oncanplaythrough = handler;
-        return this;
-    }
-
-    onStalled(handler) {
-        this.html.onstalled = handler;
-        return this;
-    }
-
-    onSuspend(handler) {
-        this.html.onsuspend = handler;
-        return this;
-    }
-
-    //Browser events
-    onPopState(handler) {
-        this.html.onpopstate = handler;
-        return this;
-    }
-
-    onStorage(handler) {
-        this.html.onstorage = handler;
-        return this;
-    }
-
-    onHashChange(handler) {
-        this.html.onhashchange = handler;
-        return this;
-    }
-
-    onAfterPrint(handler) {
-        this.html.onafterprint = handler;
-        return this;
-    }
-
-    onBeforePrint(handler) {
-        this.html.onbeforeprint = handler;
-        return this;
-    }
-
-    onPageHide(handler) {
-        this.html.onpagehide = handler;
-        return this;
-    }
-
-    onPageShow(handler) {
-        this.html.onpageshow = handler;
-        return this;
-    }
-
-    /**
-     * Creates a new HTML element and wraps it into this Elem instance.
-     * @param type
-     * @returns {Elem}
-     */
-    static create(type) {
-        return new Elem(type);
-    }
-
-    /**
-     * Does not create a new HTML element, but merely wraps an existing instance of the HTML element into
-     * this Elem instance.
-     * @param html
-     * @returns {Elem}
-     */
-    static wrap(html) {
-        if(!Util.isEmpty(html))
-            return new Elem(html);
-        else 
-            throw "Could not wrap a html element - html: " + html;
-    }
-
-    /**
-     * Takes an array of HTMLDocument elements and wraps them inside an Elem instance.
-     * Returns an array of the Elem objects if the given array contains more than one htmlDoc element otherwise a single Elem instance is returned.
-     * @param {Array} htmlDoc 
-     */
-    static wrapElems(htmlDoc) {
-        var eArr = [];
-        for(var i in htmlDoc) {
-            if(htmlDoc.hasOwnProperty(i)) {
-                eArr.push(Elem.wrap(htmlDoc[i]));
+    class Template {
+        constructor() {
+            this.template = {};
+            this.root = null;
+            this.attributes = ["id","name","class","text","value","content","tabIndex","type","src","href","editable",
+            "placeholder","size","checked","disabled","visible","display","draggable","styles"];
+        }
+
+        /**
+         * Method takes a template as parameter, starts resolving it and returns 
+         * a created element tree. 
+         * @param {object} template
+         * @returns Elem instance element tree.
+         */
+        setTemplateAndResolve(template) {
+            this.template = template;
+            this.resolve(this.template, this.root, 0);
+            return this.root;
+        }
+
+        /**
+         * Method resolves a given template recusively. The method and
+         * parameters are used internally.
+         * @param {object} template
+         * @param {object} parent
+         * @param {number} round
+         */
+        resolve(template, parent, round) {
+            for(var obj in template) {
+                if(template.hasOwnProperty(obj)) {
+                    if(round === 0) {
+                        this.root = this.resolveElement(obj);
+                        if(Util.isObject(template[obj]))
+                            this.resolve(template[obj], this.root, ++round);
+                        else if(Util.isFunction(template[obj]))
+                            this.resolveFunction(this.root, template[obj]);
+                    } else {
+                        if(this.isAttributeKey(obj)) {
+                            this.resolveAttributes(parent, obj, template[obj]);
+                        } else if(this.isEventKeyVal(obj, template[obj])) {
+                            parent[obj].call(parent, template[obj]);
+                        } else {
+                            var child = this.resolveElement(obj);
+                            parent.append(child);
+                            if(Util.isObject(template[obj])) {
+                                this.resolve(template[obj], child, ++round);
+                            } else if(Util.isFunction(template[obj])) {
+                                this.resolveFunction(child, template[obj]);
+                            }
+                        }
+                    }
+                }
             }
         }
-        return eArr.length === 1 ? eArr[0] : eArr;
-    }
-}
+    
+        /**
+         * Resolves function based tempalte implementation.
+         * @param {object} elem
+         * @param {func} func
+         */
+        resolveFunction(elem, func) {
+            let ret = func.call(elem);
+            if(!Util.isEmpty(ret) && Util.isString(ret)){
+                elem.setText(ret);
+            }
+        }
 
+        /**
+         * Resolves an element and some basic attributes from a give tag. Method throws an exception if 
+         * the element could not be resolved.
+         * @param {string} tag
+         * @returns Null or resolved Elem instance elemenet.
+         */
+        resolveElement(tag) {
+            let resolved = null;
+            var match = [];
+            var el = tag.match(/[a-z]+/).join();
+            if(Util.isEmpty(el))
+                throw "Template resolver could not find element: \"" + el + "\" from the given tag: \"" + tag + "\"";
+            else
+                resolved = new Elem(el);
+
+            match = tag.match(/\#[a-zA-Z0-9]+/); //find id
+            if(!Util.isEmpty(match))
+                resolved.setId(match.join().replace(/(\#)/, ""));
+
+            match = tag.match(/\.[a-zA-Z-0-9\-]+/g); //find classes
+            if(!Util.isEmpty(match)) 
+                resolved.addClasses(match.join(" ").replace(/\./g, ""));
+
+            match = tag.match(/\[[a-zA-Z0-9\=]+\]/g); //find attributes
+            if(!Util.isEmpty(match))
+                resolved = this.addAttributes(resolved, match);    
+
+            return resolved;
+        }
+
+        /**
+         * Adds resolved attributes to an element.
+         * @param {object} elem
+         * @param {array} elem
+         * @returns The given elem instance.
+         */
+        addAttributes(elem, attrArray) {
+            let i = 0;
+            let start = "[";
+            let eq = "=";
+            let end = "]";
+            while(i < attrArray.length) {
+                var attr = attrArray[i];
+                let key = attr.substring(attr.indexOf(start) +1, attr.indexOf(eq));
+                let val = attr.substring(attr.indexOf(eq) +1, attr.indexOf(end));
+                elem.setAttribute(key, val);
+                i++;
+            }
+            return elem;
+        }
+
+        /**
+         * Method adds an attribute to an element.
+         * @param {object} elem
+         * @param {string} key
+         * @param {string} val
+         */
+        resolveAttributes(elem, key, val) {
+            switch(key) {
+                case "id":
+                    elem.setId(val);
+                    break;
+                case "class":
+                    elem.addClasses(val);
+                    break;
+                case "text":
+                    elem.setText(val);
+                    break;
+                case "content":
+                    elem.setContent(val);
+                    break;
+                case "tabIndex":
+                    elem.setTabIndex(val);
+                    break;
+                case "editable":
+                    elem.setEditable(val);
+                    break;
+                case "checked":
+                    elem.setChecked(val);
+                    break;
+                case "disabled":
+                    elem.setDisabled(val);
+                    break;
+                case "visible":
+                    elem.setVisible(val);
+                    break;
+                case "display":
+                    elem.display(val);
+                    break;
+                case "styles":
+                    elem.setStyles(val);
+                    break;
+                default: 
+                    elem.setAttribute(key, val);
+            }
+        }
+
+        /**
+         * Checks is a given key is an attribute key.
+         * @param {key}
+         * @returns True if the given key is attribute key otherwise false.
+         */
+        isAttributeKey(key) {
+            let i = 0;
+            while(i < this.attributes.length) {
+                if(key === this.attributes[i]) {
+                    return true;
+                }
+                i++;
+            }
+            return false;
+        }
+
+        /**
+         * Checks is a given key val an event listener key val.
+         * @param {string} key
+         * @param {function} val
+         * @returns True if the given key val is event listener key val.
+         */
+        isEventKeyVal(key, val) {
+            return key.indexOf("on") === 0 && Util.isFunction(val);
+        }
+
+        /**
+         * Method takes a template as parameter, starts resolving it and 
+         * returns a created element tree.
+         * @param {object} template
+         * @returns Elem instance element tree.
+         */
+        static resolveTemplate(template) {
+            return Template.getInstance().setTemplateAndResolve(template);
+        }
+
+        static getInstance() {
+            if(!this.instance)
+                this.instance = new Template();
+            return this.instance;
+        }
+
+    }
+    return {
+        resolve: Template.resolveTemplate
+    }
+}());
+
+
+
+
+/**
+ * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
+ * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
+ * 
+ * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
+ * operation functionalities.
+ */
 class Tree {
+    /**
+     * Uses CSS selector to find elements on the HTML Document Tree. 
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} selector 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
     static get(selector) {
         return Elem.wrapElems(document.querySelectorAll(selector));
     }
 
+    /**
+     * Uses CSS selector to find the first match element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} selector 
+     * @returns An Elem instance.
+     */
     static getFirst(selector) {
         return Elem.wrap(document.querySelector(selector));
     }
 
+    /**
+     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
+     * @param {string} tag 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
     static getByTag(tag) {
         return Elem.wrapElems(document.getElementsByTagName(tag));
     }
 
+    /**
+     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
+     * Found elements will be wrappedn in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} name 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
     static getByName(name) {
         return Elem.wrapElems(document.getElementsByName(name));
     }
 
+    /**
+     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} id 
+     * @returns Elem instance.
+     */
     static getById(id) {
         return Elem.wrap(document.getElementById(id));
     }
 
+    /**
+     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
+     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} classname 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
     static getByClass(classname) {
         return Elem.wrapElems(document.getElementsByClassName(classname));
     }
 
+    /**
+     * @returns body wrapped in an Elem instance.
+     */
     static getBody() {
         return Elem.wrap(document.body);
     }
 
+    /**
+     * @returns head wrapped in an Elem instance.
+     */
     static getHead() {
         return Elem.wrap(document.head);
     }
 
+    /**
+     * @returns title of the html document page.
+     */
     static getTitle() {
         return document.title;
     }
 
+    /**
+     * Set an new title for html document page.
+     * @param {string} title 
+     */
     static setTitle(title) {
         document.title = title;
     }
 
+    /**
+     * @returns active element wrapped in an Elem instance.
+     */
     static getActiveElement() {
         return Elem.wrap(document.activeElement);
     }
 
+    /**
+     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
+     */
     static getAnchors() {
-        return document.anchors;
+        return Elem.wrapElems(document.anchors);
     }
 
+    /**
+     * @returns <html> element.
+     */
     static getHtmlElement() {
         return document.documentElement;
     }
 
+    /**
+     * @returns <!DOCTYPE> element.
+     */
     static getDoctype() {
         return document.doctype;
     }
 
+    /**
+     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
+     */
     static getEmbeds() {
-        return document.embeds;
+        return Elem.wrapElems(document.embeds);
     }
 
+    /**
+     * @returns an array of image elements (<img>) wrapped in an Elem instance.
+     */
     static getImages() {
-        return document.images;
+        return Elem.wrapElems(document.images);
     }
 
+    /**
+     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
+     */
     static getLinks() {
-        return document.links;
+        return Elem.wrapElems(document.links);
     }
 
+    /**
+     * @returns an array of scripts wrapped in an Elem instance.
+     */
     static getScripts() {
-        return document.scripts;
+        return Elem.wrapElems(document.scripts);
     }
 
+    /**
+     * @returns an array of form elements wrapped in an Elem instance.
+     */
     static getForms() {
-        return document.forms;
+        return Elem.wrapElems(document.forms);
     }
 }
 
 /**
- * No methods, only Key mappings for keyevent.
+ * Key class does not have any methods as it only contains key mappings for keyevent. For example:
+ * 
+ * onKeyDown(function(event) {
+ *  if(event.key === Key.ENTER)
+ *    //do something.
+ * });
  */
 class Key {}
+/** Enter */
 Key.ENTER = "Enter";
+/** Escape */
 Key.ESC = "Escape";
+/** Tab */
 Key.TAB = "Tab";
+/** F1 */
 Key.F1 = "F1";
+/** F2 */
 Key.F2 = "F2";
+/** F3 */
 Key.F3 = "F3";
+/** F4 */
 Key.F4 = "F4";
+/** F5 */
 Key.F5 = "F5";
+/** F6 */
 Key.F6 = "F6";
+/** F7 */
 Key.F7 = "F7";
+/** F8 */
 Key.F8 = "F8";
+/** F9 */
 Key.F9 = "F9";
+/** F10 */
 Key.F10 = "F10";
+/** F11 */
 Key.F11 = "F11";
+/** F12 */
 Key.F12 = "F12";
+/** a */
 Key.A = "a";
+/** b */
 Key.B = "b";
+/** c */
 Key.C = "c";
+/** d */
 Key.D = "d";
+/** e */
 Key.E = "e";
+/** f */
 Key.F = "f";
+/** g */
 Key.G = "g";
+/** h */
 Key.H = "h";
+/** i */
 Key.I = "i";
+/** j */
 Key.J = "j";
+/** l */
 Key.L = "l";
+/** m */
 Key.M = "m";
+/** n */
 Key.N = "n";
+/** o */
 Key.O = "o";
+/** p */
 Key.P = "p";
+/** q */
 Key.Q = "q";
+/** r */
 Key.R = "r";
+/**s */
 Key.S = "s";
+/** t */
 Key.T = "t";
+/** u */
 Key.U = "u";
+/** v */
 Key.V = "v";
+/** w */
 Key.W = "w";
+/** x */
 Key.X = "x";
+/** y */
 Key.Y = "y";
+/** z */
 Key.Z = "z";
 // Key.SWEDISH_O = "å";
 // Key.A_WITH_2_DOTS = "ä";
 // Key.O_WITH_2_DOTS = "ö";
+/** CapsLock */
 Key.CAPS_LOCK = "CapsLock";
+/** NumLock */
 Key.NUM_LOCK = "NumLock";
+/** ScrollLock */
 Key.SCROLL_LOCK = "ScrollLock";
+/** Pause */
 Key.PAUSE = "Pause";
+/** PrintScreen */
 Key.PRINT_SCREEN = "PrintScreen";
+/** PageUp */
 Key.PAGE_UP = "PageUp";
+/** PageDown */
 Key.PAGE_DOWN = "PageDown";
+/** End */
 Key.END = "End";
+/** Home */
 Key.HOME = "Home";
+/** Delete */
 Key.DELETE = "Delete";
+/** Insert */
 Key.INSERT = "Insert";
+/** Alt */
 Key.ALT = "Alt";
+/** Control */
 Key.CTRL = "Control";
+/** ContextMenu */
 Key.CONTEXT_MENU = "ContextMenu";
+/** OS */
 Key.OS = "OS"; // META
+/** AltGraph */
 Key.ALTGR = "AltGraph";
+/** Shift */
 Key.SHIFT = "Shift";
+/** Backspace */
 Key.BACKSPACE = "Backspace";
 // Key.HALF = "½";
+/** § */
 Key.SECTION = "§";
+/** 1 */
 Key.ONE = "1";
+/** 2 */
 Key.TWO = "2";
+/** 3 */
 Key.THREE = "3";
+/** 4 */
 Key.FOUR = "4";
+/** 5 */
 Key.FIVE = "5";
+/** 6 */
 Key.SIX = "6";
+/** 7 */
 Key.SEVEN = "7";
+/** 8 */
 Key.EIGHT = "8";
+/** 9 */
 Key.NINE = "9";
+/** 0 */
 Key.ZERO = "0";
+/** + */
 Key.PLUS = "+";
+/** + */
 Key.MINUS = "-";
+/** * */
 Key.STAR = "*";
+/** / */
 Key.SLASH = "/";
+/** ArrowUp */
 Key.ARROW_UP = "ArrowUp";
+/** ArrowRight */
 Key.ARROW_RIGHT = "ArrowRight";
+/** ArrowDown */
 Key.ARROW_DOWN = "ArrowDown";
+/** ArrowLeft */
 Key.ARROW_LEFT = "ArrowLeft";
+/** , */
 Key.COMMA = ",";
+/** . */
 Key.DOT = ".";
 
 
 let Cookie = (function() {
     /**
-     * Cookies
+     * Cookie interface offers an easy way to get, set or remove cookies in application logic.
+     * The interface handles Cookie objects under the hood. The cookie object may hold following values:
+     * 
+     * {
+     *    name: "name",
+     *    value: "value",
+     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+     *    cookiePath: "cookiePath absolute dir",
+     *    cookieDomain: "cookieDomain e.g example.com",
+     *    setSecureBoolean: true|false
+     * }
+     * 
+     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
      */
     class Cookies {
         /**
-         * Get a cookie by name.
-         * Returns the cookie object 
-         * {
-         *  name: "name",
-         *  value: "value",
-         *  expiresDate: "expiresDate e.g. Date.toUTCString()",
-         *  cookiePath: "cookiePath absolute dir",
-         *  cookieDomain: "cookieDomain e.g example.com",
-         *  setSecureBoolean: true|false
-         * }
+         * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
+         * 
          * @param {String} name 
+         * @returns cookie object
          */
         static get(name) {
             if(navigator.cookieEnabled) {
                 var retCookie = null;
                 var cookies = document.cookie.split(";");
-                for(var i in cookies) {
-                    if(cookies.hasOwnProperty(i)) {
-                        var cookie = cookies[i];
-                        var eq = cookie.search("=");
-                        var cn = cookie.substr(0, eq).trim();
-                        var cv = cookie.substr(eq + 1, cookie.length).trim();
-                        if(cn === name) {
-                            retCookie = new Cookie(cn, cv);
-                            break;
-                        }
+                var i = 0;
+                while(i < cookies.length) {
+                    var cookie = cookies[i];
+                    var eq = cookie.search("=");
+                    var cn = cookie.substr(0, eq).trim();
+                    var cv = cookie.substr(eq + 1, cookie.length).trim();
+                    if(cn === name) {
+                        retCookie = new Cookie(cn, cv);
+                        break;
                     }
+                    i++;
                 }
                 return retCookie;
             }
         }
         /**
-         * Receives cookie parameters.
-         * {
-         *  name: "name",
-         *  value: "value",
-         *  expiresDate: "expiresDate e.g. Date.toUTCString()",
-         *  cookiePath: "cookiePath absolute dir",
-         *  cookieDomain: "cookieDomain e.g example.com",
-         *  setSecureBoolean: true|false
-         * }
+         * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
+         * 
+         * @param {string} name
+         * @param {string} value
+         * @param {string} expiresDate
+         * @param {string} cookiePath
+         * @param {string} cookieDomain
+         * @param {boolean} setSecureBoolean
          */
         static set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
             if(navigator.cookieEnabled) {
@@ -1648,7 +2623,8 @@ let Cookie = (function() {
             }
         }
         /**
-         * Remove a cookie by name.
+         * Remove a cookie by name. Method will set the cookie expired and then remove it.
+         * @param {string} name
          */
         static remove(name) {
             var co = Cookies.get(name);
@@ -1660,16 +2636,20 @@ let Cookie = (function() {
     }
 
     /**
-    * Cookie object:
-    * {
-    *  name: "name",
-    *  value: "value",
-    *  expiresDate: "expiresDate e.g. Date.toUTCString()",
-    *  cookiePath: "cookiePath absolute dir",
-    *  cookieDomain: "cookieDomain e.g example.com",
-    *  setSecureBoolean: true|false
-    * }
-    */
+     * Cookie object may hold following values:
+     *
+     * {
+     *    name: "name",
+     *    value: "value",
+     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+     *    cookiePath: "cookiePath absolute dir",
+     *    cookieDomain: "cookieDomain e.g example.com",
+     *    setSecureBoolean: true|false
+     * }
+     * 
+     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+     */
     class Cookie {
         constructor(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
             this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
@@ -1696,15 +2676,28 @@ let Cookie = (function() {
 }());
 
 /**
- * Session interface.
+ * Session interface provides useful get, set, remove and clear methods.
  */
 class Session {
+    /**
+     * Save data into the Session.
+     * @param {string} key
+     * @param {*} value
+     */
     static set(key, value) {
         sessionStorage.setItem(key, value);
     }
+    /**
+     * Get the saved data from the Session.
+     * @param {string} key
+     */
     static get(key) {
         return sessionStorage.getItem(key);
     }
+    /**
+     * Remove data from the Session.
+     * @param {string} key
+     */
     static remove(key) {
         sessionStorage.removeItem(key);
     }
@@ -1717,20 +2710,33 @@ class Session {
 }
 
 /**
- * HTML local storage interface.
+ * HTML local storage interface provides useful get, set, remove and clear methods.
  */
 class Storage {
+    /**
+     * Save data into the local storage. 
+     * @param {string} key
+     * @param {*} value
+     */
     static set(key, value) {
         localStorage.setItem(key, value);
     }
+    /**
+     * Get the saved data from the local storage.
+     * @param {string} key
+     */
     static get(key) {
         return localStorage.getItem(key);
     }
+    /**
+     * Remove data from the local storage.
+     * @param {string} key
+     */
     static remove(key) {
         localStorage.removeItem(key);
     }
     /**
-     * Clears the storage.
+     * Clears the local storage.
      */
     static clear() {
         localStorage.clear();
@@ -1739,54 +2745,106 @@ class Storage {
 
 
 /**
- * General Utils.
+ * General Utility methods.
  */
 class Util {
-    constructor() {}
-
     /**
-     * Returns true if the give value is null, undefined or an empty string. 
+     * Checks is a given value empty.
+     * @param {*} value
+     * @returns True if the give value is null, undefined or an empty string. 
      */
     static isEmpty(value) {
         return (value === null || value === undefined || value === "");
     }
 
+    /**
+     * Get the type of the given value.
+     * @param {*} value
+     * @returns The type of the given value.
+     */
     static getType(value) {
         return typeof value;
     }
 
+    /**
+     * Checks is a given value is a given type.
+     * @param {*} value
+     * @param {string} type
+     * @returns True if the given value is the given type otherwise false.
+     */
     static isType(value, type) {
         return (Util.getType(value) === type);
     }
 
+    /**
+     * Checks is a given parameter a function.
+     * @param {*} func 
+     * @returns True if the given parameter is fuction otherwise false.
+     */
     static isFunction(func) {
         return Util.isType(func, "function");
     }
 
+    /**
+     * Checks is a given parameter a boolean.
+     * @param {*} boolean
+     * @returns True if the given parameter is boolean otherwise false.
+     */
     static isBoolean(boolean) {
         return Util.isType(boolean, "boolean");
     }
 
+    /**
+     * Checks is a given parameter a string.
+     * @param {*} string
+     * @returns True if the given parameter is string otherwise false.
+     */
     static isString(string) {
         return Util.isType(string, "string");
     }
 
+    /**
+     * Checks is a given parameter a number.
+     * @param {*} number
+     * @returns True if the given parameter is number otherwise false.
+     */
     static isNumber(number) {
         return Util.isType(number, "number");
     }
 
+    /**
+     * Checks is a given parameter a symbol.
+     * @param {*} symbol
+     * @returns True if the given parameter is symbol otherwise false.
+     */
     static isSymbol(symbol) {
         return Util.isType(symbol, "symbol");
     }
 
+    /**
+     * Checks is a given parameter a object.
+     * @param {*} object
+     * @returns True if the given parameter is object otherwise false.
+     */
     static isObject(object) {
         return Util.isType(object, "object");
     }
 
+    /**
+     * Checks is a given parameter an array.
+     * @param {*} array
+     * @returns True if the given parameter is array otherwise false.
+     */
     static isArray(array) {
         return Array.isArray(array);
     }
 
+    /**
+     * Sets a timeout where the given callback function will be called once after the given milliseconds of time.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @returns The timeout object.
+     */
     static setTimeout(callback, milliseconds) {
         if(!Util.isFunction(callback)) {
             throw "callback not fuction";
@@ -1797,10 +2855,20 @@ class Util {
         return window.setTimeout(callback, milliseconds);
     }
 
+    /**
+     * Removes a timeout that was created by setTimeout method.
+     * @param {object} timeoutObject
+     */
     static clearTimeout(timeoutObject) {
         window.clearTimeout(timeoutObject);
     }
 
+    /**
+     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @returns The interval object.
+     */
     static setInterval(callback, milliseconds) {
         if(!Util.isFunction(callback)) {
             throw "callback not fuction";
@@ -1811,10 +2879,18 @@ class Util {
         return window.setInterval(callback, milliseconds);
     }
 
+    /**
+     * Removes an interval that was created by setInterval method.
+     */
     static clearInterval(intervalObject) {
         window.clearInterval(intervalObject);
     }
 
+    /**
+     * Encodes a string to Base64.
+     * @param {string} string
+     * @returns The base64 encoded string.
+     */
     static encodeBase64String(string) {
         if(!Util.isString(string)) {
             throw "the given parameter is not a string: " +string;
@@ -1822,23 +2898,27 @@ class Util {
         return window.btoa(string);
     }
 
+    /**
+     * Decodes a base 64 encoded string.
+     * @param {string} string
+     * @returns The base64 decoded string.
+     */
     static decodeBase64String(string) {
         if(!Util.isString(string)) {
             throw "the given parameter is not a string: " +string;
         }
         return window.atob(string);
     }
-
-    static eval(string) {
-        return eval(string);
-    }
 }
 
+/**
+ * Browser class contains all the rest utility functions which JavaScript has to offer from Window, Navigator, Screen, History, Location objects.
+ */
 class Browser {
-    constructor() {}
-
     /**
      * Scroll once to a given location (xPos, yPos)
+     * @param {number} xPos
+     * @param {number} yPos
      */
     static scrollTo(xPos, yPos) {
         window.scrollTo(xPos, yPos);
@@ -1846,35 +2926,117 @@ class Browser {
 
     /**
      * Scroll multiple times by given pixel amount (xPx, yPx)
+     * @param {number} xPx
+     * @param {number} yPx
      */
     static scrollBy(xPx, yPx) {
         window.scrollBy(xPx, yPx);
     }
 
+    /**
+     * Opens a new browser window.
+     * 
+     * Name pamareter can have following values: name or target value (name|_blank|_parent|_self|_top)
+     * 
+     * Specs parameter is defined as comma,separated,list,without,whitespace and it can have following values:
+     * channelmode=yes|no|1|0,
+     * direcotries=yes|no|1|0,
+     * fullscreen=yes|no|1|0,
+     * height=pixels,
+     * left=pixels,
+     * location=yes|no|1|0,
+     * menubar=yes|no|1|0,
+     * resizable=yes|no|1|0,
+     * scrollbars=yes|no|1|0,
+     * status=yes|no|1|0,
+     * titlebar=yes|no|1|0,
+     * toolbar|yes|no|1|0,
+     * top=pixels,
+     * width=pixels min 100
+     * 
+     * Replace parameter defines is a new history entry created or is current replaced with the new one.
+     * If true the current entry is replaced with the new one. If false a new history entry is created.
+     * @param {string} url 
+     * @param {string} name 
+     * @param {string} specs 
+     * @param {boolean} replace 
+     * @returns Reference to the opened window or null if opening the window failes.
+     */
     static open(url, name, specs, replace) {
         return window.open(url, name, specs, replace);
     }
 
+    /**
+     * Closes a given opened window. Same as calling openedWindow.close();
+     * @param {*} openedWindow 
+     */
     static close(openedWindow) {
         openedWindow.close();
     }
 
+    /**
+     * Opens a print webpage dialog.
+     */
     static print() {
         window.print();
     }
 
+    /**
+     * Displays an alert dialog with a given message and an OK button.
+     * @param {string} message
+     */
     static alert(message) {
         window.alert(message);
     }
 
+    /**
+     * Displays a confirm dialog with a given message, OK and Cancel button.
+     * @param {string} message
+     * @returns True if OK was pressed otherwise false.
+     */
     static confirm(message) {
         return window.confirm(message);
     }
 
+    /**
+     * Displays a prompt dialog with a given message, a prefilled default text, OK and Cancel button.
+     * @param {string} message
+     * @param {string} defaultText
+     * @returns If OK was pressed and an input field has text then the text is returned. 
+     * If the input does not have text and OK was pressed then empty string is returned.
+     * If Cancel was pressed then null is returned.
+     */
     static prompt(message, defaultText) {
         return window.prompt(message, defaultText);
     }
 
+    /**
+     * Method is used to make a media query to the viewport/screen object.The media query is done according to a given mediaString.
+     * Syntax of the media string would be (min-width: 300px) but using this method enables user to omit parentheses(). 
+     * Which then leads to syntax min-width: 300px.
+     * 
+     * Method returns a MediaQueryList object which has few neat properties. Matches and media in addition it has 
+     * two functions addListener and removeListener which can be used to query media in realtime. Usage could be something following:
+     * 
+     * var matcher = Browser.mediaMatcher("max-height: 300px");
+     * 
+     * matcher.addlistener(function(matcher) {
+     *  if(matcher.matches)
+     *      Tree.getBody().setStyles({backgroundColor: "red"});
+     *  else
+     *      Tree.getBody().setStyles({backgroundColor: "green"});
+     * });
+     * 
+     * matcher.media returns the media query string.
+     * 
+     * matcher.matches returns the boolean indicating does it does the query string match or not. True if it matches, otherwise false.
+     * 
+     * mathcer.addListener(function(matcher)) is used to track changes on the viewport/screen.
+     * 
+     * matcher.removeListener(listenerFunction) is used to remove a created listener.
+     * @param {string} mediaString 
+     * @returns MediaQueryList object.
+     */
     static mediaMatcher(mediaString) {
         if(mediaString.indexOf("(") !== 0)
             mediaString = "("+mediaString;
@@ -1883,175 +3045,304 @@ class Browser {
         return window.matchMedia(mediaString);
     }
 
+    /**
+     * Loads one page back in the browsers history list.
+     */
     static pageBack() {
         history.back();
     }
 
+    /**
+     * Loads one page forward in the browsers history list.
+     */
     static pageForward() {
         history.forward();
     }
 
+    /**
+     * Loads to specified page in the browsers history list. A parameter can either be a number or string.
+     * If the parameter is number then positive and negative values are allowed as positive values will go forward
+     * and negative values will go backward. 
+     * If the parameter is string then it must be partial or full url of the page in the history list.
+     * @param {string|number} numberOfPagesOrUrl
+     */
     static pageGo(numberOfPagesOrUrl) {
         history.go(numberOfPagesOrUrl)
     }
 
+    /**
+     * Create a new history entry with given parameters without reloading the page. State object will be the state
+     * next history entry will be using. Title is ignored value by the history object at the time but it could be 
+     * the same title what the HTML Document page has at the moment of create the new history entry. New url must 
+     * be of the same origin (e.g. www.example.com) but the rest of url could be anything.
+     * @param {object} stateObject 
+     * @param {string} title 
+     * @param {string} newURL 
+     */
     static pushState(stateObject, title, newURL) {
         history.pushState(stateObject, title, newURL);
     }
 
+    /**
+     * Replace a history entry with given parameters without reloading the page. State object will be the state
+     * next history entry will be using. Title is ignored value by the history object at the time but it could be 
+     * the same title what the HTML Document page has at the moment of create the new history entry. New url must 
+     * be of the same origin (e.g. www.example.com) but the rest of url could be anything.
+     * @param {object} stateObject 
+     * @param {string} title 
+     * @param {string} newURL 
+     */
     static replaceState(stateObject, title, newURL) {
         history.replaceState(stateObject, title, newURL);
     }
 
+    /**
+     * Loads a new page.
+     * @param {string} newURL
+     */
     static newPage(newURL) {
         location.assign(newURL);
     }
 
+    /**
+     * Reloads a current page. If a parameter force is true then the page will be loaded from the server 
+     * otherwise from the browsers cache.
+     * @param {boolean} force
+     */
     static reloadPage(force) {
         location.reload(force);
     }
 
+    /**
+     * Replaces a current page with a new one. If the page is replaced then it wont be possible to go back
+     * to the previous page from the history list.
+     * @param {string} newURL
+     */
     static replacePage(newURL) {
         location.replace(newURL);
     }
 
+    /**
+     * @returns Anchor part of the url e.g. #heading2.
+     */
     static getAnchorHash() {
         return location.hash;
     }
 
+    /**
+     * Sets a new anhorpart of the url e.g. #heading3.
+     * @param {string} hash
+     */
     static setAnchorHash(hash) {
         location.hash = hash;
     }
 
+    /**
+     * @returns Hostname and port in host:port format.
+     */
     static getHostnamePort() {
         return location.host;
     }
 
     /**
-     * host = host:port
+     * Set a hostname and port in format host:port.
+     * @param {string} hostPort
      */
     static setHostnamePort(hostPort) {
         location.host = hostPort;
     }
 
+    /**
+     * @returns Hostname e.g. www.google.com.
+     */
     static getHostname() {
         return location.hostname;
     }
 
+    /**
+     * Set a hostname
+     * @param {string} hostname
+     */
     static setHostname(hostname) {
         location.hostname = hostname;
     }
 
+    /**
+     * @returns Entire URL of the webpage.
+     */
     static getURL() {
         return location.href;
     }
 
+    /**
+     * Set location of a current page to point to a new location e.g. http://some.url.test or #someAcnhor on the page.
+     * @param {string} newURL
+     */
     static setURL(newURL) {
         location.href;
     }
 
     /**
-     * Returns protocol, hostname and port e.g. https://www.example.com:443
+     * @returns protocol, hostname and port e.g. https://www.example.com:443
      */
     static getOrigin() {
         return location.origin;
     }
 
+    /**
+     * @returns Part of the URL after the slash(/) e.g. /photos/
+     */
     static getPathname() {
         return location.pathname;
     }
 
+    /**
+     * Sets a new pathname for this location.
+     * @param {string} pathname 
+     */
     static setPathname(pathname) {
         location.pathname;
     }
 
+    /**
+     * @returns Port number of the connection between server and client.
+     */
     static getPort() {
         return location.port;
     }
 
+    /**
+     * Sets a new port number for the connection between server and client.
+     * @param {number} portNumber 
+     */
     static setPort(portNumber) {
         location.port = portNumber;
     }
 
+    /**
+     * @returns Protocol part of the URL e.g. http: or https:.
+     */
     static getProtocol() {
         return location.protocol;
     }
 
+    /**
+     * Set a new protocol for this location to use.
+     * @param {string} protocol 
+     */
     static setProtocol(protocol) {
         location.protocol = protocol;
     }
 
     /**
-     * For example: ?attr=value&abc=efg
+     * @returns Part of the URL after the question(?) mark. e.g. ?attr=value&abc=efg.
      */
     static getSearchString() {
         return location.search;
     }
 
+    /**
+     * Sets a new searchString into the URL
+     * @param {string} searchString 
+     */
     static setSearchString(searchString) {
         location.search = searchString;
     }
 
+    /**
+     * @returns Codename of the browser.
+     */
     static getCodename() {
         return navigator.appCodeName;
     }
 
+    /**
+     * @returns Name of the browser.
+     */
     static getName() {
         return navigator.appName;
     }
 
+    /**
+     * @returns Version of the browser.
+     */
     static getVersion() {
         return navigator.appVersion;
     }
 
+    /**
+     * @returns True if cookies are enabled otherwise false.
+     */
     static isCookiesEnabled() {
         return navigator.cookieEnabled;
     }
 
+    /**
+     * @returns GeoLocation object.
+     */
     static getGeoLocation() {
         return navigator.geolocation;
     }
 
+    /**
+     * @returns Language of the browser.
+     */
     static getLanguage() {
         return navigator.language;
     }
 
-    static isOnline() {
-        return navigator.isOnline;
-    }
-
+    /**
+     * @returns A platform name of which the browser is compiled on.
+     */
     static getPlatform() {
         return navigator.platform;
     }
 
+    /**
+     * @returns A name of an engine of the browser.
+     */
     static getProduct() {
         return navigator.product;
     }
 
+    /**
+     * @returns A header string sent to a server by the browser.
+     */
     static getUserAgentHeader() {
         return navigator.userAgent;
     }
 
-    static isJavaEnabled() {
-        return navigator.isJavaEnabled();
-    }
-
+    /**
+     * @returns Color depth of the current screen.
+     */
     static getColorDepth() {
         return screen.colorDepth;
     }
 
+    /**
+     * @returns Total height of the current screen.
+     */
     static getFullScreenHeight() {
         return screen.height;
     }
 
+    /**
+     * @returns Total width of the current screen.
+     */
     static getFullScreenWidth() {
         return screen.width;
     }
 
+    /**
+     * @returns Height of the current screen excluding OS. taskbar.
+     */
     static getAvailableScreenHeight() {
         return screen.availHeight;
     }
 
+    /**
+     * @returns Width of the current screen exluding OS. taskbar.
+     */
     static getAvailableScreenWidth() {
         return screen.availWidth;
     }
