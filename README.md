@@ -4,10 +4,7 @@ RME - RestMadeEasy
 RME is a functional JavaScript library that enables user to make small and medium size websites with ease only writing 
 JavaScript. 
 
-The RME does not require any installation nor any other libraries. Just download a script file and place it to a project
-folder or simply use a github online url as follows. 
-
-`<script src="https://github.com/JamiLu/RME/releases/download/v0.5.0-beta/rme.es5.min.js"></script>`
+The RME does not require any installation nor any other libraries. 
 
 Documentation
 -----
@@ -15,12 +12,17 @@ Documentation
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v0.5.0-beta/rme.js](https://github.com/JamiLu/RME/releases/download/v0.5.0-beta/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v0.5.0-beta/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v0.5.0-beta/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v0.5.0-beta/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v0.5.0-beta/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.0.0-RC/rme.js](https://github.com/JamiLu/RME/releases/download/v1.0.0-RC/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.0.0-RC/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.0.0-RC/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.0.0-RC/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.0.0-RC/rme.es5.min.js)
 
 Basics
 -----
+__How to:__ Just download a script file and place it to a project folder or simply use a github online url as follows. 
+
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.0.0-RC/rme.es5.min.js"></script>`
+
+Then simply copy paste code clips below to your js file and voilà. __Remember__ only __1__ run() and ready() function per RME application.
 
 ```javascript
 RME.run(function() {
@@ -201,6 +203,8 @@ Classes & Functions
   - wrapElems(elemArray) **Returns an Array of wrapped html objects if many or one if only one. (Elem instances)**
   - dom() **Returns the javascript html object that this (Elem instance) holds**
   - and many many many more methods. All setter methods and methods that does not return some value are so called Builder methods that they can chained as follows setText("text").setName("name").setId("id").setType("text").addClasses("one two three");
+* Template
+  - resolve(template) **Resolves a given JSON format template and returns a created Elem instance element tree.**
 * Tree
   - get(cssSelector) **Returns an Array of Elem objects or one Elem object**
   - getFirst(cssSelector) **Returns one Elem object**
