@@ -2087,7 +2087,7 @@ let Template = (function() {
         resolveElement(tag) {
             let resolved = null;
             var match = [];
-            var el = tag.match(/[a-z]+/).join();
+            var el = tag.match(/[a-z0-9]+/).join();
             if(Util.isEmpty(el))
                 throw "Template resolver could not find element: \"" + el + "\" from the given tag: \"" + tag + "\"";
             else
@@ -2101,7 +2101,7 @@ let Template = (function() {
             if(!Util.isEmpty(match)) 
                 resolved.addClasses(match.join(" ").replace(/\./g, ""));
 
-            match = tag.match(/\[[a-zA-Z0-9\=]+\]/g); //find attributes
+            match = tag.match(/\[[a-zA-Z0-9\= ]+\]/g); //find attributes
             if(!Util.isEmpty(match))
                 resolved = this.addAttributes(resolved, match);    
 
