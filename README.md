@@ -138,6 +138,9 @@ RME.ready(function() {
         firstName: "",
         lastName: "",
     }
+    Tree.getBody().append(new Elem("h1").setText("Welcome"));
+    Tree.getBody().append(RME.component("form", {input: print}));
+    
 
     function print(event) {
         if(event.target.name === "fname")
@@ -145,21 +148,34 @@ RME.ready(function() {
         else
             state.lastName = event.target.value;
 
-        //You can render interactive content by render method. But render only renders elements.
-        Tree.get("#screen").render(new Elem("span").setText(state.firstName +" "+state.lastName));
-        //Or this way use setContent to set interactive text content.
-        // Tree.get("#screen").setContent(state.firstName +" "+state.lastName);
+        //this will update the Header content.
+        Tree.get("h1").setText("Welcome " +state.firstName +" "+state.lastName);
     }
-    Tree.getBody().append(RME.component("form", {input: print}));
-    Tree.getBody().append(new Elem("div").setId("screen"));
 });
 
 RME.component(function() {
     return {
         form: function() {
-            return new Elem("div")
-                .append(new Elem("div").append(new Elem("input").setName("fname").setType("text").setPlaceholder("First name").onInput(this.input)))
-                .append(new Elem("div").append(new Elem("input").setName("lname").setType("text").setPlaceholder("Last name").onInput(this.input)));
+            return Template.resolve({
+                div: {
+                    "label[for=fname]": {
+                        text: "First name"
+                    },
+                    "input[type=text]": {
+                        id: "fname",
+                        name: "fname",
+                        placeholder: "First name",
+                        onInput: this.input
+                    },
+                    br: {},
+                    "label[for=lname]": {
+                        text: "Last name"
+                    },
+                    "input#lname[type=text][name=lname][placeholder=Last name]": {
+                        onInput: this.input
+                    },
+                }
+            });
         }
     }
 });
