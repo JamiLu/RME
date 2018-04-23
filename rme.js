@@ -720,6 +720,7 @@ let Elem = (function() {
                 i++;
             }
             if(!RenderHelper.isNewStateEqualToPrevState(newState)) {
+                RenderHelper.setPrevState(null);
                 while(this.html.firstChild) {
                     this.html.removeChild(this.html.firstChild);
                 }
@@ -1975,7 +1976,7 @@ let Elem = (function() {
          */
         static setPrevState(state) {
             RenderHelper.getInstance().prevState = state;
-            RenderHelper.getInstance().prevStateString = state.toString();
+            RenderHelper.getInstance().prevStateString = Util.isEmpty(state) ? "" : state.toString();
         }
 
         /**
@@ -2015,8 +2016,11 @@ let Template = (function() {
         constructor() {
             this.template = {};
             this.root = null;
+            /**
+             * These attributes are supported inside an object notation: {div: {text: "some", class: "some", id:"some"....}}
+             */
             this.attributes = ["id","name","class","text","value","content","tabIndex","type","src","href","editable",
-            "placeholder","size","checked","disabled","visible","display","draggable","styles"];
+            "placeholder","size","checked","disabled","visible","display","draggable","styles", "for"];
         }
 
         /**
@@ -2042,27 +2046,58 @@ let Template = (function() {
             for(var obj in template) {
                 if(template.hasOwnProperty(obj)) {
                     if(round === 0) {
-                        this.root = this.resolveElement(obj);
-                        if(Util.isObject(template[obj]))
-                            this.resolve(template[obj], this.root, ++round);
+                        ++round;
+                        this.root = this.resolveElement(obj, template[obj]);
+                        if(Util.isArray(template[obj]))
+                            this.resolveArray(template[obj], this.root, round);
+                        else if(!this.isComponent(obj) && Util.isObject(template[obj]))
+                            this.resolve(template[obj], this.root, round);
                         else if(Util.isFunction(template[obj]))
                             this.resolveFunction(this.root, template[obj]);
                     } else {
+                        ++round;
                         if(this.isAttributeKey(obj)) {
                             this.resolveAttributes(parent, obj, template[obj]);
                         } else if(this.isEventKeyVal(obj, template[obj])) {
                             parent[obj].call(parent, template[obj]);
                         } else {
-                            var child = this.resolveElement(obj);
+                            var child = this.resolveElement(obj, template[obj]);
                             parent.append(child);
-                            if(Util.isObject(template[obj])) {
-                                this.resolve(template[obj], child, ++round);
+                            if(Util.isArray(template[obj])) {
+                                this.resolveArray(template[obj], child, round);
+                            } else if(!this.isComponent(obj) && Util.isObject(template[obj])) {
+                                this.resolve(template[obj], child, round);
                             } else if(Util.isFunction(template[obj])) {
                                 this.resolveFunction(child, template[obj]);
                             }
                         }
                     }
                 }
+            }
+        }
+
+        /**
+         * Method resolves a given array template elements.
+         * @param {array} array
+         * @param {parent} parent
+         * @param {round}
+         */
+        resolveArray(array, parent, round) {
+            var i = 0;                
+            while(i < array.length) {
+                var o = array[i];
+                for(var key in o) {
+                    if(o.hasOwnProperty(key)) {
+                        if(Util.isObject(o[key])) {
+                            this.resolve(o, parent, round);
+                        } else if(Util.isFunction(o[key])) {
+                            var el = this.resolveElement(key);
+                            this.resolveFunction(el, o[key]);
+                            parent.append(el);
+                        }
+                    }
+                }
+                i++;
             }
         }
     
@@ -2082,28 +2117,32 @@ let Template = (function() {
          * Resolves an element and some basic attributes from a give tag. Method throws an exception if 
          * the element could not be resolved.
          * @param {string} tag
+         * @param {object} obj
          * @returns Null or resolved Elem instance elemenet.
          */
-        resolveElement(tag) {
+        resolveElement(tag, obj) {
             let resolved = null;
             var match = [];
             var el = tag.match(/[a-z0-9]+/).join();
-            if(Util.isEmpty(el))
+            if(this.isComponent(tag)) {
+                tag = tag.replace(/component:/, "");
+                return RME.component(tag, obj); //if component, do fast return
+            } else if(Util.isEmpty(el))
                 throw "Template resolver could not find element: \"" + el + "\" from the given tag: \"" + tag + "\"";
             else
                 resolved = new Elem(el);
 
-            match = tag.match(/\#[a-zA-Z0-9]+/); //find id
+            match = tag.match(/[a-z0-9]+\#[a-zA-Z0-9\-]+/); //find id
             if(!Util.isEmpty(match))
-                resolved.setId(match.join().replace(/(\#)/, ""));
+                resolved.setId(match.join().replace(/[a-z0-9]+\#/g, ""));
 
             match = tag.match(/\.[a-zA-Z-0-9\-]+/g); //find classes
             if(!Util.isEmpty(match)) 
                 resolved.addClasses(match.join(" ").replace(/\./g, ""));
 
-            match = tag.match(/\[[a-zA-Z0-9\= ]+\]/g); //find attributes
+            match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#]+\]/g); //find attributes
             if(!Util.isEmpty(match))
-                resolved = this.addAttributes(resolved, match);    
+                resolved = this.addAttributes(resolved, match);
 
             return resolved;
         }
@@ -2202,19 +2241,26 @@ let Template = (function() {
         }
 
         /**
+         * Checks has a key component keyword. 
+         * @param {string} key
+         * @returns True if the key contains component keyword otherwise false.
+         */
+        isComponent(key) {
+            return key.indexOf("component:") === 0;
+        }
+
+        /**
          * Method takes a template as parameter, starts resolving it and 
          * returns a created element tree.
          * @param {object} template
          * @returns Elem instance element tree.
          */
         static resolveTemplate(template) {
-            return Template.getInstance().setTemplateAndResolve(template);
+            return Template.create().setTemplateAndResolve(template);
         }
 
-        static getInstance() {
-            if(!this.instance)
-                this.instance = new Template();
-            return this.instance;
+        static create() {
+            return new Template();
         }
 
     }
