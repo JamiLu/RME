@@ -207,6 +207,7 @@ let Http = (function() {
      *    data: data,
      *    contentType: contentType,
      *    onProgress: function(event),
+     *    onTimeout: function(event),
      *    headers: headersObject{"header": "value"},
      *    useFetch: true|false **determines that is fetch used or not.
      *  }
@@ -281,6 +282,7 @@ let Http = (function() {
          *    data: data,
          *    contentType: contentType,
          *    onProgress: function(event),
+         *    onTimeout: function(event),
          *    headers: headersObject{"header": "value"},
          *    useFetch: true|false **determines that is fetch used or not.
          *  }
@@ -347,6 +349,11 @@ let Http = (function() {
                 if(this.progressHandler)
                     this.progressHandler(event);
             };
+            if(this.xhr.ontimeout && config.onTimeout) {
+                this.xhr.ontimeout = (event) => {
+                    config.onTimeout(event);
+                }
+            }
             this.xhr.onerror = () => {
                 this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
                 if(errorHandler)
@@ -381,6 +388,11 @@ let Http = (function() {
                     request.responseJSON = tryParseJSON(request.responseText);
                     isResponseOK(request.status) ? resolve(request) : reject(request);
                 };
+                if(request.ontimeout && config.onTimeout) {
+                    request.ontimeout = (event) => {
+                        config.onTimeout(event);
+                    }
+                }
                 request.onprogress = (event) => {
                     if(config.onProgress)
                         config.onProgress(event);
@@ -1236,30 +1248,21 @@ let Elem = (function() {
         //Animation events
         onAnimationStart(handler) {
             this.html.onanimationstart = handler;
-            // this.html.addEventListener("webkitAnimationStart", handler);
-            // this.html.addEventListener("mozAnimationStart", handler);
             return this;
         }
 
         onAnimationIteration(handler) {
             this.html.onanimationiteration = handler;
-            // this.html.addEventListener("webkitAnimationIteration", handler);
-            // this.html.addEventListener("mozAnimationIteration", handler);
             return this;
         }
 
         onAnimationEnd(handler) {
             this.html.onanimationend = handler;
-            // this.html.addEventListener("webkitAnimationEnd", handler);
-            // this.html.addEventListener("mozAnimationEnd", handler);
             return this;
         }
 
         onTransitionEnd(handler) {
             this.html.ontransitionend = handler;
-            // this.html.addEventListener("webkitTransitionEnd", handler);
-            // this.html.addEventListener("mozTransitionEnd", handler);
-            // this.html.addEventListener("oTransitionEnd", handler);
             return this;
         }
 
@@ -2526,9 +2529,6 @@ Key.X = "x";
 Key.Y = "y";
 /** z */
 Key.Z = "z";
-// Key.SWEDISH_O = "å";
-// Key.A_WITH_2_DOTS = "ä";
-// Key.O_WITH_2_DOTS = "ö";
 /** CapsLock */
 Key.CAPS_LOCK = "CapsLock";
 /** NumLock */
@@ -2557,7 +2557,7 @@ Key.ALT = "Alt";
 Key.CTRL = "Control";
 /** ContextMenu */
 Key.CONTEXT_MENU = "ContextMenu";
-/** OS */
+/** OS or Metakey */
 Key.OS = "OS"; // META
 /** AltGraph */
 Key.ALTGR = "AltGraph";
@@ -2565,7 +2565,6 @@ Key.ALTGR = "AltGraph";
 Key.SHIFT = "Shift";
 /** Backspace */
 Key.BACKSPACE = "Backspace";
-// Key.HALF = "½";
 /** § */
 Key.SECTION = "§";
 /** 1 */
