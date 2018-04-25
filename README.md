@@ -105,16 +105,22 @@ RME.ready(function() {
   //This Table is only a simple basic function which enables grouping or wrapping one or bunch of Elemens into a one resusable Object. This could also be done as component.
   function Table() {
        var borders = {border: "1px solid #000000", borderCollapse: "collapse"};
-       return new Elem("table").setStyles(borders).render(
-           new Row("I love this Script", "Feel the same burn?"),
-           new Row("The inventor", "Jami Lu"));
-
-        
-        function Row(col1Text, col2Text) {
-        return new Elem("tr")
-            .append(new Elem("td").setStyles(borders).setText(col1Text))
-            .append(new Elem("td").setStyles(borders).setText(col2Text));
-        }
+       return Template.resolve({
+           table: function() {
+               this.setStyles(borders);
+               this.append(new Row("I love this script", "Feel the same burn?"));
+               this.append(new Row("The inventor", "Jami Lu"));
+               //this.render(row, row|[rows]) could also be used but for static content append is faster.
+           }
+       });
+       function Row(t1, t2) {
+           return Template.resolve({
+               tr: [
+                   {td: {text: t1, styles: borders}},
+                   {td: {text: t2, styles: borders}}
+               ]
+           });
+       }
     }
     
     var table = new Table();
