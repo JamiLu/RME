@@ -322,9 +322,17 @@ let Http = (function() {
         }
     }
     /**
-     * Content-Type JSON
+     * Content-Type application/json;charset=UTF-8
      */
     Http.JSON = "application/json;charset=UTF-8";
+    /**
+     * Content-Type multipart/form-data
+     */
+    Http.FORM_DATA = "multipart/form-data";
+    /**
+     * Content-Type text/plain
+     */
+    Http.TEXT_PLAIN = "text/plain";
 
     /**
      * Old Fashion XMLHttpRequest made into the Promise pattern.
@@ -2011,7 +2019,7 @@ let Elem = (function() {
 
 let Template = (function() {
     /**
-     * Template class reads a JSON or JSON alike format notation and creates an element tree from it.
+     * Template class reads a JSON format notation and creates an element tree from it.
      * The Template class has only one public method resolve that takes the template as parameter and returns 
      * the created element tree.
      */
@@ -2439,6 +2447,235 @@ class Tree {
         return Elem.wrapElems(document.forms);
     }
 }
+
+let Router = (function() {
+    /**
+     * Router class handles and renders route elements that are given by Router.routes() method.
+     * The method takes an array of route objects that are defined as follows: {route: "url", elem: elemObject}.
+     * The first element the array of route objects is by default the root route object in which all other route objects 
+     * are rendered into.
+     */
+    class Router {
+        constructor() {
+            this.instance = null;
+            this.root = null;
+            this.routes = [];
+            this.loadCall = () => this.renderRoute(location.pathname);
+            this.hashCall = () => this.renderRoute(location.hash);
+            this.useHistory = window.history.pushState ? true : false;
+            this.autoListen = true;
+            this.registerListeners();
+        }
+
+        /**
+         * Register listeners according to the useHistory state.
+         */
+        registerListeners() {
+            if(this.useHistory) {
+                if(window.addEventListener)
+                    window.addEventListener("load", this.loadCall);
+                else
+                    window.attachEvent("onload", this.loadCall);
+            } else {
+                if(window.addEventListener)
+                    window.addEventListener("hashchange", this.hashCall);
+                else
+                    window.attachEvent("onhashchange", this.hashCall);
+            }
+        }
+
+        /**
+         * Clear the registered listeners.
+         */
+        clearListeners() {
+            if(window.removeEventListener)
+                window.removeEventListener("load", this.loadCall);
+            else
+                window.detachEvent("onload", this.loadCall);
+            if(window.removeEventListener)
+                window.removeEventListener("hashchange", this.hashCall);
+            else
+                window.detachEvent("onhashchange", this.hashCall);
+        }
+
+        /**
+         * Set the router to use a history implementation or an anchor hash implementation.
+         * If true then the history implementation is used. Default is true.
+         * @param {boolean} use
+         */
+        setUseHistory(use) {
+            this.useHistory = use;
+            this.setAutoListen(this.autoListen);
+        }
+
+        /**
+         * Set the Router to auto listen url change to true or false.
+         * @param {boolean} listen
+         */
+        setAutoListen(listen) {
+            this.autoListen = listen;
+            this.clearListeners();
+            if(this.autoListen)
+                this.registerListeners();
+        }
+
+        /**
+         * Set the routes and take the first element to be the root route element.
+         * @param {array} routes
+         */
+        setRoutes(routes) {
+            this.routes = routes;
+            if(Util.isEmpty(this.root))
+                this.root = this.routes.shift();
+        }
+
+        /**
+         * Add a route into the Router. {route: "url", elem: elemObject}
+         * @param {object} route
+         */
+        addRoute(route) {
+            this.routes.push(route);
+        }
+
+        /**
+         * Set a root route object into the Router. {route: "url", elem: elemObject}
+         * @param {object} route
+         */
+        setRoot(route) {
+            this.root = route;
+        }
+
+        /**
+         * Method navigates to the url and renders a route element inside the root route element if found.
+         * @param {string} url
+         */
+        navigateUrl(url) {
+            var route = this.findRoute(url);
+            if(!Util.isEmpty(route) && this.useHistory) {
+                history.pushState(null, null, url);
+            } else if(!Util.isEmpty(route)) {
+                location.href = route.route.indexOf("#") === 0 ? route.route : "#"+route.route;
+            }
+            if(!Util.isEmpty(this.root)) {
+                this.root.elem.render(route.elem);
+            }
+        }
+
+        /**
+         * Method looks for a route by the url. If the router is found then it will be returned otherwise returns null
+         * @param {string} url
+         * @returns The found router or null if not found.
+         */
+        findRoute(url) {
+            var i = 0;
+            if(!Util.isEmpty(url)) {
+                while(i < this.routes.length) {
+                    if(this.createRegExp(this.routes[i].route).test(url))
+                        return this.routes[i];
+                    i++;
+                }
+            }
+            return null;
+        }
+
+        /**
+         * Method will look for a route by the url and if the route is found then it will be rendered 
+         * inside the root route element.
+         * @param {string} url
+         */
+        renderRoute(url) {
+            var route = this.findRoute(url);
+            if(!Util.isEmpty(route)) 
+                this.root.elem.render(route.elem);
+            else
+                this.root.elem.render();
+        }
+
+        /**
+         * Create a RegExp for the url according to the useHistory state.
+         * @param {string} url
+         */
+        createRegExp(url) {
+            if(this.useHistory) {
+                url = url.indexOf("/") === 0 ? url.replace("/", "") : url;
+                return new RegExp(this.root.route+url.replace(/\*/g, ".*"));
+            } else {
+                return new RegExp("\#?"+url);
+            }
+        }
+
+        /**
+         * Method will try to find a route according to the url. If found then the Router will update the new url to the browser and 
+         * render the found route element.
+         */
+        static navigate(url) {
+            Router.getInstance().navigateUrl(url);
+        }
+
+        /**
+         * Set a root element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
+         * @param {string} url
+         * @param {object} elem
+         */
+        static root(url, elem) {
+            Router.getInstance().setRoot({route: url, elem: elem});
+        }
+
+        /**
+         * Add a new route element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
+         * @param {string} url
+         * @param {object} elem
+         */
+        static add(url, elem) {
+            Router.getInstance().addRoute({route: url, elem: elem});
+        }
+
+        /**
+         * Set an array of routes that the Router uses. The first item in the given routes array will be the root route element by default.
+         * @param {array} routes
+         */
+        static routes(routes) {
+            if(!Util.isArray(routes))
+                throw "Could not set routes. Given parameter: \"" + routes + "\" is not an array."
+            Router.getInstance().setRoutes(routes);
+        }
+
+        /**
+         * Set the Router use history or a anchor hash implementation. If a given value is true then the history implementation is used
+         * otherwise the anchor hash implementation is used. Default is true.
+         * @param {boolean} useHistory
+         */
+        static useHistory(useHistory) {
+            if(!Util.isBoolean(useHistory))
+                throw "Could not set use history mode. Given parameter: \"" + useHistory + "\" is not a boolean.";
+            Router.getInstance().setUseHistory(useHistory);
+        }
+
+        /**
+         * Set the Router auto listen url to true or false.
+         * @param {boolean} listen
+         */
+        static autoListen(listen) {
+            if(!Util.isBoolean(listen))
+                throw "Could not set use history mode. Given parameter: \"" + listen + "\" is not a boolean.";
+            Router.getInstance().setAutoListen(listen);
+        }
+
+        static getInstance() {
+            if(Util.isEmpty(this.instance))
+                this.instance = new Router();
+            return this.instance;
+        }
+    }
+    return {
+        navigate: Router.navigate,
+        root: Router.root,
+        add: Router.add,
+        routes: Router.routes,
+        useHistory: Router.useHistory,
+        autoListen: Router.autoListen
+    }
+}());
 
 /**
  * Key class does not have any methods as it only contains key mappings for keyevent. For example:
@@ -3224,7 +3461,7 @@ class Browser {
      * @param {string} newURL
      */
     static setURL(newURL) {
-        location.href;
+        location.href = newURL;
     }
 
     /**
@@ -3246,7 +3483,7 @@ class Browser {
      * @param {string} pathname 
      */
     static setPathname(pathname) {
-        location.pathname;
+        location.pathname = pathname;
     }
 
     /**
