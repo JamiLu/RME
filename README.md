@@ -12,15 +12,15 @@ Documentation
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.0.0-RC/rme.js](https://github.com/JamiLu/RME/releases/download/v1.0.0-RC/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.0.0-RC/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.0.0-RC/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.0.0-RC/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.0.0-RC/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.0.0/rme.js](https://github.com/JamiLu/RME/releases/download/v1.0.0/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.0.0/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.0.0/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.0.0/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.0.0/rme.es5.min.js)
 
 Basics
 -----
 __How to:__ Just download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.0.0-RC/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.0.0/rme.es5.min.js"></script>`
 
 Then simply copy paste code clips below to your js file and voilà. __Remember__ only __1__ run() and ready() function per RME application.
 
@@ -239,6 +239,13 @@ Classes & Functions
   - getTitle() **Returns document title string**
   - setTitle(string) **Sets document title string**
   - and other methods that searches elements from the html document tree, _but does not return an Elem instance_
+* Router
+  - navigate(url) **Navigates to the url, updates url on the browser and renders route element if found.**
+  - root(url, elem) **Set a root route element to the Router**
+  - add(url, elem) **Add a route to the Router**
+  - routes(array) **Set routes array. The first element in the array will be removed from the array and set as root render element**
+  - useHistory(boolean) **True by default. True to use history implementation false to use anchor hash implementation**
+  - autoListen(boolean) **True by default. True to use url auto listen**
 * Key
   - no methods, only **Key** constants for keyevent such as Key.ENTER
 * Cookie
