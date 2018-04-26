@@ -2471,31 +2471,34 @@ let Router = (function() {
          * Register listeners according to the useHistory state.
          */
         registerListeners() {
-            if(this.useHistory) {
-                if(window.addEventListener)
-                    window.addEventListener("load", this.loadCall);
-                else
-                    window.attachEvent("onload", this.loadCall);
-            } else {
-                if(window.addEventListener)
-                    window.addEventListener("hashchange", this.hashCall);
-                else
-                    window.attachEvent("onhashchange", this.hashCall);
-            }
+            if(this.useHistory && this.autoListen)
+                window.addEventListener("load", this.loadCall);
+            else if(this.autoListen)
+                window.addEventListener("hashchange", this.hashCall);
+            
+            if(!this.autoListen)
+                window.addEventListener("popstate", this.onPopState.bind(this));
         }
 
         /**
          * Clear the registered listeners.
          */
         clearListeners() {
-            if(window.removeEventListener)
-                window.removeEventListener("load", this.loadCall);
+            window.removeEventListener("load", this.loadCall);
+            window.removeEventListener("hashchange", this.hashCall);
+
+            if(!this.autoListen)
+                window.removeEventListener("popstate", this.onPopState);
+        }
+
+        /**
+         * On popstate call is registered if the auto listen is false. It listens the browsers history change and renders accordingly.
+         */
+        onPopState() {
+            if(this.useHistory)
+                this.renderRoute(location.pathname);
             else
-                window.detachEvent("onload", this.loadCall);
-            if(window.removeEventListener)
-                window.removeEventListener("hashchange", this.hashCall);
-            else
-                window.detachEvent("onhashchange", this.hashCall);
+                this.renderRoute(location.hash);
         }
 
         /**
@@ -2515,8 +2518,7 @@ let Router = (function() {
         setAutoListen(listen) {
             this.autoListen = listen;
             this.clearListeners();
-            if(this.autoListen)
-                this.registerListeners();
+            this.registerListeners();
         }
 
         /**
