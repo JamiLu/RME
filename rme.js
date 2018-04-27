@@ -1133,7 +1133,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setVisible(boolean) {
-            this.html.style.visibility = boolean ? "visibile" : "hidden";
+            this.html.style.visibility = boolean ? "" : "hidden";
             return this;
         }
 
@@ -1144,7 +1144,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         display(boolean) {
-            this.html.style.display = boolean ? "initial" : "none";
+            this.html.style.display = boolean ? "" : "none";
             return this;
         }
 

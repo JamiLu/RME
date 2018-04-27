@@ -1355,7 +1355,7 @@ var Elem = function () {
         }, {
             key: "setVisible",
             value: function setVisible(boolean) {
-                this.html.style.visibility = boolean ? "visibile" : "hidden";
+                this.html.style.visibility = boolean ? "" : "hidden";
                 return this;
             }
 
@@ -1369,7 +1369,7 @@ var Elem = function () {
         }, {
             key: "display",
             value: function display(boolean) {
-                this.html.style.display = boolean ? "initial" : "none";
+                this.html.style.display = boolean ? "" : "none";
                 return this;
             }
 
