@@ -1251,6 +1251,18 @@ let Elem = (function() {
             return this.html.lastElementChild !== null ? Elem.wrap(this.html.lastElementChild) : null;
         }
 
+        /**
+         * Method does es5 standard extension to an element. This method can be used to add additional functionality
+         * to this element. Method returns the given child reference.
+         * @param {object} child 
+         * @returns child instance.
+         */
+        extend(child) {
+            child.prototype = this;
+            child.prototype.constructor = child;
+            return child;
+        }
+
         //EVENTS BELOW
 
         //Animation events
