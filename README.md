@@ -9,6 +9,10 @@ The RME does not require any installation nor any other libraries.
 Documentation
 -----
  - [http://jlcv.sytes.net/files/index.html](http://jlcv.sytes.net/files/index.html)
+ 
+Howto
+-----
+ - [http://jlcv.sytes.net/files/howto.html](http://jlcv.sytes.net/files/howto.html)
 
 Download
 -----
@@ -18,7 +22,10 @@ Download
 
 Basics
 -----
-__How to:__ Just download a script file and place it to a project folder or simply use a github online url as follows. 
+
+__See Basics online from Howto.__
+
+Download a script file and place it to a project folder or simply use a github online url as follows. 
 
 `<script src="https://github.com/JamiLu/RME/releases/download/v1.0.0/rme.es5.min.js"></script>`
 
