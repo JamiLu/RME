@@ -2663,7 +2663,7 @@ var Template = function () {
                 match = tag.match(/\.[a-zA-Z-0-9\-]+/g); //find classes
                 if (!Util.isEmpty(match)) resolved.addClasses(match.join(" ").replace(/\./g, ""));
 
-                match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#]+\]/g); //find attributes
+                match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-]+\]/g); //find attributes
                 if (!Util.isEmpty(match)) resolved = this.addAttributes(resolved, match);
 
                 return resolved;
