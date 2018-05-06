@@ -993,13 +993,14 @@ var Elem = function () {
              * Removes an attribute of this element.
              * 
              * @param {String} attr 
-             * @returns the removed attribute object with value and name parameters.
+             * @returns Elem instance.
              */
 
         }, {
             key: "removeAttribute",
             value: function removeAttribute(attr) {
-                return this.html.removeAttributeNode(this.getAttribute(attr));
+                this.html.removeAttributeNode(this.getAttribute(attr));
+                return this;
             }
 
             /**
@@ -1711,8 +1712,8 @@ var Elem = function () {
              */
 
         }, {
-            key: "onMmouseLeave",
-            value: function onMmouseLeave(handler) {
+            key: "onMouseLeave",
+            value: function onMouseLeave(handler) {
                 this.html.onmouseleave = handler;
                 return this;
             }
@@ -3059,26 +3060,26 @@ var Router = function () {
             this.instance = null;
             this.root = null;
             this.routes = [];
+            this.prevUrl = "";
             this.loadCall = function () {
                 return _this4.renderRoute(location.pathname);
             };
             this.hashCall = function () {
                 return _this4.renderRoute(location.hash);
             };
-            this.useHistory = window.history.pushState ? true : false;
+            this.useHistory = true;
             this.autoListen = true;
-            this.registerListeners();
         }
 
         /**
-         * Register listeners according to the useHistory state.
+         * Register listeners according to the useHistory and the autoListen state.
          */
 
 
         _createClass(Router, [{
             key: "registerListeners",
             value: function registerListeners() {
-                if (this.useHistory && this.autoListen) window.addEventListener("load", this.loadCall);else if (this.autoListen) window.addEventListener("hashchange", this.hashCall);
+                if (this.useHistory && this.autoListen) window.addEventListener("load", this.loadCall);else if (!this.useHistory && this.autoListen) window.addEventListener("hashchange", this.hashCall);
 
                 if (!this.autoListen) window.addEventListener("popstate", this.onPopState.bind(this));
             }
@@ -3116,7 +3117,6 @@ var Router = function () {
             key: "setUseHistory",
             value: function setUseHistory(use) {
                 this.useHistory = use;
-                this.setAutoListen(this.autoListen);
             }
 
             /**
@@ -3128,8 +3128,6 @@ var Router = function () {
             key: "setAutoListen",
             value: function setAutoListen(listen) {
                 this.autoListen = listen;
-                this.clearListeners();
-                this.registerListeners();
             }
 
             /**
@@ -3175,12 +3173,13 @@ var Router = function () {
             key: "navigateUrl",
             value: function navigateUrl(url) {
                 var route = this.findRoute(url);
-                if (!Util.isEmpty(route) && this.useHistory) {
+                if (!Util.isEmpty(route) && this.useHistory && !route.hide) {
                     history.pushState(null, null, url);
-                } else if (!Util.isEmpty(route)) {
+                } else if (!Util.isEmpty(route) && !route.hide) {
                     location.href = route.route.indexOf("#") === 0 ? route.route : "#" + route.route;
                 }
-                if (!Util.isEmpty(this.root)) {
+                if (!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
+                    this.prevUrl = url;
                     this.root.elem.render(route.elem);
                 }
             }
@@ -3195,9 +3194,9 @@ var Router = function () {
             key: "findRoute",
             value: function findRoute(url) {
                 var i = 0;
-                if (!Util.isEmpty(url)) {
+                if (!Util.isEmpty(url) && this.prevUrl !== url) {
                     while (i < this.routes.length) {
-                        if (this.createRegExp(this.routes[i].route).test(url)) return this.routes[i];
+                        if (this.matches(this.routes[i].route, url)) return this.routes[i];
                         i++;
                     }
                 }
@@ -3218,18 +3217,21 @@ var Router = function () {
             }
 
             /**
-             * Create a RegExp for the url according to the useHistory state.
+             * Method matches a given url parameters and returns true if the urls matches.
              * @param {string} url
+             * @param {string} newUrl
+             * @returns True if the given urls matches otherwise false.
              */
 
         }, {
-            key: "createRegExp",
-            value: function createRegExp(url) {
+            key: "matches",
+            value: function matches(url, newUrl) {
                 if (this.useHistory) {
                     url = url.indexOf("/") === 0 ? url.replace("/", "") : url;
-                    return new RegExp(this.root.route + url.replace(/\*/g, ".*"));
+                    return new RegExp(this.root.route + url.replace(/\*/g, ".*")).test(newUrl);
                 } else {
-                    return new RegExp("\#?" + url);
+                    url = url.indexOf("#") === 0 ? url : "#" + url;
+                    return url === newUrl;
                 }
             }
 
@@ -3281,28 +3283,53 @@ var Router = function () {
             }
 
             /**
-             * Set the Router use history or a anchor hash implementation. If a given value is true then the history implementation is used
-             * otherwise the anchor hash implementation is used. Default is true.
-             * @param {boolean} useHistory
+             * Method sets the Router to use an url implementation. The url implementation defaults to HTML standard that pressing a link
+             * will cause the browser reload a new page. After reload the new page is rendered. If you wish to skip reload then you should 
+             * invoke a method manual() after invoking this method as follows Router.url().manual().
+             * @returns Router
              */
 
         }, {
-            key: "useHistory",
-            value: function useHistory(_useHistory) {
-                if (!Util.isBoolean(_useHistory)) throw "Could not set use history mode. Given parameter: \"" + _useHistory + "\" is not a boolean.";
-                Router.getInstance().setUseHistory(_useHistory);
+            key: "url",
+            value: function url() {
+                Router.getInstance().setUseHistory(true);
+                Router.getInstance().registerListeners();
+                return Router;
             }
 
             /**
-             * Set the Router auto listen url to true or false.
-             * @param {boolean} listen
+             * Method sets the Router not to automatically follow url changes. If this method is invoked 
+             * the user must explicitly define a method that calls Router.navigate in order to have navigation working
+             * properly when going forward and backward in the history. The method will not 
+             * do anything if the url implementation is not used.
+             * @returns Router
              */
 
         }, {
-            key: "autoListen",
-            value: function autoListen(listen) {
-                if (!Util.isBoolean(listen)) throw "Could not set use history mode. Given parameter: \"" + listen + "\" is not a boolean.";
-                Router.getInstance().setAutoListen(listen);
+            key: "manual",
+            value: function manual() {
+                if (Router.getInstance().useHistory) {
+                    Router.getInstance().clearListeners();
+                    Router.getInstance().setAutoListen(false);
+                    Router.getInstance().registerListeners();
+                }
+                return Router;
+            }
+
+            /**
+             * Method sets the Router to use a hash implementation. When this implementation is used 
+             * there is no need to manually use Router.navigate function because change
+             * of the hash is automatically followed.
+             * @returns Router
+             */
+
+        }, {
+            key: "hash",
+            value: function hash() {
+                Router.getInstance().setUseHistory(false);
+                Router.getInstance().setAutoListen(true);
+                Router.getInstance().registerListeners();
+                return Router;
             }
         }, {
             key: "getInstance",
@@ -3320,8 +3347,9 @@ var Router = function () {
         root: Router.root,
         add: Router.add,
         routes: Router.routes,
-        useHistory: Router.useHistory,
-        autoListen: Router.autoListen
+        url: Router.url,
+        manual: Router.manual,
+        hash: Router.hash
     };
 }();
 
