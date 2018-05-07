@@ -2464,7 +2464,7 @@ class Tree {
 let Router = (function() {
     /**
      * Router class handles and renders route elements that are given by Router.routes() method.
-     * The method takes an array of route objects that are defined as follows: {route: "url", elem: elemObject}.
+     * The method takes an array of route objects that are defined as follows: {route: "url", elem: elemObject, hide: true|false|undefined}.
      * The first element the array of route objects is by default the root route object in which all other route objects 
      * are rendered into.
      */
@@ -2886,7 +2886,7 @@ Key.DOT = ".";
 let Cookie = (function() {
     /**
      * Cookie interface offers an easy way to get, set or remove cookies in application logic.
-     * The interface handles Cookie objects under the hood. The cookie object may hold following values:
+     * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
      * 
      * {
      *    name: "name",
@@ -2995,7 +2995,7 @@ let Cookie = (function() {
 }());
 
 /**
- * Session interface provides useful get, set, remove and clear methods.
+ * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
  */
 class Session {
     /**
@@ -3029,7 +3029,7 @@ class Session {
 }
 
 /**
- * HTML local storage interface provides useful get, set, remove and clear methods.
+ * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
  */
 class Storage {
     /**
@@ -3330,7 +3330,7 @@ class Browser {
     }
 
     /**
-     * Method is used to make a media query to the viewport/screen object.The media query is done according to a given mediaString.
+     * Method is used to make a media query to the viewport/screen object. The media query is done according to a given mediaString.
      * Syntax of the media string would be (min-width: 300px) but using this method enables user to omit parentheses(). 
      * Which then leads to syntax min-width: 300px.
      * 
