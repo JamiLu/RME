@@ -10,6 +10,8 @@ var RME = function () {
     /**
      * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create RESTfull webpages with ease and speed.
      * This library is free to use under the MIT License.
+     * 
+     * RME class is a core of the RME library. The RME class offers functionality to start a RME application, control components, external script files and rme storage.
      */
     var RME = function () {
         function RME() {
@@ -514,7 +516,7 @@ var Http = function () {
             _classCallCheck(this, FetchRequest);
         }
         /**
-         * Does Fetch GET request. Content-Type JSON is used.
+         * Does Fetch GET request. Content-Type JSON is used by default.
          * @param {stirng} url *Required
          * @param {*} init 
          */
@@ -528,7 +530,7 @@ var Http = function () {
                 return this.do({ url: url, init: init, contentType: Http.JSON });
             }
             /**
-             * Does Fetch POST request. Content-Type JSON is used.
+             * Does Fetch POST request. Content-Type JSON is used by default.
              * @param {string} url *Required
              * @param {*} body 
              * @param {*} init 
@@ -543,7 +545,7 @@ var Http = function () {
                 return this.do({ url: url, init: init, contentType: Http.JSON });
             }
             /**
-             * Does Fetch PUT request. Content-Type JSON is used.
+             * Does Fetch PUT request. Content-Type JSON is used by default.
              * @param {string} url *Required
              * @param {*} body 
              * @param {*} init 
@@ -558,7 +560,7 @@ var Http = function () {
                 return this.do({ url: url, init: init, contentType: Http.JSON });
             }
             /**
-             * Does Fetch DELETE request. Content-Type JSON is used.
+             * Does Fetch DELETE request. Content-Type JSON is used by default.
              * @param {string} url 
              * @param {*} init 
              */
@@ -589,8 +591,7 @@ var Http = function () {
                 if (!config.init) config.init = {};
                 if (config.contentType) {
                     if (!config.init.headers) config.init.headers = new Headers({});
-
-                    config.init.headers.set("Content-Type", config.contentType);
+                    if (!config.init.headers.has("Content-Type")) config.init.headers.set("Content-Type", config.contentType);
                 }
                 if (config.method) {
                     config.init.method = config.method;
@@ -1464,6 +1465,26 @@ var Elem = function () {
             key: "width",
             value: function width() {
                 return this.html.clientWidth;
+            }
+
+            /**
+             * @returns position from top relative to offsetParent.
+             */
+
+        }, {
+            key: "top",
+            value: function top() {
+                return this.html.offsetTop;
+            }
+
+            /**
+             * @returns position from left relative to offsetParent.
+             */
+
+        }, {
+            key: "left",
+            value: function left() {
+                return this.html.offsetLeft;
             }
 
             /**
@@ -3131,7 +3152,7 @@ var Router = function () {
             }
 
             /**
-             * Set the routes and take the first element to be the root route element.
+             * Set the routes and if a root is not set then the first element will be the root route element.
              * @param {array} routes
              */
 
@@ -3227,11 +3248,17 @@ var Router = function () {
             key: "matches",
             value: function matches(url, newUrl) {
                 if (this.useHistory) {
-                    url = url.indexOf("/") === 0 ? url.replace("/", "") : url;
-                    return new RegExp(this.root.route + url.replace(/\*/g, ".*")).test(newUrl);
+                    url = url.replace(/\*/g, ".*").replace(/\/{2,}/g, "/");
+                    var path = newUrl.replace(/\:{1}\/{2}/, "").match(/\/{1}.*/).join();
+                    var found = newUrl.match(url);
+                    if (!Util.isEmpty(found)) found = found.join();
+                    return found === path && new RegExp(url).test(newUrl);
                 } else {
                     url = url.indexOf("#") === 0 ? url : "#" + url;
-                    return url === newUrl;
+                    var hash = newUrl.match(/\#{1}.*/).join();
+                    var found = newUrl.match(url);
+                    if (!Util.isEmpty(found)) found = found.join();
+                    return url === found && found === hash;
                 }
             }
 
@@ -3248,30 +3275,32 @@ var Router = function () {
 
             /**
              * Set a root element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
-             * @param {string} url
              * @param {object} elem
+             * @returns Router
              */
 
         }, {
             key: "root",
-            value: function root(url, elem) {
-                Router.getInstance().setRoot({ route: url, elem: elem });
+            value: function root(elem) {
+                Router.getInstance().setRoot({ elem: elem });
+                return Router;
             }
 
             /**
              * Add a new route element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
              * @param {string} url
              * @param {object} elem
+             * @param {boolean} hide
              */
 
         }, {
             key: "add",
-            value: function add(url, elem) {
-                Router.getInstance().addRoute({ route: url, elem: elem });
+            value: function add(url, elem, hide) {
+                Router.getInstance().addRoute({ route: url, elem: elem, hide: hide });
             }
 
             /**
-             * Set an array of routes that the Router uses. The first item in the given routes array will be the root route element by default.
+             * Set an array of routes that the Router uses. If a root is not set then the first item in the given routes array will be the root route element.
              * @param {array} routes
              */
 
