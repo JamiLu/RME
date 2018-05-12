@@ -248,11 +248,12 @@ Classes & Functions
   - and other methods that searches elements from the html document tree, _but does not return an Elem instance_
 * Router
   - navigate(url) **Navigates to the url, updates url on the browser and renders route element if found.**
-  - root(url, elem) **Set a root route element to the Router**
-  - add(url, elem) **Add a route to the Router**
+  - root(elem) **Set a root route element to the Router**
+  - add(url, elem, hide) **Add a route to the Router**
   - routes(array) **Set routes array. The first element in the array will be removed from the array and set as root render element**
-  - useHistory(boolean) **True by default. True to use history implementation false to use anchor hash implementation**
-  - autoListen(boolean) **True by default. True to use url auto listen**
+  - hash() **Use hash implementation**
+  - url() **Use default URL implementation**
+  - manual() **Set URL implementation to manual, Router.navigate need to be invoked in order to change pages**
 * Key
   - no methods, only **Key** constants for keyevent such as Key.ENTER
 * Cookie
