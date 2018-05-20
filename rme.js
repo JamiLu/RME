@@ -44,7 +44,10 @@ let RME = (function() {
         }
 
         getComponent(name, props) {
-            return this.components[name].call(props);
+            let comp = this.components[name];
+            if(!comp)
+                throw "Cannot find a component: \""+name+"\"";
+            return comp.call(props);
         }
 
         setRmeState(key, value) {
@@ -53,7 +56,10 @@ let RME = (function() {
         }
 
         getRmeState(key) {
-            return this.rmeState[key];
+            let data = this.rmeState[key];
+            if(!data)
+                throw "Cannot find data with a key: \""+key+"\"";
+            return data;
         }
 
         /** 
