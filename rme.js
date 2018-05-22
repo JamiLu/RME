@@ -56,10 +56,7 @@ let RME = (function() {
         }
 
         getRmeState(key) {
-            let data = this.rmeState[key];
-            if(!data)
-                throw "Cannot find data with a key: \""+key+"\"";
-            return data;
+            return this.rmeState[key];
         }
 
         /** 
