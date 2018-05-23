@@ -12,7 +12,7 @@ Documentation
  
 Howto
 -----
- - http://jlcv.sytes.net/rme/howto](http://jlcv.sytes.net/rme/howto)
+ - [http://jlcv.sytes.net/rme/howto](http://jlcv.sytes.net/rme/howto)
 
 Download
 -----
