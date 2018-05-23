@@ -9,10 +9,6 @@ The RME does not require any installation nor any other libraries.
 Documentation
 -----
  - [http://jlcv.sytes.net/rme/](http://jlcv.sytes.net/rme/)
- 
-Howto
------
- - [http://jlcv.sytes.net/rme/howto](http://jlcv.sytes.net/rme/howto)
 
 Download
 -----
@@ -23,7 +19,7 @@ Download
 Basics
 -----
 
-__See Basics online from Howto.__
+__See Basics online from:__ [http://jlcv.sytes.net/rme/howto](http://jlcv.sytes.net/rme/howto)
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
