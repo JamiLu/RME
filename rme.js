@@ -12,7 +12,7 @@ let RME = (function() {
             this.instance = this;
             this.completeRun = function() {};
             this.runner = function() {};
-            this.onrmestoragechange = function(state) {};
+            this.onStorageChange = function(state) {};
             this.components = {};
             this.rmeState = {};
         }
@@ -35,24 +35,29 @@ let RME = (function() {
         }
 
         addComponent(runnable) {
-            var comp = runnable();
+            var comp;
+            if(Util.isFunction(runnable))
+                comp = runnable();
+            else if(Util.isObject(runnable))
+                comp = runnable;
             for(var p in comp) {
                 if(comp.hasOwnProperty(p)) {
                     this.components[p] = comp[p];
                 }
             }
+            comp = null;
         }
 
         getComponent(name, props) {
             let comp = this.components[name];
             if(!comp)
                 throw "Cannot find a component: \""+name+"\"";
-            return comp.call(props);
+            return comp.call(props, props);
         }
 
         setRmeState(key, value) {
             this.rmeState[key] = value;
-            this.onrmestoragechange(this.rmeState);
+            this.onStorageChange.call(this, this.rmeState);
         }
 
         getRmeState(key) {
@@ -60,8 +65,7 @@ let RME = (function() {
         }
 
         /** 
-         * Runs a runnable script immedeately.
-         * Only one run method per RME application.
+         * Runs a runnable script immedeately. If multpile run functions are declared they will be invoked by the declaration order.
          */
         static run(runnable) {
             if(runnable && Util.isFunction(runnable))
@@ -69,8 +73,8 @@ let RME = (function() {
         }
 
         /**
-         * Waits until body has been loaded and then runs a runnable script.
-         * Only one ready method per RME application.
+         * Waits until body has been loaded and then runs a runnable script. 
+         * If multiple ready functions are declared the latter one is invoked.
          */
         static ready(runnable) {
             if(runnable && Util.isFunction(runnable))
@@ -87,7 +91,7 @@ let RME = (function() {
          * @param {Object} props 
          */
         static component(runnable, props) {
-            if(runnable && Util.isFunction(runnable))
+            if(runnable && (Util.isFunction(runnable) || Util.isObject(runnable)))
                 RME.getInstance().addComponent(runnable);
             else if(runnable && Util.isString(runnable))
                 return RME.getInstance().getComponent(runnable, props);
@@ -148,9 +152,23 @@ let RME = (function() {
          * current instance storage.
          * @param {function} listener 
          */
-        static onrmestoragechange(listener) {
+        static onStorageChange(listener) {
             if(listener && Util.isFunction(listener))
                 RME.getInstance().onrmestoragechange = listener;
+        }
+
+        static onReceive(dataKey) {
+            if(!Util.isEmpty(dataKey))
+                return DataReceivePromise.waitTillReceive(dataKey);
+        }
+
+        /**
+         * Function checks if a component with the given name exists.
+         * @param {string} name 
+         * @returns True if the component exist otherwise false
+         */
+        static hasComponent(name) {
+            return !Util.isEmpty(RME.getInstance().components[name]);
         }
 
         static config() {
@@ -185,11 +203,54 @@ let RME = (function() {
             return this.instance;
         }
     }
-    
-    document.onreadystatechange = (event) => {
-         if(document.readyState === "complete")
-             RME.getInstance().complete();
+
+    class DataReceivePromise {
+        constructor() {
+            this.instance = this;
+        }
+
+        createPromise(dataKey) {
+            return new Promise((resolve, reject) => {
+                let interval = Util.setInterval(function() {
+                    let data = RME.storage(dataKey);
+                    if(!Util.isEmpty(data)) {
+                        Util.clearInterval(interval);
+                        resolve(data);
+                    }
+                });
+                Util.setTimeout(function() {
+                    if(Util.isEmpty(RME.storage(dataKey)))
+                        Util.clearInterval(interval);
+                        reject(dataKey);
+                }, 5000);
+            });
+        }
+
+        createCustom(dataKey) {
+
+        }
+
+
+        then(handler) {
+
+        }
+
+        static waitTillReceive(dataKey) {
+            if(window.Promise)
+                return DataReceivePromise.create().createPromise(dataKey);
+            else
+                return DataReceivePromise.create().createCustom(dataKey);
+        }
+
+        static create() {
+            return new DataReceivePromise();
+        }
     }
+    
+    document.addEventListener("readystatechange", () => {
+        if(document.readyState === "complete")
+             RME.getInstance().complete();
+    });
 
     return {
         run: RME.run,
@@ -197,7 +258,9 @@ let RME = (function() {
         component: RME.component,
         storage: RME.storage,
         script: RME.script,
-        onrmestoragechange: RME.onrmestoragechange
+        onStorageChange: RME.onStorageChange,
+        onReceive: RME.onReceive,
+        hasComponent: RME.hasComponent
     }
 }());
 
@@ -771,6 +834,47 @@ let Elem = (function() {
         }
 
         /**
+         * Uses CSS selector to find all matching child elements in this Element. Found elements will be wrapped in an Elem instance.
+         * @param {string} selector 
+         * @returns An array of Elem instances or a single Elem instance.
+         */
+        get(selector) {
+            return Elem.wrapElems(this.html.querySelectorAll(selector));
+        }
+    
+        /**
+         * Uses CSS selector to find the first match child element in this Element.
+         * Found element will be wrapped in an Elem instance.
+         * @param {string} selector 
+         * @returns An Elem instance.
+         */
+        getFirst(selector) {
+            return Elem.wrap(this.html.querySelector(selector));
+        }
+    
+        /**
+         * Uses a HTML Document tag name to find matching elements in this Element e.g. div, span, p.
+         * Found elements will be wrapped in an Elem instance.
+         * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
+         * @param {string} tag 
+         * @returns An array of Elem instances or a single Elem instance.
+         */
+        getByTag(tag) {
+            return Elem.wrapElems(this.html.getElementsByTagName(tag));
+        }
+    
+        /**
+         * Uses a HTML Document element class string to find matching elements in this Element e.g. "main emphasize-green".
+         * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
+         * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+         * @param {string} classname 
+         * @returns An array of Elem instances or a single Elem instance.
+         */
+        getByClass(classname) {
+            return Elem.wrapElems(this.html.getElementsByClassName(classname));
+        }
+
+        /**
          * Set a title of this element.
          * 
          * @param {String} text 
@@ -1165,6 +1269,26 @@ let Elem = (function() {
         }
 
         /**
+         * Set translated text of this element.
+         * @param {string} message 
+         * @param {*} params 
+         */
+        message(message, ...params) {
+            let i = 0;
+            let paramArray = [];
+            while(i < params.length) {
+                if(Util.isArray(params[i]))
+                    paramArray = paramArray.concat(params[i]);
+                else
+                    paramArray.push(params[i]);
+                i++;
+            }
+            paramArray.push(this);
+            this.setText(Messages.message(message, paramArray));
+            return this;
+        }
+
+        /**
          * Do click on this element.
          * @returns Elem instance.
          */
@@ -1287,22 +1411,22 @@ let Elem = (function() {
 
         //Animation events
         onAnimationStart(handler) {
-            this.html.onanimationstart = handler;
+            this.html.onanimationstart = handler.bind(this, this);
             return this;
         }
 
         onAnimationIteration(handler) {
-            this.html.onanimationiteration = handler;
+            this.html.onanimationiteration = handler.bind(this, this);
             return this;
         }
 
         onAnimationEnd(handler) {
-            this.html.onanimationend = handler;
+            this.html.onanimationend = handler.bind(this, this);
             return this;
         }
 
         onTransitionEnd(handler) {
-            this.html.ontransitionend = handler;
+            this.html.ontransitionend = handler.bind(this, this);
             return this;
         }
 
@@ -1313,7 +1437,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onDrag(handler) {
-            this.html.ondrag = handler;
+            this.html.ondrag = handler.bind(this, this);
             return this;
         }
 
@@ -1323,7 +1447,7 @@ let Elem = (function() {
          * @return Elem instance.
          */
         onDragEnd(handler) {
-            this.html.ondragend = handler;
+            this.html.ondragend = handler.bind(this, this);
             return this;
         }
 
@@ -1333,7 +1457,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onDragEnter(handler) {
-            this.html.ondragenter = handler;
+            this.html.ondragenter = handler.bind(this, this);
             return this;
         }
 
@@ -1343,7 +1467,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onDragOver(handler) {
-            this.html.ondragover = handler;
+            this.html.ondragover = handler.bind(this, this);
             return this;
         }
 
@@ -1353,7 +1477,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onDragStart(handler) {
-            this.html.ondragstart = handler;
+            this.html.ondragstart = handler.bind(this, this);
             return this;
         }
 
@@ -1363,7 +1487,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onDrop(handler) {
-            this.html.ondrop = handler;
+            this.html.ondrop = handler.bind(this, this);
             return this;
         }
 
@@ -1374,7 +1498,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onClick(handler) {
-            this.html.onclick = handler;
+            this.html.onclick = handler.bind(this, this);
             return this;
         }
 
@@ -1384,7 +1508,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onDoubleClick(handler) {
-            this.html.ondblclick = handler;
+            this.html.ondblclick = handler.bind(this, this);
             return this;
         }
 
@@ -1394,7 +1518,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onContextMenu(handler) {
-            this.html.oncontextmenu = handler;
+            this.html.oncontextmenu = handler.bind(this, this);
             return this;
         }
 
@@ -1404,7 +1528,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onMouseDown(handler) {
-            this.html.onmousedown = handler;
+            this.html.onmousedown = handler.bind(this, this);
             return this;
         }
 
@@ -1414,7 +1538,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onMouseEnter(handler) {
-            this.html.onmouseenter = handler;
+            this.html.onmouseenter = handler.bind(this, this);
             return this;
         }
 
@@ -1424,7 +1548,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onMouseLeave(handler) {
-            this.html.onmouseleave = handler;
+            this.html.onmouseleave = handler.bind(this, this);
             return this;
         }
 
@@ -1434,7 +1558,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onMouseMove(handler) {
-            this.html.onmousemove = handler;
+            this.html.onmousemove = handler.bind(this, this);
             return this;
         }
 
@@ -1444,7 +1568,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onMouseOver(handler) {
-            this.html.onmouseover = handler;
+            this.html.onmouseover = handler.bind(this, this);
             return this;
         }
 
@@ -1454,7 +1578,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onMouseOut(handler) {
-            this.html.onmouseout = handler;
+            this.html.onmouseout = handler.bind(this, this);
             return this;
         }
 
@@ -1464,7 +1588,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onMouseUp(handler) {
-            this.html.onmouseup = handler;
+            this.html.onmouseup = handler.bind(this, this);
             return this;
         }
 
@@ -1474,7 +1598,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onWheel(handler) {
-            this.html.onwheel = handler;
+            this.html.onwheel = handler.bind(this, this);
             return this;
         }
 
@@ -1485,7 +1609,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onScroll(handler) {
-            this.html.onscroll = handler;
+            this.html.onscroll = handler.bind(this, this);
             return this;
         }
 
@@ -1494,7 +1618,7 @@ let Elem = (function() {
          * @param {function} handler 
          */
         onResize(handler) {
-            this.html.onresize = handler;
+            this.html.onresize = handler.bind(this, this);
             return this;
         }
 
@@ -1505,7 +1629,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onError(handler) {
-            this.html.onerror = handler;
+            this.html.onerror = handler.bind(this, this);
             return this;
         }
 
@@ -1515,7 +1639,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onLoad(handler) {
-            this.html.onload = handler;
+            this.html.onload = handler.bind(this, this);
             return this;
         }
 
@@ -1525,7 +1649,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onUnload(handler) {
-            this.html.onunload = handler;
+            this.html.onunload = handler.bind(this, this);
             return this;
         }
 
@@ -1535,7 +1659,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onBeforeUnload(handler) {
-            this.html.onbeforeunload = handler;
+            this.html.onbeforeunload = handler.bind(this, this);
             return this;
         }
 
@@ -1546,7 +1670,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onKeyUp(handler) {
-            this.html.onkeyup = handler;
+            this.html.onkeyup = handler.bind(this, this);
             return this;
         }
 
@@ -1556,7 +1680,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onKeyDown(handler) {
-            this.html.onkeydown = handler;
+            this.html.onkeydown = handler.bind(this, this);
             return this;
         }
 
@@ -1566,7 +1690,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onKeyPress(handler) {
-            this.html.onkeypress = handler;
+            this.html.onkeypress = handler.bind(this, this);
             return this;
         }
 
@@ -1576,7 +1700,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onInput(handler) {
-            this.html.oninput = handler;
+            this.html.oninput = handler.bind(this, this);
             return this;
         }
 
@@ -1587,7 +1711,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onChange(handler) {
-            this.html.onchange = handler;
+            this.html.onchange = handler.bind(this, this);
             return this;
         }
 
@@ -1597,7 +1721,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onSubmit(handler) {
-            this.html.onsubmit = handler;
+            this.html.onsubmit = handler.bind(this, this);
             return this;
         }
 
@@ -1607,7 +1731,7 @@ let Elem = (function() {
          * @returns Elem isntance.
          */
         onSelect(handler) {
-            this.html.onselect = handler;
+            this.html.onselect = handler.bind(this, this);
             return this;
         }
         
@@ -1617,7 +1741,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onReset(handler) {
-            this.html.onreset = handler;
+            this.html.onreset = handler.bind(this, this);
             return this;
         }
 
@@ -1627,7 +1751,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onFocus(handler) {
-            this.html.onfocus = handler;
+            this.html.onfocus = handler.bind(this, this);
             return this;
         }
 
@@ -1637,7 +1761,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onFocusIn(handler) {
-            this.html.onfocusin = handler;
+            this.html.onfocusin = handler.bind(this, this);
             return this;
         }
 
@@ -1647,7 +1771,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onFocusOut(handler) {
-            this.html.onfocusout = handler;
+            this.html.onfocusout = handler.bind(this, this);
             return this;
         }
 
@@ -1657,7 +1781,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onBlur(handler) {
-            this.html.onblur = handler;
+            this.html.onblur = handler.bind(this, this);
             return this;
         }
 
@@ -1668,7 +1792,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onCopy(handler) {
-            this.html.oncopy = handler;
+            this.html.oncopy = handler.bind(this, this);
             return this;
         }
 
@@ -1678,7 +1802,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onCut(handler) {
-            this.html.oncut = handler;
+            this.html.oncut = handler.bind(this, this);
             return this;
         }
 
@@ -1688,7 +1812,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onPaste(handler) {
-            this.html.onpaste = handler;
+            this.html.onpaste = handler.bind(this, this);
             return this;
         }
 
@@ -1699,7 +1823,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onAbort(handler) {
-            this.html.onabort = handler;
+            this.html.onabort = handler.bind(this, this);
             return this;
         }
 
@@ -1709,7 +1833,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onWaiting(handler) {
-            this.html.onwaiting = handler;
+            this.html.onwaiting = handler.bind(this, this);
             return this;
         }
 
@@ -1719,7 +1843,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onVolumeChange(handler) {
-            this.html.onvolumechange = handler;
+            this.html.onvolumechange = handler.bind(this, this);
             return this;
         }
 
@@ -1729,7 +1853,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onTimeUpdate(handler) {
-            this.html.ontimeupdate = handler;
+            this.html.ontimeupdate = handler.bind(this, this);
             return this;
         }
 
@@ -1739,7 +1863,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onSeeking(handler) {
-            this.html.onseeking = handler;
+            this.html.onseeking = handler.bind(this, this);
             return this;
         }
 
@@ -1749,7 +1873,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onSeekEnd(handler) {
-            this.html.onseekend = handler;
+            this.html.onseekend = handler.bind(this, this);
             return this;
         }
 
@@ -1759,7 +1883,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onRateChange(handler) {
-            this.html.onratechange = handler;
+            this.html.onratechange = handler.bind(this, this);
             return this;
         }
 
@@ -1769,7 +1893,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onProgress(handler) {
-            this.html.onprogress = handler;
+            this.html.onprogress = handler.bind(this, this);
             return this; 
         }
 
@@ -1779,7 +1903,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onLoadMetadata(handler) {
-            this.html.onloadmetadata = handler;
+            this.html.onloadmetadata = handler.bind(this, this);
             return this;
         }
 
@@ -1789,7 +1913,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onLoadedData(handler) {
-            this.html.onloadeddata = handler;
+            this.html.onloadeddata = handler.bind(this, this);
             return this;
         }
 
@@ -1799,7 +1923,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onLoadStart(handler) {
-            this.html.onloadstart = handler;
+            this.html.onloadstart = handler.bind(this, this);
             return this;
         }
 
@@ -1809,7 +1933,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onPlaying(handler) {
-            this.html.onplaying = handler;
+            this.html.onplaying = handler.bind(this, this);
             return this;
         }
 
@@ -1819,7 +1943,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onPlay(handler) {
-            this.html.onplay = handler;
+            this.html.onplay = handler.bind(this, this);
             return this;
         }
 
@@ -1829,7 +1953,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onPause(handler) {
-            this.html.onpause = handler;
+            this.html.onpause = handler.bind(this, this);
             return this;
         }
 
@@ -1839,7 +1963,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onEnded(handler) {
-            this.html.onended = handler;
+            this.html.onended = handler.bind(this, this);
             return this;
         }
 
@@ -1849,7 +1973,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onDurationChange(handler) {
-            this.html.ondurationchange = handler;
+            this.html.ondurationchange = handler.bind(this, this);
             return this;
         }
 
@@ -1859,7 +1983,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onCanPlay(handler) {
-            this.html.oncanplay = handler;
+            this.html.oncanplay = handler.bind(this, this);
             return this;
         }
 
@@ -1869,7 +1993,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onCanPlayThrough(handler) {
-            this.html.oncanplaythrough = handler;
+            this.html.oncanplaythrough = handler.bind(this, this);
             return this;
         }
 
@@ -1879,7 +2003,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onStalled(handler) {
-            this.html.onstalled = handler;
+            this.html.onstalled = handler.bind(this, this);
             return this;
         }
 
@@ -1889,7 +2013,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onSuspend(handler) {
-            this.html.onsuspend = handler;
+            this.html.onsuspend = handler.bind(this, this);
             return this;
         }
 
@@ -1900,7 +2024,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onPopState(handler) {
-            this.html.onpopstate = handler;
+            this.html.onpopstate = handler.bind(this, this);
             return this;
         }
 
@@ -1910,7 +2034,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onStorage(handler) {
-            this.html.onstorage = handler;
+            this.html.onstorage = handler.bind(this, this);
             return this;
         }
 
@@ -1920,7 +2044,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onHashChange(handler) {
-            this.html.onhashchange = handler;
+            this.html.onhashchange = handler.bind(this, this);
             return this;
         }
 
@@ -1930,7 +2054,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         onAfterPrint(handler) {
-            this.html.onafterprint = handler;
+            this.html.onafterprint = handler.bind(this, this);
             return this;
         }
 
@@ -1939,7 +2063,7 @@ let Elem = (function() {
          * @param {function} handler 
          */
         onBeforePrint(handler) {
-            this.html.onbeforeprint = handler;
+            this.html.onbeforeprint = handler.bind(this, this);
             return this;
         }
 
@@ -1948,7 +2072,7 @@ let Elem = (function() {
          * @param {function} handler 
          */
         onPageHide(handler) {
-            this.html.onpagehide = handler;
+            this.html.onpagehide = handler.bind(this, this);
             return this;
         }
 
@@ -1957,7 +2081,7 @@ let Elem = (function() {
          * @param {function} handler 
          */
         onPageShow(handler) {
-            this.html.onpageshow = handler;
+            this.html.onpageshow = handler.bind(this, this);
             return this;
         }
 
@@ -2063,7 +2187,7 @@ let Template = (function() {
              * These attributes are supported inside an object notation: {div: {text: "some", class: "some", id:"some"....}}
              */
             this.attributes = ["id","name","class","text","value","content","tabIndex","type","src","href","editable",
-            "placeholder","size","checked","disabled","visible","display","draggable","styles", "for"];
+            "placeholder","size","checked","disabled","visible","display","draggable","styles", "for", "message", "target", "title"];
         }
 
         /**
@@ -2150,7 +2274,7 @@ let Template = (function() {
          * @param {func} func
          */
         resolveFunction(elem, func) {
-            let ret = func.call(elem);
+            let ret = func.call(elem, elem);
             if(!Util.isEmpty(ret) && Util.isString(ret)){
                 elem.setText(ret);
             }
@@ -2183,7 +2307,7 @@ let Template = (function() {
             if(!Util.isEmpty(match)) 
                 resolved.addClasses(match.join(" ").replace(/\./g, ""));
 
-            match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-]+\]/g); //find attributes
+            match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_]+\]/g); //find attributes
             if(!Util.isEmpty(match))
                 resolved = this.addAttributes(resolved, match);
 
@@ -2252,8 +2376,40 @@ let Template = (function() {
                 case "styles":
                     elem.setStyles(val);
                     break;
+                case "message":
+                    this.resolveMessage(elem, val);
+                    break;
                 default: 
                     elem.setAttribute(key, val);
+            }
+        }
+
+        /**
+         * Function sets a translated message to the element. If the message contains message parameters then the paramters
+         * are resolved first.
+         * @param {object} elem 
+         * @param {string} message 
+         */
+        resolveMessage(elem, message) {
+            if(Util.isEmpty(message))
+                throw "message must not be empty";
+
+            let matches = message.match(/\:{1}(\{.*\}\;)*/g);
+            if(Util.isEmpty(matches)) {
+                elem.message(message);
+            } else {
+                Util.setTimeout(function() {
+                    message = message.substring(0, message.indexOf(":"));
+                    matches = matches.join().match(/([^\{\}\:\;]*)/g);
+                    let params = [];
+                    let i = 0;
+                    while(i < matches.length) {
+                        if(!Util.isEmpty(matches[i]))
+                            params.push(matches[i]);
+                        i++;
+                    }
+                    elem.message(message, params);
+                });
             }
         }
 
@@ -2284,12 +2440,12 @@ let Template = (function() {
         }
 
         /**
-         * Checks has a key component keyword. 
+         * Checks that the given component exist with the given key or the key starts with component keyword and the component exist. 
          * @param {string} key
-         * @returns True if the key contains component keyword otherwise false.
+         * @returns True if the component exist or the key contains component keyword and exist, otherwise false.
          */
         isComponent(key) {
-            return key.indexOf("component:") === 0;
+            return RME.hasComponent(key) || key.indexOf("component:") === 0 && RME.hasComponent(key.replace(/component:/, ""));
         }
 
         /**
@@ -2555,7 +2711,7 @@ let Router = (function() {
          * @param {array} routes
          */
         setRoutes(routes) {
-            this.routes = routes;
+            this.routes = this.resolveRouteElems(routes);
             if(Util.isEmpty(this.root))
                 this.root = this.routes.shift();
         }
@@ -2565,6 +2721,7 @@ let Router = (function() {
          * @param {object} route
          */
         addRoute(route) {
+            route.elem = this.resolveElem(route.elem);
             this.routes.push(route);
         }
 
@@ -2573,7 +2730,35 @@ let Router = (function() {
          * @param {object} route
          */
         setRoot(route) {
+            route.elem = this.resolveElem(route.elem);
             this.root = route;
+        }
+
+        /**
+         * Resolve route elements.
+         * @param {array} routes 
+         */
+        resolveRouteElems(routes) {
+            let i = 0;
+            while (i < routes.length) {
+                routes[i].elem = this.resolveElem(routes[i].elem);
+                i++;
+            }
+            return routes;
+        }
+
+        /**
+         * Method resolves element. If elem is string gets a component of the name if exist otherwise creates a new elemen of the name.
+         * If both does not apply then method assumes the elem to be an element and returns it.
+         * @param {*} elem 
+         */
+        resolveElem(elem) {
+            if(Util.isString(elem) && RME.hasComponent(elem)) {
+                return RME.component(elem);
+            } else if(Util.isString(elem)) {
+                return new Elem(elem);
+            }
+            return elem;
         }
 
         /**
@@ -2741,6 +2926,246 @@ let Router = (function() {
         manual: Router.manual,
         hash: Router.hash
     }
+}());
+
+let Messages = (function() {
+    /**
+     * Messages class handles internationalization. The class offers public methods that enable easy 
+     * using of translated content.
+     */
+    class Messages {
+        constructor() {
+            this.instance = this;
+            this.messages = [];
+            this.locale = "";
+            this.translated = [];
+            this.load = function() {};
+            this.messagesType;
+        }
+
+        setLoad(loader) {
+            this.load = loader;
+        }
+
+        setLocale(locale) {
+            this.locale = locale;
+            return this;
+        }
+
+        setMessages(messages) {
+            if(Util.isArray(messages))
+                this.messagesType = "array";
+            else if(Util.isObject(messages))
+                this.messagesType = "map";
+            else
+                throw "messages must be type array or object";
+            this.messages = messages;
+            this.runTranslated.call(this);
+        }
+
+        getMessage(text, ...params) {
+            if(Util.isEmpty(params[0][0])) {
+                return this.resolveMessage(text);
+            } else {
+                this.getTranslatedElemIfExist(text, params[0][0]);
+                let msg = this.resolveMessage(text);
+                return this.resolveParams(msg, params[0][0]);
+            }
+        }
+
+        /**
+         * Resolves translated message key and returns a resolved message if exist
+         * otherwise returns the given key.
+         * @param {string} text 
+         * @returns A resolved message if exist otherwise the given key.
+         */
+        resolveMessage(text) {
+            if(this.messagesType === "array") {
+                return this.resolveMessagesArray(text);
+            } else if(this.messagesType === "map") {
+                return this.resolveMessagesMap(text);
+            }
+        }
+
+        /**
+         * Resolves a translated message key from the map. Returns a resolved message 
+         * if found otherwise returns the key.
+         * @param {string} text 
+         * @returns A resolved message
+         */
+        resolveMessagesMap(text) {
+            let msg = text;
+            for(let i in this.messages) {
+                if(i === text) {
+                    msg = this.messages[i];
+                    break;
+                }
+            }
+            return msg;
+        }
+
+        /**
+         * Resolves a translated message key from the array. Returns a resolved message
+         * if found otherwise returns the key.
+         * @param {string} text 
+         * @returns A resolved message
+         */
+        resolveMessagesArray(text) {
+            let i = 0;
+            let msg = text;
+            while(i < this.messages.length) {
+                if(!Util.isEmpty(this.messages[i][text])) {
+                    msg = this.messages[i][text];
+                    break;
+                }
+                i++;
+            }
+            return msg;
+        }
+
+        /**
+         * Resolves the message parameters if exist otherwise does nothing.
+         * @param {string} msg 
+         * @param {*} params 
+         * @returns The message with resolved message parameteres if parameters exist.
+         */
+        resolveParams(msg, params) {
+            let i = 0;
+            while(i < params.length) {
+                msg = msg.replace("{"+i+"}", params[i]);
+                i++;
+            }
+            return msg;
+        }
+
+        /**
+         * Function gets a Elem object and inserts it into a translated object array if it exists.
+         * @param {string} key 
+         * @param {*} params 
+         */
+        getTranslatedElemIfExist(key, params) {
+            let last = params[params.length - 1];
+            if(Util.isObject(last) && last instanceof Elem) {
+                last = params.pop();
+                this.translated.push({key: key, params: params, obj: last});
+            }
+        }
+
+        /**
+         * Function goes through the translated objects array and sets a translated message to the translated elements.
+         */
+        runTranslated() {
+            Util.setTimeout(function() {
+                let i = 0;
+                while(i < this.translated.length) {
+                    this.translated[i].obj.setText.call(this.translated[i].obj, Messages.message(this.translated[i].key, this.translated[i].params));
+                    i++;
+                }
+            }.bind(this));
+        }
+
+        /**
+         * Deprecated
+         * Method is called automatically and removes removed nodes from the translated objects array.
+         * @param {NodeList} removedNodes 
+         */
+        clearTranslated(removedNodes) {
+            if(removedNodes.length > 0)
+                Util.setTimeout(function() {
+                    let translatedCopy = this.translated.slice(0, this.translated.length);
+                    let i = 0;
+                    while(i < removedNodes.length) {
+                        let j = 0;
+                        while(j < translatedCopy.length) {
+                            if(removedNodes[i] === translatedCopy[j].obj.dom()) {
+                                delete translatedCopy[j];
+                            } else if(removedNodes[i].contains(translatedCopy[j].obj.dom())) {
+                                delete translatedCopy[j];
+                            }
+                            j++;
+                        }
+                        i++;
+                    }
+                    this.translated = [];
+                    let k = 0;
+                    while(k < translatedCopy.length) {
+                        if(!Util.isEmpty(translatedCopy[k]))
+                            this.translated.push(translatedCopy[k]);
+                        k++;
+                    }
+                    translatedCopy = null;
+                }.bind(this));
+        }
+
+        /**
+         * Function returns current locale of the Messages
+         * @returns Current locale
+         */
+        static locale() {
+            return Messages.getInstance().locale;
+        }
+
+        /**
+         * Lang function is used to change or set the current locale to be the given locale. After calling this method
+         * the Messages.load function will be automatically invoked.
+         * @param {string} locale 
+         */
+        static lang(locale) {
+            if(!Util.isString(locale))
+                throw "locale must be type string " + Util.getType(locale);
+            Messages.getInstance().setLocale(locale).load.call(null, 
+                Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
+        }
+
+        /**
+         * Message function is used to retrieve translated messages. The function also supports message parameters
+         * that can be given as a comma separeted list. 
+         * @param {string} text 
+         * @param {*} params 
+         * @returns A resolved message or the given key if the message is not found.
+         */
+        static message(text, ...params) {
+            return Messages.getInstance().getMessage(text, params);
+        }
+
+        /**
+         * Load function is used to load new messages or change already loaded messages.
+         * Implementation of the function receives two parameters which one of them is the changed locale and 
+         * the other is setMessages(array) function that is used to change the next array of translated messages.
+         * This function is called automatically when language is change by calling the Messages.lang() function.
+         * @param {function} loader 
+         */
+        static load(loader) {
+            if(!Util.isFunction(loader))
+                throw "loader must be type function " + Util.getType(loader);
+            Messages.getInstance().setLoad(loader);
+        }
+
+        static getInstance() {
+            if(!this.instance)
+                this.instance = new Messages();
+            return this.instance;
+        }
+    }
+
+    // Deprecated
+    // var observer = new MutationObserver(function(mutations) {
+    //     if(document.readyState === "complete") {
+    //         let i = 0;
+    //         while(i < mutations.length) {
+    //             Messages.getInstance().clearTranslated(mutations[i].removedNodes);
+    //             i++;
+    //         }
+    //     }
+    // });
+    // observer.observe(document, {childList: true, subtree: true});
+
+    return {
+        lang: Messages.lang,
+        message: Messages.message,
+        load: Messages.load,
+        locale: Messages.locale,
+    };
 }());
 
 /**
@@ -3099,10 +3524,10 @@ class Util {
     /**
      * Checks is a given value empty.
      * @param {*} value
-     * @returns True if the give value is null, undefined or an empty string. 
+     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
      */
     static isEmpty(value) {
-        return (value === null || value === undefined || value === "");
+        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
     }
 
     /**
@@ -3188,19 +3613,17 @@ class Util {
     }
 
     /**
-     * Sets a timeout where the given callback function will be called once after the given milliseconds of time.
+     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
      * @param {function} callback
      * @param {number} milliseconds
+     * @param {*} params
      * @returns The timeout object.
      */
-    static setTimeout(callback, milliseconds) {
+    static setTimeout(callback, milliseconds, ...params) {
         if(!Util.isFunction(callback)) {
             throw "callback not fuction";
         }
-        if(!Util.isNumber(milliseconds)) {
-            throw "milliseconds not a number"
-        }
-        return window.setTimeout(callback, milliseconds);
+        return window.setTimeout(callback, milliseconds, params);
     }
 
     /**
@@ -3212,19 +3635,17 @@ class Util {
     }
 
     /**
-     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed.
+     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
      * @param {function} callback
      * @param {number} milliseconds
+     * @param {*} params
      * @returns The interval object.
      */
-    static setInterval(callback, milliseconds) {
+    static setInterval(callback, milliseconds, ...params) {
         if(!Util.isFunction(callback)) {
             throw "callback not fuction";
         }
-        if(!Util.isNumber(milliseconds)) {
-            throw "milliseconds not a number"
-        }
-        return window.setInterval(callback, milliseconds);
+        return window.setInterval(callback, milliseconds, params);
     }
 
     /**
