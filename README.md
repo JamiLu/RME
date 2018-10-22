@@ -12,9 +12,9 @@ Documentation
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.0.0/rme.js](https://github.com/JamiLu/RME/releases/download/v1.0.0/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.0.0/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.0.0/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.0.0/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.0.0/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.1.0/rme.js](https://github.com/JamiLu/RME/releases/download/v1.1.0/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.1.0/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.1.0/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.1.0/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.1.0/rme.es5.min.js)
 
 Basics
 -----
@@ -23,9 +23,9 @@ __See Basics online from:__ [http://jlcv.sytes.net/rme/howto](http://jlcv.sytes.
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.0.0/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.1.0/rme.es5.min.js"></script>`
 
-Then simply copy paste code clips below to your js file and voilà. __Remember__ only __1__ run() and ready() function per RME application.
+Then simply copy paste code clips below to your js file and voilà. __Remember__ only __1__ ready() function per RME application.
 
 ```javascript
 RME.run(function() {
@@ -41,19 +41,13 @@ RME.ready(function() {
 
 ```javascript
 //this is how to create a component. (components does not even need to be in the same JS file.)
-RME.component(function() {
-  return {
-    myFirstComponent: function() {
-      return this.x * this.y;
-    }
-  }
-});
+RME.component({ myFirstComponent: (props) => props.x * props.y });
 //this is how to use a component
 console.log(RME.component("myFirstComponent", {x: 2, y: 5}));
 ```
 
 ```javascript
-//this is how to add script files on the go. This method should be invoked before run() or ready()
+//this is how to add script files on the go. This method should be invoked before the script is needed.
 RME.script("myComponentLib.js");
 ```
 
@@ -62,10 +56,12 @@ RME.script("myComponentLib.js");
 RME.storage("foo", "bar");
 //this is how to get stored data. (that can be anything)
 console.log(RME.storage("foo"));
+//this method waits until the "foo" is saved into the storage and then it is invoked.
+RME.onReceive("foo").then((bar) => console.log(bar));
 ```
 
 ```javascript
-//This is how to create a Hello World Application.
+//This is how to create a div inside the body and set a text inside the div.
 RME.ready(function() {
   Tree.getBody().append(new Elem("div").setText("Hello World"));
 });
@@ -80,17 +76,11 @@ RME.ready(function() {
     new Elem("li").setText("You really should try it out")
   ];
 
-  //Rendering a list inside the Body is not necessary to be done inside the component but it explains how these components might be very handy. (as they can be anything and have any functionality)
+//Render the list inside the body using a component.
   Tree.getBody().append(RME.component("lister", {list: abc}));
 });
 
-RME.component(function() {
-  return {
-    lister: function() {
-      return new Elem("ul").render(this.list);
-    }
-  }
-});
+RME.component({ lister: (props) => new Elem("ul").render(props.list) });
 ```
 
 ```javascript
@@ -105,39 +95,27 @@ RME.ready(function() {
       Tree.get("#myDiv").render(state.show ? table : []);
   }
 
-  //This Table is only a simple basic function which enables grouping or wrapping one or bunch of Elemens into a one resusable Object. This could also be done as component.
   function Table() {
-       var borders = {border: "1px solid #000000", borderCollapse: "collapse"};
        return Template.resolve({
-           table: function() {
-               this.setStyles(borders);
-               this.append(new Row("I love this script", "Feel the same burn?"));
-               this.append(new Row("The inventor", "Jami Lu"));
-               //this.render(row, row|[rows]) could also be used but for static content append is faster.
-           }
+           table: [
+               {tr: [
+                   {td: {text: "I love this script"}},
+                   {td: {text: "Feel the same burn?"}}
+               ]},
+               {tr: [
+                   {td: {text: "The inventor"}},
+                   {td: {text: "Jami Lu"}}
+               ]}
+           ]
        });
-       function Row(t1, t2) {
-           return Template.resolve({
-               tr: [
-                   {td: {text: t1, styles: borders}},
-                   {td: {text: t2, styles: borders}}
-               ]
-           });
-       }
     }
     
     var table = new Table();
     Tree.getBody().append(new Elem("div").setId("myDiv").render(state.show ? table : []));
-    Tree.getBody().append(RME.component("showB", {clickFuntion: toggle}));
+    Tree.getBody().append(RME.component("showB", {click: toggle}));
 });
 
-RME.component(function() {
-    return {
-        showB : function() {
-            return new Elem("button").setText("show&hide").onClick(this.clickFuntion);
-        }
-    }
-});
+RME.component({ showB : (props) => new Elem("button").setText("show&hide").onClick(props.click) });
 ```
 
 ```javascript
@@ -148,45 +126,36 @@ RME.ready(function() {
         lastName: "",
     }
     Tree.getBody().append(new Elem("h1").setText("Welcome"));
-    Tree.getBody().append(RME.component("form", {input: print}));
-    
+    Tree.getBody().append(RME.component("form", {input: print}));    
 
-    function print(event) {
-        if(event.target.name === "fname")
-            state.firstName = event.target.value;
+    function print(elem, event) {
+        if(elem.getName() === "fname")
+            state.firstName = elem.getValue();
         else
-            state.lastName = event.target.value;
-
-        //this will update the Header content.
+            state.lastName = elem.getValue();
+            
         Tree.get("h1").setText("Welcome " +state.firstName +" "+state.lastName);
     }
 });
 
-RME.component(function() {
-    return {
-        form: function() {
-            return Template.resolve({
-                div: {
-                    "label[for=fname]": {
-                        text: "First name"
-                    },
-                    "input[type=text]": {
-                        id: "fname",
-                        name: "fname",
-                        placeholder: "First name",
-                        onInput: this.input
-                    },
-                    br: {},
-                    "label[for=lname]": {
-                        text: "Last name"
-                    },
-                    "input#lname[type=text][name=lname][placeholder=Last name]": {
-                        onInput: this.input
-                    },
-                }
-            });
+RME.component({form: (props) => 
+    Template.resolve({
+        div: {
+            "label[for=fname]": {
+                text: "First name"
+            },
+            "input#fname[type=text][name=fname][placeholder=First name]": {
+                onInput: props.input
+            },
+            br: {},
+            "label[for=lname]": {
+                text: "Last name"
+            },
+            "input#lname[type=text][name=lname][placeholder=Last name]": {
+                onInput: props.input
+            },
         }
-    }
+    })
 });
 ```
 
