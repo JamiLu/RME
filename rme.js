@@ -830,7 +830,7 @@ let Elem = (function() {
          * @returns A HTMLDocument object array of child elements.
          */
         getChildren() {
-            return this.html.children;
+            return Elem.wrapElems(this.html.children);
         }
 
         /**

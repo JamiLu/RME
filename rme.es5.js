@@ -960,7 +960,7 @@ var Elem = function () {
         }, {
             key: "getChildren",
             value: function getChildren() {
-                return this.html.children;
+                return Elem.wrapElems(this.html.children);
             }
 
             /**
