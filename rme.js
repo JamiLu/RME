@@ -825,9 +825,9 @@ let Elem = (function() {
         }
 
         /**
-         * Get an array of children of this element.
+         * Get an array of children of this element. Returns the array of child elements wrapped in Elem instance.
          * 
-         * @returns A HTMLDocument object array of child elements.
+         * @returns An array of child elements wrapped in Elem instance.
          */
         getChildren() {
             return Elem.wrapElems(this.html.children);
