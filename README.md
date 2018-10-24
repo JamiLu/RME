@@ -1,4 +1,4 @@
-RME - RestMadeEasy
+RME.js
 ======
 
 RME is a functional JavaScript library that enables user to make small and medium size websites with ease only writing 
