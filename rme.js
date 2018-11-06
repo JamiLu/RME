@@ -2648,11 +2648,12 @@ let Router = (function() {
             this.instance = null;
             this.root = null;
             this.routes = [];
-            this.prevUrl = "";
-            this.loadCall = () => this.renderRoute(location.pathname);
-            this.hashCall = () => this.renderRoute(location.hash);
+            this.prevUrl = location.pathname;
+            this.loadCall = () => this.navigateUrl(location.pathname);
+            this.hashCall = () => this.navigateUrl(location.hash);
             this.useHistory =  true;
             this.autoListen = true;
+            this.useHash = false;
         }
 
         /**
@@ -2685,7 +2686,7 @@ let Router = (function() {
         onPopState() {
             if(this.useHistory)
                 this.renderRoute(location.pathname);
-            else
+            else 
                 this.renderRoute(location.hash);
         }
 
@@ -2714,6 +2715,11 @@ let Router = (function() {
             this.routes = this.resolveRouteElems(routes);
             if(Util.isEmpty(this.root))
                 this.root = this.routes.shift();
+            if(this.useHash) {
+                this.renderRoute(location.hash);
+            } else {
+                this.renderRoute(location.pathname);
+            }
         }
 
         /**
@@ -2781,11 +2787,12 @@ let Router = (function() {
         /**
          * Method looks for a route by the url. If the router is found then it will be returned otherwise returns null
          * @param {string} url
+         * @param {boolean} force
          * @returns The found router or null if not found.
          */
-        findRoute(url) {
+        findRoute(url, force) {
             var i = 0;
-            if(!Util.isEmpty(url) && this.prevUrl !== url) {
+            if(!Util.isEmpty(url) && (this.prevUrl !== url || force)) {
                 while(i < this.routes.length) {
                     if(this.matches(this.routes[i].route, url))
                         return this.routes[i];
@@ -2801,11 +2808,12 @@ let Router = (function() {
          * @param {string} url
          */
         renderRoute(url) {
-            var route = this.findRoute(url);
+            var route = this.findRoute(url, true);
             if(!Util.isEmpty(route)) 
                 this.root.elem.render(route.elem);
             else
                 this.root.elem.render();
+            this.prevUrl = location.pathname;
         }
 
         /**
@@ -2833,11 +2841,26 @@ let Router = (function() {
         }
 
         /**
-         * Method will try to find a route according to the url. If found then the Router will update the new url to the browser and 
-         * render the found route element.
+         * Method will try to find a route according to the given parameter. The supported parameter combinations are url, event or elem & event. 
+         * The first paramter can either be an URL or an Event or an Elem. The second parameter is an Event if the first parameter is an Elem.
+         * If the route is found, then the Router will update a new url to the browser and render the found route element.
+         * @param {string} url
+         * @param {object} url type event
+         * @param {object} url type Elem
+         * @param {object} event
          */
-        static navigate(url) {
-            Router.getInstance().navigateUrl(url);
+        static navigate(url, event) {
+            if(Util.isString(url))
+                Router.getInstance().navigateUrl(url);
+            else if(Util.isObject(url) && url instanceof Event) {
+                if(!Router.getInstance().autoListen || Router.getInstance().useHash)
+                    url.preventDefault();
+                Router.getInstance().navigateUrl(url.target.href);
+            } else if(Util.isObject(url) && url instanceof Elem && !Util.isEmpty(event) && Util.isObject(event) && event instanceof Event) {
+                if(!Router.getInstance().autoListen || Router.getInstance().useHash)
+                    event.preventDefault();
+                Router.getInstance().navigateUrl(url.getHref());
+            }
         }
 
         /**
@@ -2873,12 +2896,16 @@ let Router = (function() {
         /**
          * Method sets the Router to use an url implementation. The url implementation defaults to HTML standard that pressing a link
          * will cause the browser reload a new page. After reload the new page is rendered. If you wish to skip reload then you should 
-         * invoke a method manual() after invoking this method as follows Router.url().manual().
+         * set the parameter manual to true.
+         * @param {boolean} manual
          * @returns Router
          */
-        static url() {
+        static url(manual) {
             Router.getInstance().setUseHistory(true);
             Router.getInstance().registerListeners();
+            if(Util.isBoolean(manual) && manual) {
+                Router.manual();
+            }
             return Router;
         }
 
@@ -2908,6 +2935,7 @@ let Router = (function() {
             Router.getInstance().setUseHistory(false);
             Router.getInstance().setAutoListen(true);
             Router.getInstance().registerListeners();
+            Router.getInstance().useHash = true;
             return Router;
         }
 
@@ -2923,7 +2951,6 @@ let Router = (function() {
         add: Router.add,
         routes: Router.routes,
         url: Router.url,
-        manual: Router.manual,
         hash: Router.hash
     }
 }());
@@ -3130,9 +3157,9 @@ let Messages = (function() {
 
         /**
          * Load function is used to load new messages or change already loaded messages.
-         * Implementation of the function receives two parameters which one of them is the changed locale and 
-         * the other is setMessages(array) function that is used to change the next array of translated messages.
-         * This function is called automatically when language is change by calling the Messages.lang() function.
+         * Implementation of the function receives two parameters. The one of the parameters is the changed locale and 
+         * the other is setMessages(messagesArrayOrObject) function that is used to change the translated messages.
+         * This function is called automatically when language is changed by calling the Messages.lang() function.
          * @param {function} loader 
          */
         static load(loader) {
