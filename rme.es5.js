@@ -2814,10 +2814,10 @@ var Template = function () {
             value: function resolveElement(tag, obj) {
                 var resolved = null;
                 var match = [];
-                var el = tag.match(/[a-z0-9]+/).join();
-                if (this.isComponent(tag)) {
-                    tag = tag.replace(/component:/, "");
-                    return RME.component(tag, obj); //if component, do fast return
+                var el = tag.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join();
+                if (this.isComponent(el)) {
+                    el = el.replace(/component:/, "");
+                    resolved = RME.component(el, obj);
                 } else if (Util.isEmpty(el)) throw "Template resolver could not find element: \"" + el + "\" from the given tag: \"" + tag + "\"";else resolved = new Elem(el);
 
                 match = tag.match(/[a-z0-9]+\#[a-zA-Z0-9\-]+/); //find id
@@ -2920,12 +2920,13 @@ var Template = function () {
             value: function resolveMessage(elem, message) {
                 if (Util.isEmpty(message)) throw "message must not be empty";
 
-                var matches = message.match(/\:{1}(\{.*\}\;)*/g);
+                var matches = message.match(/\:?(\{.*\}\;?)/g);
                 if (Util.isEmpty(matches)) {
                     elem.message(message);
                 } else {
                     Util.setTimeout(function () {
-                        message = message.substring(0, message.indexOf(":"));
+                        var end = message.indexOf(":") > 0 ? message.indexOf(":") : message.indexOf("{");
+                        message = message.substring(0, end);
                         matches = matches.join().match(/([^\{\}\:\;]*)/g);
                         var params = [];
                         var i = 0;
@@ -3010,7 +3011,7 @@ var Template = function () {
             key: "isTemplate",
             value: function isTemplate(object) {
                 var isTemplate = false;
-                if (Util.isObject(object)) {
+                if (Util.isObject(object) && !Util.isArray(object) && !(object instanceof Elem)) {
                     for (var p in object) {
                         isTemplate = object.hasOwnProperty(p) && Template.isTag(p);
                         if (isTemplate) break;
@@ -3028,6 +3029,9 @@ var Template = function () {
         }, {
             key: "isTag",
             value: function isTag(tag) {
+                tag = tag.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join().replace("component:", "");
+                if (RME.hasComponent(tag)) return true;
+
                 var i = 0;
                 var tagArray = Template.tags()[tag.substring(0, 1)];
                 while (i < tagArray.length) {
