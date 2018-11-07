@@ -63,7 +63,8 @@ var RME = function () {
             value: function getComponent(name, props) {
                 var comp = this.components[name];
                 if (!comp) throw "Cannot find a component: \"" + name + "\"";
-                return comp.call(props, props);
+                var ret = comp.call(props, props);
+                if (Template.isTemplate(ret)) return Template.resolve(ret);else return ret;
             }
         }, {
             key: "setRmeState",
@@ -2998,13 +2999,78 @@ var Template = function () {
             value: function create() {
                 return new Template();
             }
+
+            /**
+             * Method checks if the given object is an unresolved JSON template.
+             * @param {object} object 
+             * @returns True if the given object is an unresolved JSON template, otherwise false.
+             */
+
+        }, {
+            key: "isTemplate",
+            value: function isTemplate(object) {
+                var isTemplate = false;
+                if (Util.isObject(object)) {
+                    for (var p in object) {
+                        isTemplate = object.hasOwnProperty(p) && Template.isTag(p);
+                        if (isTemplate) break;
+                    }
+                }
+                return isTemplate;
+            }
+
+            /**
+             * Method takes a string and returns true if the given string is a html tag, otherwise returns false.
+             * @param {string} tag 
+             * @returns True if the given tag is a HTML tag otherwise false.
+             */
+
+        }, {
+            key: "isTag",
+            value: function isTag(tag) {
+                var i = 0;
+                var tagArray = Template.tags()[tag.substring(0, 1)];
+                while (i < tagArray.length) {
+                    if (tagArray[i] === tag) return true;
+                    i++;
+                }
+                return false;
+            }
+        }, {
+            key: "tags",
+            value: function tags() {
+                return {
+                    a: ["a", "abbr", "acronym", "address", "applet", "area", "article", "aside", "audio"],
+                    b: ["button", "br", "b", "base", "basefont", "bdi", "bdo", "big", "blockquote", "body"],
+                    c: ["canvas", "caption", "center", "cite", "code", "col", "colgroup"],
+                    d: ["div", "dd", "dl", "dt", "data", "datalist", "del", "details", "dfn", "dialog", "dir"],
+                    e: ["em", "embed"],
+                    f: ["form", "fieldset", "figcaption", "figure", "font", "footer", "frame", "frameset"],
+                    h: ["h1", "h2", "h3", "h4", "h5", "h6", "head", "header", "hr", "html"],
+                    i: ["i", "input", "img", "iframe", "ins"],
+                    k: ["kbd"],
+                    l: ["label", "li", "legend", "link"],
+                    m: ["main", "meta", "map", "mark", "meter"],
+                    n: ["nav", "noframes", "noscript"],
+                    o: ["option", "object", "ol", "optgroup", "output"],
+                    p: ["p", "pre", "param", "picture", "progress"],
+                    q: ["q"],
+                    r: ["rp", "rt", "ruby"],
+                    s: ["span", "select", "s", "samp", "script", "section", "small", "source", "strike", "strong", "style", "sub", "summary", "sup", "svg"],
+                    t: ["table", "textarea", "td", "tr", "tt", "th", "thead", "tbody", "tfoot", "template", "time", "title", "track"],
+                    u: ["u", "ul"],
+                    v: ["var", "video"],
+                    w: ["wbr"]
+                };
+            }
         }]);
 
         return Template;
     }();
 
     return {
-        resolve: Template.resolveTemplate
+        resolve: Template.resolveTemplate,
+        isTemplate: Template.isTemplate
     };
 }();
 
