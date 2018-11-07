@@ -12,9 +12,9 @@ Documentation
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.1.0/rme.js](https://github.com/JamiLu/RME/releases/download/v1.1.0/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.1.0/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.1.0/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.1.0/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.1.0/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.1.1/rme.js](https://github.com/JamiLu/RME/releases/download/v1.1.1/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.1.1/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.1.1/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.1.1/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.1.1/rme.es5.min.js)
 
 Basics
 -----
@@ -23,7 +23,7 @@ __See Basics online from:__ [http://jlcv.sytes.net/rme/howto](http://jlcv.sytes.
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.1.0/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.1.1/rme.es5.min.js"></script>`
 
 Then simply copy paste code clips below to your js file and voilà. __Remember__ only __1__ ready() function per RME application.
 
@@ -56,8 +56,6 @@ RME.script("myComponentLib.js");
 RME.storage("foo", "bar");
 //this is how to get stored data. (that can be anything)
 console.log(RME.storage("foo"));
-//this method waits until the "foo" is saved into the storage and then it is invoked.
-RME.onReceive("foo").then((bar) => console.log(bar));
 ```
 
 ```javascript
@@ -199,6 +197,7 @@ Classes & Functions
   - and many many many more methods. All setter methods and methods that does not return some value are so called Builder methods that they can chained as follows setText("text").setName("name").setId("id").setType("text").addClasses("one two three");
 * Template
   - resolve(template) **Resolves a given JSON format template and returns a created Elem instance element tree.**
+  - isTemplate(object) **Method checks if the given object is an unresolved JSON template and returns true if it is an unresolved JSON template, otherwise false.**
 * Tree
   - get(cssSelector) **Returns an Array of Elem objects or one Elem object**
   - getFirst(cssSelector) **Returns one Elem object**
@@ -211,6 +210,11 @@ Classes & Functions
   - getTitle() **Returns document title string**
   - setTitle(string) **Sets document title string**
   - and other methods that searches elements from the html document tree, _but does not return an Elem instance_
+* Messages
+  - locale() **Function returns current locale of the Messages.**
+  - lang(locale) **Lang function is used to change or set the current locale to be the given locale. After calling this method the Messages.load function will be automatically invoked.**
+  - message(message, ...params) **Message function is used to retrieve translated messages. The function also supports message parameters that can be given as a comma separeted list.**
+  - load(loader) **Load function is used to load new messages or change already loaded messages. The one of the parameters is the changed locale and the other is setMessages(messagesArrayOrObject) function that is used to change the translated messages. The loader function is called automatically when language is changed by calling the Messages.lang() function.**
 * Router
   - navigate(url) **Navigates to the url, updates url on the browser and renders route element if found.**
   - root(elem) **Set a root route element to the Router**
