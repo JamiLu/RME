@@ -120,41 +120,36 @@ RME.component({ showB : (props) => new Elem("button").setText("show&hide").onCli
 //an extra example, an interactive form.
 RME.ready(function() {
   var state = {
-        firstName: "",
-        lastName: "",
+        fname: "",
+        lname: "",
     }
     Tree.getBody().append(new Elem("h1").setText("Welcome"));
     Tree.getBody().append(RME.component("form", {input: print}));    
 
-    function print(elem, event) {
-        if(elem.getName() === "fname")
-            state.firstName = elem.getValue();
-        else
-            state.lastName = elem.getValue();
-            
+    function print(elem) {
+        state[elem.getName()] = elem.getValue();
+        
         Tree.get("h1").setText("Welcome " +state.firstName +" "+state.lastName);
     }
 });
 
-RME.component({form: (props) => 
-    Template.resolve({
-        div: {
-            "label[for=fname]": {
-                text: "First name"
-            },
-            "input#fname[type=text][name=fname][placeholder=First name]": {
-                onInput: props.input
-            },
-            br: {},
-            "label[for=lname]": {
-                text: "Last name"
-            },
-            "input#lname[type=text][name=lname][placeholder=Last name]": {
-                onInput: props.input
-            },
-        }
-    })
-});
+RME.component({form: (props) => t = {
+    div: {
+        "label[for=fname]": {
+            text: "First name"
+        },
+        "input#fname[type=text][name=fname][placeholder=First name]": {
+            onInput: props.input
+        },
+        br: {},
+        "label[for=lname]": {
+            text: "Last name"
+        },
+        "input#lname[type=text][name=lname][placeholder=Last name]": {
+            onInput: props.input
+        },
+    }
+}});
 ```
 
 Classes & Functions
