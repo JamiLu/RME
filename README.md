@@ -129,7 +129,7 @@ RME.ready(function() {
     function print(elem) {
         state[elem.getName()] = elem.getValue();
         
-        Tree.get("h1").setText("Welcome " +state.firstName +" "+state.lastName);
+        Tree.get("h1").setText("Welcome " +state.fname +" "+state.lname);
     }
 });
 
