@@ -69,16 +69,16 @@ RME.ready(function() {
 //This is how to create a bit more complex Hello World
 RME.ready(function() {
   var abc = [
-    new Elem("li").setText("JavaScript rules"),
-    new Elem("li").setText("RME is the best"),
-    new Elem("li").setText("You really should try it out")
+    {li: {text: "JavaScript rules"}},
+    {li: () => "RME is the best"},
+    {li: {text: "You really should try it out"}}
   ];
 
 //Render the list inside the body using a component.
   Tree.getBody().append(RME.component("lister", {list: abc}));
 });
 
-RME.component({ lister: (props) => new Elem("ul").render(props.list) });
+RME.component({ lister: (props) => ({ul: props.list)) });
 ```
 
 ```javascript
@@ -133,7 +133,7 @@ RME.ready(function() {
     }
 });
 
-RME.component({form: (props) => t = {
+RME.component({form: (props) => ({
     div: {
         "label[for=fname]": {
             text: "First name"
@@ -148,8 +148,8 @@ RME.component({form: (props) => t = {
         "input#lname[type=text][name=lname][placeholder=Last name]": {
             onInput: props.input
         },
-    }
-}});
+    }})
+});
 ```
 
 Classes & Functions
