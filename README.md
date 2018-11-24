@@ -12,9 +12,9 @@ Documentation
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.1.1/rme.js](https://github.com/JamiLu/RME/releases/download/v1.1.1/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.1.1/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.1.1/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.1.1/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.1.1/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.1.2/rme.js](https://github.com/JamiLu/RME/releases/download/v1.1.2/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.1.2/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.1.2/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.1.2/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.1.2/rme.es5.min.js)
 
 Basics
 -----
@@ -23,7 +23,7 @@ __See Basics online from:__ [http://jlcv.sytes.net/rme/howto](http://jlcv.sytes.
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.1.1/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.1.2/rme.es5.min.js"></script>`
 
 Then simply copy paste code clips below to your js file and voilà. __Remember__ only __1__ ready() function per RME application.
 
@@ -69,7 +69,7 @@ RME.ready(function() {
 //This is how to create a bit more complex Hello World
 RME.ready(function() {
   var abc = [
-    {li: {text: "JavaScript rules"}},
+    {li: () => "JavaScript rules"},
     {li: () => "RME is the best"},
     {li: {text: "You really should try it out"}}
   ];
@@ -217,6 +217,7 @@ Classes & Functions
   - hash() **Use hash implementation**
   - url() **Use default URL implementation**
   - manual() **Set URL implementation to manual, Router.navigate need to be invoked in order to change pages**
+  - scroll(auto) **Method sets default level behavior for route naviagation. A value true sets the browser to auto-scroll up when navigating to a new resource and a value false will not auto-scroll up. Default value is true.**
 * Key
   - no methods, only **Key** constants for keyevent such as Key.ENTER
 * Cookie
