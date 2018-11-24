@@ -85,35 +85,34 @@ RME.component({ lister: (props) => ({ul: props.list)) });
 //Conditional rendering
 RME.ready(function() {
   var state = {
-    show: true
+      show: true
   }
+  
+  let rows = [
+      {col1: "I love this script", col2: "Feel the same burn?"},
+      {col1: "The inventor", col2: "Jami Lu"}
+  ]
   
   function toggle() {
       state.show = !state.show;
       Tree.get("#myDiv").render(state.show ? table : []);
   }
-
-  function Table() {
-       return Template.resolve({
-           table: [
-               {tr: [
-                   {td: {text: "I love this script"}},
-                   {td: {text: "Feel the same burn?"}}
-               ]},
-               {tr: [
-                   {td: {text: "The inventor"}},
-                   {td: {text: "Jami Lu"}}
-               ]}
-           ]
-       });
-    }
     
-    var table = new Table();
-    Tree.getBody().append(new Elem("div").setId("myDiv").render(state.show ? table : []));
-    Tree.getBody().append(RME.component("showB", {click: toggle}));
+  let table = RME.component("myTable", {rows: rows});
+  Tree.getBody().append(new Elem("div").setId("myDiv").append(table));
+  Tree.getBody().append(RME.component("showB", {click: toggle}));
 });
 
 RME.component({ showB : (props) => new Elem("button").setText("show&hide").onClick(props.click) });
+
+RME.component({ myTable: (props) => ({
+    table: props.rows.map((row) => ({
+        tr: [
+            {td: () => row.col1},
+            {td: () => row.col2}
+        ],
+    }))
+})});
 ```
 
 ```javascript
