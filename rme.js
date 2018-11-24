@@ -785,7 +785,7 @@ let Elem = (function() {
          * @returns String presentation of this component.
          */
         toString() {
-            return "<"+this.getTagName().toLowerCase()+">"+this.getContent();
+            return "<"+this.getTagName().toLowerCase()+">"+this.getContent()+"</"+this.getTagName().toLowerCase()+">";
         }
 
         /**
@@ -2279,9 +2279,28 @@ let Template = (function() {
          */
         resolveFunction(elem, func) {
             let ret = func.call(elem, elem);
-            if(!Util.isEmpty(ret) && Util.isString(ret)){
+            if(!Util.isEmpty(ret) && Util.isString(ret)) {
+                if(this.isMessage(ret)) {
+                    this.resolveMessage(elem, ret);
+                } else {
+                    elem.setText(ret);
+                }
+            }  else if (!Util.isEmpty(ret) && Util.isNumber(ret)) {
                 elem.setText(ret);
             }
+        }
+
+        /**
+         * Function will check if the given message is actually a message or not. The function
+         * will return true if it is a message otherwise false is returned.
+         * @param {string} message 
+         * @returns True if the given message is actually a message otherwise returns false.
+         */
+        isMessage(message) {
+            let params = this.getMessageParams(message);
+            if(!Util.isEmpty(params))
+                message = message.replace(params.join(), "");
+            return Messages.message(message) != message;
         }
 
         /**
@@ -2398,7 +2417,7 @@ let Template = (function() {
             if(Util.isEmpty(message))
                 throw "message must not be empty";
 
-            let matches = message.match(/\:?(\{.*\}\;?)/g);
+            let matches = this.getMessageParams(message);
             if(Util.isEmpty(matches)) {
                 elem.message(message);
             } else {
@@ -2416,6 +2435,15 @@ let Template = (function() {
                     elem.message(message, params);
                 });
             }
+        }
+
+        /**
+         * Function will return message parameters if found.
+         * @param {string} message 
+         * @returns Message params in a match array if found.
+         */
+        getMessageParams(message) {
+            return message.match(/\:?(\{.*\}\;?)/g);
         }
 
         /**
@@ -2723,6 +2751,7 @@ let Router = (function() {
             this.useHistory =  true;
             this.autoListen = true;
             this.useHash = false;
+            this.scrolltop = true;
         }
 
         /**
@@ -2774,6 +2803,14 @@ let Router = (function() {
          */
         setAutoListen(listen) {
             this.autoListen = listen;
+        }
+
+        /**
+         * Set auto scroll up true or false.
+         * @param {boolean} auto 
+         */
+        setAutoScrollUp(auto) {
+            this.scrolltop = auto;
         }
 
         /**
@@ -2848,6 +2885,8 @@ let Router = (function() {
                 location.href = route.route.indexOf("#") === 0 ? route.route : "#"+route.route;
             }
             if(!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
+                if((route.scrolltop === true) || (route.scrolltop === undefined && this.scrolltop))
+                    Browser.scrollTo(0, 0);
                 this.prevUrl = url;
                 this.root.elem.render(route.elem);
             }
@@ -3008,6 +3047,19 @@ let Router = (function() {
             return Router;
         }
 
+        /**
+         * Method default level behavior for route naviagation. If the given value is true then the Browser auto-scrolls up 
+         * when navigating to a new resource. If set false then the Browser does not auto-scroll up. Default value is true.
+         * @param {boolean} auto 
+         * @returns Router
+         */
+        static scroll(auto) {
+            if(Util.isBoolean(auto)) {
+                Router.getInstance().setAutoScrollUp(auto);
+            }
+            return Router;
+        }
+
         static getInstance() {
             if(Util.isEmpty(this.instance))
                 this.instance = new Router();
@@ -3020,7 +3072,8 @@ let Router = (function() {
         add: Router.add,
         routes: Router.routes,
         url: Router.url,
-        hash: Router.hash
+        hash: Router.hash,
+        scroll: Router.scroll
     }
 }());
 

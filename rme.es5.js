@@ -910,7 +910,7 @@ var Elem = function () {
         }, {
             key: "toString",
             value: function toString() {
-                return "<" + this.getTagName().toLowerCase() + ">" + this.getContent();
+                return "<" + this.getTagName().toLowerCase() + ">" + this.getContent() + "</" + this.getTagName().toLowerCase() + ">";
             }
 
             /**
@@ -2797,8 +2797,29 @@ var Template = function () {
             value: function resolveFunction(elem, func) {
                 var ret = func.call(elem, elem);
                 if (!Util.isEmpty(ret) && Util.isString(ret)) {
+                    if (this.isMessage(ret)) {
+                        this.resolveMessage(elem, ret);
+                    } else {
+                        elem.setText(ret);
+                    }
+                } else if (!Util.isEmpty(ret) && Util.isNumber(ret)) {
                     elem.setText(ret);
                 }
+            }
+
+            /**
+             * Function will check if the given message is actually a message or not. The function
+             * will return true if it is a message otherwise false is returned.
+             * @param {string} message 
+             * @returns True if the given message is actually a message otherwise returns false.
+             */
+
+        }, {
+            key: "isMessage",
+            value: function isMessage(message) {
+                var params = this.getMessageParams(message);
+                if (!Util.isEmpty(params)) message = message.replace(params.join(), "");
+                return Messages.message(message) != message;
             }
 
             /**
@@ -2920,7 +2941,7 @@ var Template = function () {
             value: function resolveMessage(elem, message) {
                 if (Util.isEmpty(message)) throw "message must not be empty";
 
-                var matches = message.match(/\:?(\{.*\}\;?)/g);
+                var matches = this.getMessageParams(message);
                 if (Util.isEmpty(matches)) {
                     elem.message(message);
                 } else {
@@ -2937,6 +2958,18 @@ var Template = function () {
                         elem.message(message, params);
                     });
                 }
+            }
+
+            /**
+             * Function will return message parameters if found.
+             * @param {string} message 
+             * @returns Message params in a match array if found.
+             */
+
+        }, {
+            key: "getMessageParams",
+            value: function getMessageParams(message) {
+                return message.match(/\:?(\{.*\}\;?)/g);
             }
 
             /**
@@ -3334,6 +3367,7 @@ var Router = function () {
             this.useHistory = true;
             this.autoListen = true;
             this.useHash = false;
+            this.scrolltop = true;
         }
 
         /**
@@ -3393,6 +3427,17 @@ var Router = function () {
             key: "setAutoListen",
             value: function setAutoListen(listen) {
                 this.autoListen = listen;
+            }
+
+            /**
+             * Set auto scroll up true or false.
+             * @param {boolean} auto 
+             */
+
+        }, {
+            key: "setAutoScrollUp",
+            value: function setAutoScrollUp(auto) {
+                this.scrolltop = auto;
             }
 
             /**
@@ -3484,6 +3529,7 @@ var Router = function () {
                     location.href = route.route.indexOf("#") === 0 ? route.route : "#" + route.route;
                 }
                 if (!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
+                    if (route.scrolltop === true || route.scrolltop === undefined && this.scrolltop) Browser.scrollTo(0, 0);
                     this.prevUrl = url;
                     this.root.elem.render(route.elem);
                 }
@@ -3662,6 +3708,22 @@ var Router = function () {
                 Router.getInstance().useHash = true;
                 return Router;
             }
+
+            /**
+             * Method default level behavior for route naviagation. If the given value is true then the Browser auto-scrolls up 
+             * when navigating to a new resource. If set false then the Browser does not auto-scroll up. Default value is true.
+             * @param {boolean} auto 
+             * @returns Router
+             */
+
+        }, {
+            key: "scroll",
+            value: function scroll(auto) {
+                if (Util.isBoolean(auto)) {
+                    Router.getInstance().setAutoScrollUp(auto);
+                }
+                return Router;
+            }
         }, {
             key: "getInstance",
             value: function getInstance() {
@@ -3679,7 +3741,8 @@ var Router = function () {
         add: Router.add,
         routes: Router.routes,
         url: Router.url,
-        hash: Router.hash
+        hash: Router.hash,
+        scroll: Router.scroll
     };
 }();
 
