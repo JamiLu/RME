@@ -12,9 +12,9 @@ Documentation
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.1.2/rme.js](https://github.com/JamiLu/RME/releases/download/v1.1.2/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.1.2/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.1.2/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.1.2/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.1.2/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.2.0/rme.js](https://github.com/JamiLu/RME/releases/download/v1.2.0/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.2.0/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.2.0/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.2.0/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.2.0/rme.es5.min.js)
 
 Basics
 -----
@@ -23,121 +23,85 @@ __See Basics online from:__ [http://jlcv.sytes.net/rme/howto](http://jlcv.sytes.
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.1.2/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.2.0/rme.es5.min.js"></script>`
 
-Then simply copy paste code clips below to your js file and voilà. __Remember__ only __1__ ready() function per RME application.
+Then simply copy paste code clips below to your js file and voilà. 
 
+Start by creating a new application. Default application does not need to be named. If a root is not specified then the Document Body is used by automatic. This following line of code will create a single div element inside of the Body element. Inside the div there will be three components that we will take a closer look just below.
 ```javascript
-RME.run(function() {
-  alert("this script is run immediately");
-});
-```
+App.create({
+    div: [
+        {todoExample: {}},
 
-```javascript
-RME.ready(function() {
-  Tree.getBody().setText("this script waits untill body is ready and then it will run");
-});
-```
-
-```javascript
-//this is how to create a component. (components does not even need to be in the same JS file.)
-RME.component({ myFirstComponent: (props) => props.x * props.y });
-//this is how to use a component
-console.log(RME.component("myFirstComponent", {x: 2, y: 5}));
-```
-
-```javascript
-//this is how to add script files on the go. This method should be invoked before the script is needed.
-RME.script("myComponentLib.js");
-```
-
-```javascript
-//this is how to use RME instance storage that is available for all RME functions to use (run(), ready(), component()),
-RME.storage("foo", "bar");
-//this is how to get stored data. (that can be anything)
-console.log(RME.storage("foo"));
-```
-
-```javascript
-//This is how to create a div inside the body and set a text inside the div.
-RME.ready(function() {
-  Tree.getBody().append(new Elem("div").setText("Hello World"));
-});
-```
-
-```javascript
-//This is how to create a bit more complex Hello World
-RME.ready(function() {
-  var abc = [
-    {li: () => "JavaScript rules"},
-    {li: () => "RME is the best"},
-    {li: {text: "You really should try it out"}}
-  ];
-
-//Render the list inside the body using a component.
-  Tree.getBody().append(RME.component("lister", {list: abc}));
-});
-
-RME.component({ lister: (props) => ({ul: props.list)) });
-```
-
-```javascript
-//Conditional rendering
-RME.ready(function() {
-  var state = {
-      show: true
-  }
-  
-  let rows = [
-      {col1: "I love this script", col2: "Feel the same burn?"},
-      {col1: "The inventor", col2: "Jami Lu"}
-  ]
-  
-  function toggle() {
-      state.show = !state.show;
-      Tree.get("#myDiv").render(state.show ? table : []);
-  }
-    
-  let table = RME.component("myTable", {rows: rows});
-  Tree.getBody().append(new Elem("div").setId("myDiv").append(table));
-  Tree.getBody().append(RME.component("showB", {click: toggle}));
-});
-
-RME.component({ showB : (props) => new Elem("button").setText("show&hide").onClick(props.click) });
-
-RME.component({ myTable: (props) => ({
-    table: props.rows.map((row) => ({
-        tr: [
-            {td: () => row.col1},
-            {td: () => row.col2}
-        ],
-    }))
-})});
-```
-
-```javascript
-//an extra example, an interactive form.
-RME.ready(function() {
-  var state = {
-        fname: "",
-        lname: "",
-    }
-    Tree.getBody().append(new Elem("h1").setText("Welcome"));
-    Tree.getBody().append(RME.component("form", {input: print}));    
-
-    function print(elem) {
-        state[elem.getName()] = elem.getValue();
+        {formExample: {}},
         
-        Tree.get("h1").setText("Welcome " +state.fname +" "+state.lname);
-    }
+        {filterExample: {}}
+    ]
+}).setState({
+    lister: {list: [{li: () => "What groceries should I buy?"}]}
 });
+```
+Above you can see that after we have created the application by calling the App.create(...) function we can also call setState(..) function that will set state for the application. In the setState function we give it an object that in first level tells which component the state is set to and next level will be name of the state property and third level will be the given state value. After calling setState the Application will rerender itself. 
 
-RME.component({form: (props) => ({
+Function setState can also take two parameters but then the first parameter is a component name that the state is set to and the next parameter is the state object that the component receives.
+
+Now we can create a component that contains other components and even a stateful component. The next component contains a div that contains h2, input and button elements. Below them there is a lister component that is explained below.
+```javascript
+RME.component({ todoExample: () => 
+    ({div: {
+        h2: () => "Todo Example",
+        "input[type=text][placeholder=Type & Press Enter to Add]": {
+            onKeyDown: (event) => {
+                if(event.key === Key.ENTER) {
+                    App.mergeState({lister: {list: {li: {text: event.target.value}}}});
+                    event.target.value = "";
+                }
+            }
+        },
+        button: {
+            text: "Clear list",
+            onClick: () => App.clearState("lister", true)
+        },
+        lister: {}
+    }})
+});
+```
+
+The component below is our lister component that is a stateful component as it has its own state that can be updated. Each state property and other properties also are given to the template in a props object.
+```javascript
+App.component({ lister: props => ({ul: props.list}) })();
+```
+
+Lets create other example component that we will see in action later. This component also has couple of insteresting elements. A statefulHeader component actually only prints what user types on a form component. Because form is an HTML 5
+tag so we have to explicitly tell the RME that this form is actually our component that we want to use. Normally it is a good practise to name well own components that they wont get mixed with the HTML 5 tags and attributes.
+```javascript
+RME.component({ formExample: () => 
+    ({div: {
+        h2: () => "Form Example",
+        statefulHeader: {fname: "", lname: ""},
+        "component:form": {
+            input: (event) => {
+                let state = App.getState("statefulHeader");
+                state[event.target.name] = event.target.value
+                App.mergeState("statefulHeader", state);
+            }
+        }
+    }})
+});
+```
+
+Here is our form component that has one property input which is actually onInput event action. Elements inside the component are on purposely typed a bit inconsistent fashion only to demonstrate possibilities of a JSON templates.
+```javascript
+RME.component({form: props => ({
     div: {
         "label[for=fname]": {
             text: "First name"
         },
-        "input#fname[type=text][name=fname][placeholder=First name]": {
+        input: {
+            id: "fname",
+            name: "fname",
+            type: "text",
+            placeholder: "First name",
             onInput: props.input
         },
         br: {},
@@ -151,6 +115,40 @@ RME.component({form: (props) => ({
 });
 ```
 
+Lets hard code dummy data for our next component and save it into the RME instance storage.
+```javascript
+RME.storage("countryList", [
+    {country: "Finland", capital: "Helsinki"}, {country: "Sweden", capital: "Stockholm"}, {country: "Norway", capital: "Oslo"},
+    {country: "Iceland", capital: "Reykjavik"}, {country: "England", capital: "London"}, {country: "America", capital: "Washington"}, 
+    {country: "Mexico", capital: "Mexico City"}, {country: "Peru", capital: "Lima"}, {country: "Egypt", capital: "Kairo"}, {country: "China", capital: "Beijing"},
+    {country: "Japan", capital: "Tokyo"}, {country: "South Korea", capital: "Seoul"}, {country: "Malaysia", capital: "Kuala Lumpur"}, {country: "Namibia", capital: "Windhoek"}, {country: "South Africa", capital: "Cape Town"}]);
+```
+
+Now we add one more component. The component has an input that is used to filter the data and a table that shows the filtered data. Default values can be given as properties to components directly and they will be overridden by state properties if they are named equally and the component has state.
+```javascript
+RME.component({ filterExample: () => 
+    ({div: {
+        h2: () => "Filter Example",
+        "input[type=text][placeholder=Type to Filter Country]": {
+            onInput: (event) => App.setState({myTable: {rows: RME.storage("countryList").filter(row => row.country.toLowerCase().search(event.target.value) > -1)}})
+        },
+        myTable: {rows: RME.storage("countryList")}
+    }})
+});
+```
+
+This is as simple as it gets when creating a table from the rows that are come in the props object.
+```javascript
+App.component({ myTable: props => 
+    ({table: props.rows.map((row) => ({
+        tr: [
+            {td: () => row.country},
+            {td: () => row.capital}
+        ],
+    }))})
+})();
+```
+
 Classes & Functions
 ----
 >Not comprehensive. Just to name few.
@@ -158,7 +156,7 @@ Classes & Functions
 * RME
   - run(runnable) **Runs application script type fuction _(runnable)_ immediately _MAX 1 run per RME application_**
   - ready(runnable) **Runs application script type function _(runnable)_ when body is ready _MAX 1 ready per RME application_**
-  - component(function(){}) **Create and return created component on the callback**
+  - component(object|function(){}) **Create and return created component on the callback**
   - component("componentName", {param: 1, param: 2}) **Get and invoke the component**
   - storage(key, val) **Store data in RME instance**
   - storage(key) **Read data from RME instance storage**
