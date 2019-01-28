@@ -41,7 +41,7 @@ App.create({
     lister: {list: [{li: () => "What groceries should I buy?"}]}
 });
 ```
-Above you can see that after we have created the application by calling the App.create(...) function we can also call setState(..) function that will set state for the application. In the setState function we give it an object that in first level tells which component the state is set to and next level will be name of the state property and third level will be the given state value. After calling setState the Application will rerender itself. 
+Above you can see that after we have created the application by calling the App.create(...) function we can also call setState(..) function that will set state for the application. In the setState function we give it an object that in the first level tells which component the state is set to and next level will be name of the state property and the third level will be the given state value. After calling setState the Application will rerender itself. 
 
 Function setState can also take two parameters but then the first parameter is a component name that the state is set to and the next parameter is the state object that the component receives.
 
@@ -97,7 +97,7 @@ App.component({ statefulHeader: props =>
 })();
 ```
 
-Here is our form component that has one property input which is actually onInput event action. Elements inside the component are on purposely typed a bit inconsistent fashion only to demonstrate possibilities of a JSON templates.
+Here is our form component that has one property input which is actually onInput event action. Elements inside the component are on purposely typed a bit inconsistent fashion only to demonstrate possibilities of JSON templates.
 ```javascript
 RME.component({form: props => ({
     div: {
@@ -144,7 +144,7 @@ RME.component({ filterExample: () =>
 });
 ```
 
-This is as simple as it gets when creating a table from the rows that are come in the props object.
+This is as simple as it gets when creating a table from the rows that come in the props object.
 ```javascript
 App.component({ myTable: props => 
     ({table: props.rows.map((row) => ({
