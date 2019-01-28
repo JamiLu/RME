@@ -8,7 +8,7 @@ The RME does not require any installation nor any other libraries.
 
 Documentation
 -----
- - [http://jlcv.sytes.net/rme/](http://jlcv.sytes.net/rme/)
+ - [http://jlcv.sytes.net/rme/](http://jlcv.sytes.net/rme/) (explanatories not yet fully updated)
 
 Download
 -----
@@ -88,6 +88,13 @@ RME.component({ formExample: () =>
         }
     }})
 });
+```
+
+This is the statefulHeader component that stores two values to the state of the component and then prints them as they are updated.
+```javascript
+App.component({ statefulHeader: props => 
+    ({h5: {text: `Welcome ${props.fname} ${props.lname}`}})
+})();
 ```
 
 Here is our form component that has one property input which is actually onInput event action. Elements inside the component are on purposely typed a bit inconsistent fashion only to demonstrate possibilities of a JSON templates.
