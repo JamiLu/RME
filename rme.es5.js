@@ -23,17 +23,20 @@ var RME = function () {
             this.onStorageChange = function (state) {};
             this.components = {};
             this.rmeState = {};
+            this.router;
+            this.messages;
+            this.defaultApp;
         }
 
         _createClass(RME, [{
             key: "complete",
             value: function complete() {
-                this.completeRun();
+                this.completeRun.call();
             }
         }, {
             key: "start",
             value: function start() {
-                this.runner();
+                this.runner.call();
             }
         }, {
             key: "setComplete",
@@ -48,12 +51,12 @@ var RME = function () {
             }
         }, {
             key: "addComponent",
-            value: function addComponent(runnable) {
+            value: function addComponent(runnable, props) {
                 var comp;
-                if (Util.isFunction(runnable)) comp = runnable();else if (Util.isObject(runnable)) comp = runnable;
+                if (Util.isFunction(runnable)) comp = runnable.call();else if (Util.isObject(runnable)) comp = runnable;
                 for (var p in comp) {
                     if (comp.hasOwnProperty(p)) {
-                        this.components[p] = comp[p];
+                        this.components[p] = { component: comp[p], update: Util.isFunction(props) ? props : undefined };
                     }
                 }
                 comp = null;
@@ -63,8 +66,25 @@ var RME = function () {
             value: function getComponent(name, props) {
                 var comp = this.components[name];
                 if (!comp) throw "Cannot find a component: \"" + name + "\"";
-                var ret = comp.call(props, props);
+                if (!Util.isEmpty(props) && Util.isFunction(comp.update)) {
+                    var state = Util.isEmpty(props.key) ? name : "" + name + props.key;
+                    props["ref"] = state;
+                    props = this.extendProps(props, comp.update.call()(state));
+                }
+                var ret = comp.component.call(props, props);
                 if (Template.isTemplate(ret)) return Template.resolve(ret);else return ret;
+            }
+        }, {
+            key: "extendProps",
+            value: function extendProps(props, newProps) {
+                if (!Util.isEmpty(newProps)) {
+                    for (var p in newProps) {
+                        if (newProps.hasOwnProperty(p)) {
+                            props[p] = newProps[p];
+                        }
+                    }
+                }
+                return props;
             }
         }, {
             key: "setRmeState",
@@ -76,6 +96,17 @@ var RME = function () {
             key: "getRmeState",
             value: function getRmeState(key) {
                 return this.rmeState[key];
+            }
+        }, {
+            key: "configure",
+            value: function configure(config) {
+                this.router = config.router;
+                this.messages = config.messages;
+                this.defaultApp = config.app;
+
+                if (!Util.isEmpty(this.router)) this.router.setApp(this.defaultApp);
+                if (!Util.isEmpty(this.messages)) this.messages.setApp(this.defaultApp);
+                if (!Util.isEmpty(this.defaultApp)) this.defaultApp.setRouter(this.router);
             }
 
             /** 
@@ -112,7 +143,7 @@ var RME = function () {
         }, {
             key: "component",
             value: function component(runnable, props) {
-                if (runnable && (Util.isFunction(runnable) || Util.isObject(runnable))) RME.getInstance().addComponent(runnable);else if (runnable && Util.isString(runnable)) return RME.getInstance().getComponent(runnable, props);
+                if (runnable && (Util.isFunction(runnable) || Util.isObject(runnable))) RME.getInstance().addComponent(runnable, props);else if (runnable && Util.isString(runnable)) return RME.getInstance().getComponent(runnable, props);
             }
 
             /**
@@ -156,7 +187,7 @@ var RME = function () {
                     if (!Util.isEmpty(crossOrigin)) sc.setAttribute("crossOrigin", crossOrigin);
                     if (!Util.isEmpty(charset)) sc.setAttribute("charset", charset);
                     if (!Util.isEmpty(async)) sc.setAttribute("async", async);
-                    RME.config().addScript(sc);
+                    RME.addScript(sc);
                 }
             }
 
@@ -172,11 +203,6 @@ var RME = function () {
             value: function onStorageChange(listener) {
                 if (listener && Util.isFunction(listener)) RME.getInstance().onrmestoragechange = listener;
             }
-        }, {
-            key: "onReceive",
-            value: function onReceive(dataKey) {
-                if (!Util.isEmpty(dataKey)) return DataReceivePromise.waitTillReceive(dataKey);
-            }
 
             /**
              * Function checks if a component with the given name exists.
@@ -187,34 +213,51 @@ var RME = function () {
         }, {
             key: "hasComponent",
             value: function hasComponent(name) {
-                return !Util.isEmpty(RME.getInstance().components[name]);
+                return !Util.isEmpty(RME.getInstance().components[name.replace("component:", "")]);
+            }
+
+            /**
+             * Function receives an object as a parameter that holds three properties router, messages and app. The function will
+             * autoconfigure the Router, the Messages and the App instance to be used as default.
+             * 
+             * The config object represented
+             * {
+             * router: Router reference
+             * messages: Messages reference
+             * app: App instance
+             * }
+             * @param {object} config 
+             */
+
+        }, {
+            key: "use",
+            value: function use(config) {
+                RME.getInstance().configure(config);
             }
         }, {
-            key: "config",
-            value: function config() {
-                return {
-                    addScript: function addScript(elem) {
-                        var scripts = Tree.getScripts();
-                        var lastScript = scripts[scripts.length - 1];
-                        lastScript.after(elem);
-                    },
-                    removeScript: function removeScript(sourceOrId) {
-                        if (sourceOrId.indexOf("#") === 0) {
-                            Tree.getHead().remove(Tree.get(sourceOrId));
-                        } else {
-                            var scripts = Tree.getScripts();
-                            for (var s in scripts) {
-                                if (scripts.hasOwnProperty(s)) {
-                                    var src = !Util.isEmpty(scripts[s].getSource()) ? scripts[s].getSource() : "";
-                                    if (src.search(sourceOrId) > -1 && src.search(sourceOrId) === src.length - sourceOrId.length) {
-                                        Tree.getHead().remove(scripts[s]);
-                                        break;
-                                    }
-                                }
+            key: "addScript",
+            value: function addScript(elem) {
+                var scripts = Tree.getScripts();
+                var lastScript = scripts[scripts.length - 1];
+                lastScript.after(elem);
+            }
+        }, {
+            key: "removeScript",
+            value: function removeScript(sourceOrId) {
+                if (sourceOrId.indexOf("#") === 0) {
+                    Tree.getHead().remove(Tree.get(sourceOrId));
+                } else {
+                    var scripts = Tree.getScripts();
+                    for (var s in scripts) {
+                        if (scripts.hasOwnProperty(s)) {
+                            var src = !Util.isEmpty(scripts[s].getSource()) ? scripts[s].getSource() : "";
+                            if (src.search(sourceOrId) > -1 && src.search(sourceOrId) === src.length - sourceOrId.length) {
+                                Tree.getHead().remove(scripts[s]);
+                                break;
                             }
                         }
                     }
-                };
+                }
             }
         }, {
             key: "getInstance",
@@ -225,51 +268,6 @@ var RME = function () {
         }]);
 
         return RME;
-    }();
-
-    var DataReceivePromise = function () {
-        function DataReceivePromise() {
-            _classCallCheck(this, DataReceivePromise);
-
-            this.instance = this;
-        }
-
-        _createClass(DataReceivePromise, [{
-            key: "createPromise",
-            value: function createPromise(dataKey) {
-                return new Promise(function (resolve, reject) {
-                    var interval = Util.setInterval(function () {
-                        var data = RME.storage(dataKey);
-                        if (!Util.isEmpty(data)) {
-                            Util.clearInterval(interval);
-                            resolve(data);
-                        }
-                    });
-                    Util.setTimeout(function () {
-                        if (Util.isEmpty(RME.storage(dataKey))) Util.clearInterval(interval);
-                        reject(dataKey);
-                    }, 5000);
-                });
-            }
-        }, {
-            key: "createCustom",
-            value: function createCustom(dataKey) {}
-        }, {
-            key: "then",
-            value: function then(handler) {}
-        }], [{
-            key: "waitTillReceive",
-            value: function waitTillReceive(dataKey) {
-                if (window.Promise) return DataReceivePromise.create().createPromise(dataKey);else return DataReceivePromise.create().createCustom(dataKey);
-            }
-        }, {
-            key: "create",
-            value: function create() {
-                return new DataReceivePromise();
-            }
-        }]);
-
-        return DataReceivePromise;
     }();
 
     document.addEventListener("readystatechange", function () {
@@ -283,8 +281,583 @@ var RME = function () {
         storage: RME.storage,
         script: RME.script,
         onStorageChange: RME.onStorageChange,
-        onReceive: RME.onReceive,
-        hasComponent: RME.hasComponent
+        hasComponent: RME.hasComponent,
+        use: RME.use
+    };
+}();
+
+var App = function () {
+    var App = function () {
+        function App() {
+            _classCallCheck(this, App);
+
+            this.self;
+            this.seq = 0;
+            this.prefix = "app";
+            this.name;
+            this.root;
+        }
+
+        /**
+         * Function will set a name for an application. If the name is not set then a default name is used.
+         * @param {string} name 
+         * @returns App.
+         */
+
+
+        _createClass(App, null, [{
+            key: "name",
+            value: function name(_name) {
+                App.init().name = App.checkName(_name);
+                return App;
+            }
+
+            /**
+             * Function will set a root for an application. If the root is not set then body is used by default.
+             * @param {string} root 
+             * @returns App.
+             */
+
+        }, {
+            key: "root",
+            value: function root(_root) {
+                if (!Util.isEmpty(_root) && Util.isString(_root)) App.init().root = _root;
+
+                return App;
+            }
+
+            /**
+             * Function will check if a given name is empty or not. If the name is empty then a next available default name is returned.
+             * @param {string} name 
+             * @returns Checked name.
+             */
+
+        }, {
+            key: "checkName",
+            value: function checkName(name) {
+                if (!Util.isEmpty(name)) {
+                    return App.init().prefix + name;
+                } else {
+                    while (Util.isEmpty(App.init().name)) {
+                        name = App.init().prefix + App.init().seq;
+                        name = RME.storage(name);
+                        if (Util.isEmpty(name)) {
+                            App.init().name = App.init().prefix + App.init().seq;
+                            break;
+                        } else {
+                            App.init().seq++;
+                        }
+                    }
+                    return App.init().name;
+                }
+            }
+
+            /**
+             * Resets settings that are used to create an application.
+             */
+
+        }, {
+            key: "reset",
+            value: function reset() {
+                App.init().name = undefined;
+                App.init().root = undefined;
+                App.init().seq = 0;
+            }
+
+            /**
+             * Function creates an application. The given parameter can either be a Template object or an Elem object. 
+             * @param {object} object 
+             * @returns Created application instance.
+             */
+
+        }, {
+            key: "create",
+            value: function create(object) {
+                var name = !Util.isEmpty(App.init().name) ? App.init().name : App.checkName();
+                var root = !Util.isEmpty(App.init().root) ? App.init().root : undefined;
+                var app = new AppInstance(name, root, object);
+                RME.storage(name, app);
+                App.reset();
+                return app;
+            }
+
+            /**
+             * Gets Application instance by name. If the name is empty then default application instance is retrieved.
+             * @param {string} name 
+             * @returns Application instance.
+             */
+
+        }, {
+            key: "get",
+            value: function get(name) {
+                if (Util.isEmpty(name)) return App.name(0).getInstance();else {
+                    var app = App.name(name).getInstance();
+                    if (Util.isEmpty(app)) throw "Could not find app with name: " + name;else return app;
+                }
+            }
+
+            /**
+             * Function takes two parameters that enable setting state for components. If only one parameter is given then the parameter must be an object
+             * that defines the component name and its values as follows. ({refName: {key: val, key: val}})
+             * If two parameters are given then the first parameter is a component name and the values is component state object as follows. (refName, {key: val, key: val}).
+             * Given states are stored into default application. 
+             * @param {*} refName 
+             * @param {*} value 
+             */
+
+        }, {
+            key: "setState",
+            value: function setState(refName, value) {
+                return App.get().setState(refName, value);
+            }
+
+            /**
+             * Function takes one optional parameter. If refName is given then only a state of a component referred by the refName is given. 
+             * Otherwise whole default application state is given.
+             * @param {string} refName 
+             */
+
+        }, {
+            key: "getState",
+            value: function getState(refName) {
+                return App.get().getState(refName);
+            }
+
+            /**
+             * Function takes one optional parameter. If refName is given then only a state of a component referred by the refName is checked.
+             * Otherwised default application state is checked.
+             * @param {string} refName 
+             * @returns True if state empty otherwise false.
+             */
+
+        }, {
+            key: "isStateEmpty",
+            value: function isStateEmpty(refName) {
+                return App.get().isStateEmpty(refName);
+            }
+
+            /**
+             * Function takes two optional parameters. If refName is given then only a state of the component with the refName is cleared otherwise 
+             * whole default application state is cleared. If update is given then after clearing the state the application is refreshed.
+             * @param {string} refName 
+             * @param {boolean} update 
+             */
+
+        }, {
+            key: "clearState",
+            value: function clearState(refName, update) {
+                return App.get().clearState(refName, update);
+            }
+
+            /**
+             * Function takes two parameters. If the first parameter is string then the second parameter must be an object. The first parameter refName 
+             * defines a component and the second parameter is the state of the component as follows: (compName, {key: val, key: val}) If the first parameter is an object then the second parameter
+             * is omitted. In this case the object must contain a component name and a state for the component as follows: ({compName: {val: key, val: key}}).
+             * Given states are stored into default application.
+             * @param {string} refName 
+             * @param {object} value 
+             */
+
+        }, {
+            key: "mergeState",
+            value: function mergeState(key, value) {
+                return App.get().mergeState(key, value);
+            }
+        }, {
+            key: "getInstance",
+            value: function getInstance() {
+                if (Util.isEmpty(App.init().name)) throw "No App instance selected, invoke a function name() first";
+                var app = RME.storage(App.init().name);
+                App.reset();
+                return app;
+            }
+
+            /**
+             * Function creates a statefull component. The state of the component is stored in an application that this component is bound to.
+             * @param {object} component 
+             */
+
+        }, {
+            key: "component",
+            value: function component(_component) {
+                var bindState = function bindState(appName) {
+                    var updater = Util.isEmpty(appName) ? function () {
+                        return function (state) {
+                            return App.getState(state);
+                        };
+                    } : function () {
+                        return function (state) {
+                            return App.get(appName).getState(state);
+                        };
+                    };
+                    RME.component(_component, updater);
+                };
+                return bindState;
+            }
+        }, {
+            key: "init",
+            value: function init() {
+                if (Util.isEmpty(this.self)) this.self = new App();
+                return this.self;
+            }
+        }]);
+
+        return App;
+    }();
+
+    var AppInstance = function () {
+        function AppInstance(name, root, object) {
+            _classCallCheck(this, AppInstance);
+
+            this.rawStage = object;
+            this.name = name;
+            this.root;
+            this.state = {};
+            this.renderer;
+            this.oldStage = "";
+            this.router;
+            this.ready = false;
+            this.setState = this.setState.bind(this);
+            this.getState = this.getState.bind(this);
+            this.refresh = this.refreshApp.bind(this);
+            this.bindReadyListener(root);
+        }
+
+        _createClass(AppInstance, [{
+            key: "bindReadyListener",
+            value: function bindReadyListener(root) {
+                var _this = this;
+
+                if (document.readyState === "loading" || document.readyState === "interactive") {
+                    // DOMContentLoaded
+                    document.addEventListener("readystatechange", function () {
+                        if (document.readyState === "complete") _this.init(root);
+                    });
+                } else {
+                    this.init(root);
+                }
+            }
+
+            /**
+             * Initialize the Application
+             * @param {string} root 
+             */
+
+        }, {
+            key: "init",
+            value: function init(root) {
+                this.root = Util.isEmpty(root) ? Tree.getBody() : Tree.getFirst(root);
+                this.renderer = new Renderer(this.root);
+                this.ready = true;
+                this.refreshApp();
+            }
+        }, {
+            key: "refreshApp",
+            value: function refreshApp() {
+                var _this2 = this;
+
+                if (this.ready) {
+                    Util.setTimeout(function () {
+                        var freshStage = Template.isTemplate(_this2.rawStage) ? Template.resolve(_this2.rawStage) : _this2.rawStage;
+
+                        if (!Util.isEmpty(_this2.router)) {
+                            var state = _this2.router.getCurrentState();
+                            if (!Util.isEmpty(state.current)) {
+                                var selector = state.root;
+                                var element = state.current;
+                                freshStage.getFirst(selector).append(element);
+                            }
+                        }
+
+                        if (_this2.oldStage.toString() !== freshStage.toString()) {
+                            _this2.oldStage = _this2.renderer.merge(_this2.oldStage, freshStage);
+                        }
+                    });
+                }
+            }
+
+            /**
+             * Function takes two parameters that enable setting state for components. If only one parameter is given then the parameter must be an object
+             * that defines the component name and its values as follows. ({refName: {key: val, key: val}})
+             * If two parameters are given then the first parameter is a component name and the values is component state object as follows. (refName, {key: val, key: val}).
+             * Given states are stored into this application instance state. 
+             * @param {*} refName 
+             * @param {*} value 
+             */
+
+        }, {
+            key: "setState",
+            value: function setState(refName, value) {
+                if (Util.isString(refName)) {
+                    this.state[refName] = value;
+                    this.refreshApp();
+                } else if (Util.isObject(refName)) {
+                    for (var p in refName) {
+                        if (refName.hasOwnProperty(p)) this.state[p] = refName[p];
+                    }
+                    this.refreshApp();
+                }
+            }
+
+            /**
+             * Function takes one optional parameter. If refName is given then only a state of a component referred by the refName is given. 
+             * Otherwise whole application state of this application instance is given.
+             * @param {string} refName 
+             */
+
+        }, {
+            key: "getState",
+            value: function getState(refName) {
+                if (Util.isString(refName)) {
+                    return !Util.isEmpty(this.state[refName]) ? this.state[refName] : {};
+                } else if (Util.isEmpty(refName)) {
+                    return this.state;
+                }
+            }
+
+            /**
+             * Function takes one optional parameter. If refName is given then only a state of a component referred by the refName is checked.
+             * Otherwise whole application state of this application instance is checked.
+             * @param {string} refName 
+             * @returns True if state empty otherwise false.
+             */
+
+        }, {
+            key: "isStateEmpty",
+            value: function isStateEmpty(refName) {
+                if (Util.isEmpty(refName)) return this.recursiveCheckMapIsEmpty(this.state);else return this.recursiveCheckMapIsEmpty(this.state[refName]);
+            }
+        }, {
+            key: "recursiveCheckMapIsEmpty",
+            value: function recursiveCheckMapIsEmpty(map) {
+                for (var key in map) {
+                    if (map.hasOwnProperty(key)) {
+                        if (!Util.isEmpty(map[key])) return false;
+                        if (Util.isObject(map[key])) this.recursiveCheckMapIsEmpty(map[key]);
+                    }
+                }
+                return true;
+            }
+
+            /**
+             * Function takes two optional parameters. If refName is given then only a state of the component with the refName is cleared otherwise 
+             * whole application state of this application instance is cleared. If update is given then after clearing the state the application is refreshed.
+             * @param {string} refName 
+             * @param {boolean} update 
+             */
+
+        }, {
+            key: "clearState",
+            value: function clearState(refName, update) {
+                if (Util.isEmpty(refName)) this.recursiveClearMap(this.state);else this.recursiveClearMap(this.state[refName]);
+
+                if (Util.isBoolean(update) && update === true) {
+                    this.refreshApp();
+                }
+            }
+        }, {
+            key: "recursiveClearMap",
+            value: function recursiveClearMap(map) {
+                for (var key in map) {
+                    if (map.hasOwnProperty(key)) {
+                        if (Util.isString(map[key])) map[key] = "";else if (Util.isArray(map[key])) map[key] = [];else if (Util.isObject(map[key])) this.recursiveClearMap(map[key]);
+                    }
+                }
+            }
+
+            /**
+             * Function takes two parameters. If the first parameter is string then the second parameter must be an object. The first parameter refName 
+             * defines a component and the second parameter is the state of the component as follows: (compName, {key: val, key: val}) If the first parameter is an object then the second parameter
+             * is omitted. In this case the object must contain a component name and a state for the component as follows: ({compName: {val: key, val: key}}).
+             * Given states are stored into this application instance state.
+             * @param {string} refName 
+             * @param {object} value 
+             */
+
+        }, {
+            key: "mergeState",
+            value: function mergeState(refName, value) {
+                var newState = {};
+                if (Util.isString(refName)) {
+                    newState[refName] = value;
+                } else if (Util.isObject(refName)) {
+                    for (var p in refName) {
+                        if (refName.hasOwnProperty(p)) newState[p] = refName[p];
+                    }
+                }
+                this.recursiveMergeState(this.state, newState);
+                this.refreshApp();
+            }
+        }, {
+            key: "recursiveMergeState",
+            value: function recursiveMergeState(oldMap, newMap) {
+                for (var key in newMap) {
+                    if (newMap.hasOwnProperty(key)) {
+                        if (Util.isArray(oldMap[key]) && !Util.isArray(newMap[key])) oldMap[key].push(newMap[key]);else if (Util.isArray(oldMap[key]) && Util.isArray(newMap[key])) oldMap[key] = oldMap[key].concat(newMap[key]);else if (Util.isObject(oldMap[key]) && Util.isObject(newMap[key])) this.recursiveMergeState(oldMap[key], newMap[key]);else if (Util.isEmpty(oldMap[key])) oldMap[key] = newMap[key];
+                    }
+                }
+            }
+        }, {
+            key: "setRouter",
+            value: function setRouter(router) {
+                this.router = router;
+            }
+        }]);
+
+        return AppInstance;
+    }();
+
+    var Renderer = function () {
+        function Renderer(root) {
+            _classCallCheck(this, Renderer);
+
+            this.root = root;
+            this.mergedStage;
+            this.tobeRemoved = [];
+        }
+
+        /**
+         * Function merges a newStage to a oldStage. Merge rules are following.
+         * New stage has what old stage doesn't > add it.
+         * New stage has what old stage has > has it changed ? yes > change|update it : no > do nothing.
+         * New stage doesn't have what old stage has > remove it.
+         * @param {object} oldStage
+         * @param {object} newStage
+         * @returns The merged stage.
+         */
+
+
+        _createClass(Renderer, [{
+            key: "merge",
+            value: function merge(oldStage, newStage) {
+                if (Util.isEmpty(this.root.getChildren())) {
+                    this.root.append(newStage);
+                    this.mergedStage = newStage;
+                } else {
+                    this.render(this.root, oldStage, newStage, 0);
+                    this.mergedStage = oldStage;
+                    this.removeToBeRemoved();
+                }
+                return this.mergedStage;
+            }
+
+            /**
+             * Function is called recusively and goes through a oldStage and a newStage simultaneosly in recursion and comparing them and updating changed content.
+             * @param {object} parent 
+             * @param {object} oldNode 
+             * @param {object} newNode 
+             * @param {number} index 
+             */
+
+        }, {
+            key: "render",
+            value: function render(parent, oldNode, newNode, index) {
+                if (!oldNode && newNode) {
+                    parent.append(newNode.duplicate());
+                } else if (oldNode && !newNode) {
+                    this.tobeRemoved.push({ parent: parent, child: this.wrap(parent.dom().children[index]) });
+                } else if (this.hasNodeChanged(oldNode, newNode)) {
+                    if (this.isValueElem(newNode.getTagName()) && this.comparePropsWithoutValue(oldNode, newNode)) oldNode.setValue(newNode.getValue());else this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
+                } else {
+                    var i = 0;
+                    var oldLength = oldNode ? oldNode.dom().children.length : 0;
+                    var newLength = newNode ? newNode.dom().children.length : 0;
+
+                    while (i < newLength || i < oldLength) {
+                        this.render(this.wrap(parent.dom().children[index]), oldNode ? this.wrap(oldNode.dom().children[i]) : null, newNode ? this.wrap(newNode.dom().children[i]) : null, i);
+                        i++;
+                    }
+                }
+            }
+
+            /**
+             * Function removes all the marked as to be removed elements which did not come in the new stage by starting from the last to the first.
+             */
+
+        }, {
+            key: "removeToBeRemoved",
+            value: function removeToBeRemoved() {
+                if (this.tobeRemoved.length > 0) {
+                    var lastIdx = this.tobeRemoved.length - 1;
+                    while (lastIdx >= 0) {
+                        this.tobeRemoved[lastIdx].parent.remove(this.tobeRemoved[lastIdx].child);
+                        lastIdx--;
+                    }
+                    this.tobeRemoved = [];
+                }
+            }
+
+            /**
+             * Function takes two Elem objects as parameter and compares them if they are equal or have some properties changed ignoring a value attribute.
+             * @param {object} oldNode 
+             * @param {object} newNode 
+             * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
+             */
+
+        }, {
+            key: "comparePropsWithoutValue",
+            value: function comparePropsWithoutValue(oldNode, newNode) {
+                var o = oldNode.getProps();
+                var n = newNode.getProps();
+                o.value = "";
+                n.value = "";
+                return JSON.stringify(o) === JSON.stringify(n);
+            }
+
+            /**
+             * Function takes two Elem objects as parameter and compares them if they are equal or have some properties changed.
+             * @param {object} oldNode 
+             * @param {object} newNode 
+             * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
+             */
+
+        }, {
+            key: "hasNodeChanged",
+            value: function hasNodeChanged(oldNode, newNode) {
+                return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && (oldNode.getTagName() !== newNode.getTagName() || oldNode.getProps(true) !== newNode.getProps(true));
+            }
+
+            /**
+             * Function takes DOM node as a parameter and wraps it to Elem object.
+             * @param {object} node 
+             * @returns the Wrapped Elem object.
+             */
+
+        }, {
+            key: "wrap",
+            value: function wrap(node) {
+                if (!Util.isEmpty(node)) return Elem.wrap(node);
+            }
+
+            /**
+             * Function takes an element tag string and compares it to other elements that have a value attribute. If the given tag is a tag of the element that has the tag attribute
+             * true is returned otherwise false will be returned.
+             * @param {string} tag 
+             * @returns True if the give tag is an element that has a value attribute otherwise false is returned.
+             */
+
+        }, {
+            key: "isValueElem",
+            value: function isValueElem(tag) {
+                tag = tag.toLowerCase();
+                return tag === "button" || tag === "input" || tag === "li" || tag === "option" || tag === "meter" || tag === "progress" || tag === "param";
+            }
+        }]);
+
+        return Renderer;
+    }();
+
+    return {
+        name: App.name,
+        root: App.root,
+        create: App.create,
+        get: App.get,
+        component: App.component,
+        setState: App.setState,
+        getState: App.getState,
+        clearState: App.clearState,
+        isStateEmpty: App.isStateEmpty,
+        mergeState: App.mergeState
     };
 }();
 
@@ -471,14 +1044,14 @@ var Http = function () {
         _createClass(Ajax, [{
             key: "then",
             value: function then(successHandler, errorHandler) {
-                var _this = this;
+                var _this3 = this;
 
                 this.xhr.onload = function () {
-                    _this.xhr.responseJSON = tryParseJSON(_this.xhr.responseText);
-                    isResponseOK(_this.xhr.status) ? successHandler(_this.xhr) : errorHandler(_this.xhr);
+                    _this3.xhr.responseJSON = tryParseJSON(_this3.xhr.responseText);
+                    isResponseOK(_this3.xhr.status) ? successHandler(resolveResponse(_this3.xhr.response), _this3.xhr) : errorHandler(_this3.xhr);
                 };
                 this.xhr.onprogress = function (event) {
-                    if (_this.progressHandler) _this.progressHandler(event);
+                    if (_this3.progressHandler) _this3.progressHandler(event);
                 };
                 if (this.xhr.ontimeout && config.onTimeout) {
                     this.xhr.ontimeout = function (event) {
@@ -486,8 +1059,8 @@ var Http = function () {
                     };
                 }
                 this.xhr.onerror = function () {
-                    _this.xhr.responseJSON = tryParseJSON(_this.xhr.responseText);
-                    if (errorHandler) errorHandler(_this.xhr);
+                    _this3.xhr.responseJSON = tryParseJSON(_this3.xhr.responseText);
+                    if (errorHandler) errorHandler(_this3.xhr);
                 };
                 this.data ? this.xhr.send(this.data) : this.xhr.send();
                 return this;
@@ -495,11 +1068,11 @@ var Http = function () {
         }, {
             key: "catch",
             value: function _catch(errorHandler) {
-                var _this2 = this;
+                var _this4 = this;
 
                 this.xhr.onerror = function () {
-                    _this2.xhr.responseJSON = tryParseJSON(_this2.xhr.responrenderseText);
-                    if (errorHandler) errorHandler(_this2.xhr);
+                    _this4.xhr.responseJSON = tryParseJSON(_this4.xhr.responrenderseText);
+                    if (errorHandler) errorHandler(_this4.xhr);
                 };
             }
         }]);
@@ -514,7 +1087,7 @@ var Http = function () {
 
     var PromiseAjax = function () {
         function PromiseAjax(config) {
-            var _this3 = this;
+            var _this5 = this;
 
             _classCallCheck(this, PromiseAjax);
 
@@ -526,7 +1099,7 @@ var Http = function () {
                 if (config.headers) setXhrHeaders(request, config.headers);
                 request.onload = function () {
                     request.responseJSON = tryParseJSON(request.responseText);
-                    isResponseOK(request.status) ? resolve(request) : reject(request);
+                    isResponseOK(request.status) ? resolve(resolveResponse(request.response)) : reject(request);
                 };
                 if (request.ontimeout && config.onTimeout) {
                     request.ontimeout = function (event) {
@@ -540,7 +1113,7 @@ var Http = function () {
                     request.responseJSON = tryParseJSON(request.responseText);
                     reject(request);
                 };
-                _this3.data ? request.send(_this3.data) : request.send();
+                _this5.data ? request.send(_this5.data) : request.send();
             });
         }
 
@@ -671,6 +1244,12 @@ var Http = function () {
         return FetchRequest;
     }();
 
+    var resolveResponse = function resolveResponse(response) {
+        var resp = tryParseJSON(response);
+        if (Util.isEmpty(resp)) resp = response;
+        return resp;
+    };
+
     function setXhrHeaders(xhr, headers) {
         for (var header in headers) {
             if (headers.hasOwnProperty(header)) xhr.setRequestHeader(header, headers[header]);
@@ -752,7 +1331,13 @@ var Elem = function () {
         }, {
             key: "getText",
             value: function getText() {
-                return this.html.textContent;
+                var text = "";
+                this.html.childNodes.forEach(function (node) {
+                    if (node.nodeType === 3) {
+                        text = node.nodeValue;
+                    }
+                });
+                return text;
             }
 
             /**
@@ -843,7 +1428,7 @@ var Elem = function () {
         }, {
             key: "append",
             value: function append(elem) {
-                this.html.appendChild(elem.dom());
+                this.html.appendChild(Template.isTemplate(elem) ? Template.resolve(elem).dom() : elem.dom());
                 return this;
             }
 
@@ -911,6 +1496,31 @@ var Elem = function () {
             key: "toString",
             value: function toString() {
                 return "<" + this.getTagName().toLowerCase() + ">" + this.getContent() + "</" + this.getTagName().toLowerCase() + ">";
+            }
+
+            /**
+             * Converts this Elem object to JSON template object.
+             * @param {boolean} deep default true if true children will also be templated.
+             * @returns Template representation of the element tree.
+             */
+
+        }, {
+            key: "toTemplate",
+            value: function toTemplate(deep) {
+                return Templater.toTemplate(this, deep);
+            }
+
+            /**
+             * Returns properties of an Elem in an object. If a boolean json is true
+             * then the returned object is returned as JSON string.
+             * @param {boolean} json 
+             * @returns Properties of the elem in the properties object.
+             */
+
+        }, {
+            key: "getProps",
+            value: function getProps(json) {
+                if (Util.isBoolean(json) && json === true) return JSON.stringify(Templater.getElementProps(this));else return Templater.getElementProps(this);
             }
 
             /**
@@ -1282,6 +1892,78 @@ var Elem = function () {
             }
 
             /**
+             * Set maximum length of an input field.
+             * @param {number} length 
+             * @returns Elem instance.
+             */
+
+        }, {
+            key: "setMaxLength",
+            value: function setMaxLength(length) {
+                this.html.maxLength = length;
+                return this;
+            }
+
+            /**
+             * @returns Max length of this element.
+             */
+
+        }, {
+            key: "getMaxLength",
+            value: function getMaxLength() {
+                return this.html.maxLength;
+            }
+
+            /**
+             * Set minimum length of an input field.
+             * @param {number} length 
+             * @returns Elem instance.
+             */
+
+        }, {
+            key: "setMinLength",
+            value: function setMinLength(length) {
+                this.html.minLength = length;
+                return this;
+            }
+
+            /**
+             * @returns Min lenght of this element.
+             */
+
+        }, {
+            key: "getMinLength",
+            value: function getMinLength() {
+                return this.html.minLength;
+            }
+
+            /**
+             * Set data to be stored into this dom element by a given key.
+             * @param {string} key 
+             * @param {*} value 
+             * @returns Elem instance.
+             */
+
+        }, {
+            key: "setData",
+            value: function setData(key, value) {
+                this.html.dataset[key] = value;
+                return this;
+            }
+
+            /**
+             * Get data by a given key from this dom element.
+             * @param {string} key 
+             * @returns Retrieved data.
+             */
+
+        }, {
+            key: "getData",
+            value: function getData(key) {
+                return this.html.dataset[key];
+            }
+
+            /**
              * Set this element content editable.
              * 
              * @param {boolean} boolean 
@@ -1370,11 +2052,11 @@ var Elem = function () {
             key: "addClasses",
             value: function addClasses(classes) {
                 var toAdd = classes.trim().split(" ");
-                var origClass = this.getClasses();
+                var origClass = " " + this.getClasses() + " ";
                 var i = 0;
                 while (i < toAdd.length) {
                     var clazz = toAdd[i];
-                    if (origClass.search(clazz) === -1) origClass += " " + clazz;
+                    if (origClass.match(" " + clazz + " ") === null) origClass += " " + clazz;
                     i++;
                 }
                 this.html.className = origClass.trim();
@@ -1392,11 +2074,11 @@ var Elem = function () {
             key: "removeClasses",
             value: function removeClasses(classes) {
                 var toRm = classes.trim().split(" ");
-                var origClass = this.getClasses();
+                var origClass = " " + this.getClasses() + " ";
                 var i = 0;
                 while (i < toRm.length) {
                     var clazz = toRm[i];
-                    if (origClass.search(clazz) > -1) origClass = origClass.replace(clazz, "").trim();
+                    if (origClass.match(" " + clazz + " ") !== null) origClass = origClass.replace(clazz, "").trim();
                     i++;
                 }
                 this.html.className = origClass.trim();
@@ -1414,12 +2096,12 @@ var Elem = function () {
             key: "toggleClasses",
             value: function toggleClasses(classes) {
                 var cArr = classes.split(" ");
-                var origClass = this.getClasses();
+                var origClass = " " + this.getClasses() + " ";
                 var toAdd = "";
                 var toRm = "";
                 var i = 0;
                 while (i < cArr.length) {
-                    if (origClass.search(cArr[i]) > -1) toRm += " " + cArr[i];else toAdd += " " + cArr[i];
+                    if (origClass.match(" " + cArr[i] + " ") !== null) toRm += " " + cArr[i];else toAdd += " " + cArr[i];
                     i++;
                 }
                 this.addClasses(toAdd.trim());
@@ -1537,7 +2219,11 @@ var Elem = function () {
         }, {
             key: "click",
             value: function click() {
-                this.html.click();
+                var _this6 = this;
+
+                Util.setTimeout(function () {
+                    return _this6.html.click();
+                });
                 return this;
             }
 
@@ -1549,7 +2235,11 @@ var Elem = function () {
         }, {
             key: "focus",
             value: function focus() {
-                this.html.focus();
+                var _this7 = this;
+
+                Util.setTimeout(function () {
+                    return _this7.html.focus();
+                });
                 return this;
             }
 
@@ -1561,7 +2251,11 @@ var Elem = function () {
         }, {
             key: "blur",
             value: function blur() {
-                this.html.blur();
+                var _this8 = this;
+
+                Util.setTimeout(function () {
+                    return _this8.html.blur();
+                });
                 return this;
             }
 
@@ -1589,13 +2283,23 @@ var Elem = function () {
             }
 
             /**
+             * @returns A duplicated Elem object
+             */
+
+        }, {
+            key: "duplicate",
+            value: function duplicate() {
+                return Template.resolve(this.toTemplate());
+            }
+
+            /**
              * @returns height of this element.
              */
 
         }, {
             key: "height",
             value: function height() {
-                return this.html.clientHeight;
+                return this.html.height;
             }
 
             /**
@@ -1605,7 +2309,7 @@ var Elem = function () {
         }, {
             key: "width",
             value: function width() {
-                return this.html.clientWidth;
+                return this.html.width;
             }
 
             /**
@@ -1700,25 +2404,25 @@ var Elem = function () {
         }, {
             key: "onAnimationStart",
             value: function onAnimationStart(handler) {
-                this.html.onanimationstart = handler.bind(this, this);
+                this.html.onanimationstart = handler;
                 return this;
             }
         }, {
             key: "onAnimationIteration",
             value: function onAnimationIteration(handler) {
-                this.html.onanimationiteration = handler.bind(this, this);
+                this.html.onanimationiteration = handler;
                 return this;
             }
         }, {
             key: "onAnimationEnd",
             value: function onAnimationEnd(handler) {
-                this.html.onanimationend = handler.bind(this, this);
+                this.html.onanimationend = handler;
                 return this;
             }
         }, {
             key: "onTransitionEnd",
             value: function onTransitionEnd(handler) {
-                this.html.ontransitionend = handler.bind(this, this);
+                this.html.ontransitionend = handler;
                 return this;
             }
 
@@ -1732,7 +2436,7 @@ var Elem = function () {
         }, {
             key: "onDrag",
             value: function onDrag(handler) {
-                this.html.ondrag = handler.bind(this, this);
+                this.html.ondrag = handler;
                 return this;
             }
 
@@ -1745,7 +2449,7 @@ var Elem = function () {
         }, {
             key: "onDragEnd",
             value: function onDragEnd(handler) {
-                this.html.ondragend = handler.bind(this, this);
+                this.html.ondragend = handler;
                 return this;
             }
 
@@ -1758,7 +2462,7 @@ var Elem = function () {
         }, {
             key: "onDragEnter",
             value: function onDragEnter(handler) {
-                this.html.ondragenter = handler.bind(this, this);
+                this.html.ondragenter = handler;
                 return this;
             }
 
@@ -1771,7 +2475,7 @@ var Elem = function () {
         }, {
             key: "onDragOver",
             value: function onDragOver(handler) {
-                this.html.ondragover = handler.bind(this, this);
+                this.html.ondragover = handler;
                 return this;
             }
 
@@ -1784,7 +2488,7 @@ var Elem = function () {
         }, {
             key: "onDragStart",
             value: function onDragStart(handler) {
-                this.html.ondragstart = handler.bind(this, this);
+                this.html.ondragstart = handler;
                 return this;
             }
 
@@ -1797,7 +2501,7 @@ var Elem = function () {
         }, {
             key: "onDrop",
             value: function onDrop(handler) {
-                this.html.ondrop = handler.bind(this, this);
+                this.html.ondrop = handler;
                 return this;
             }
 
@@ -1811,7 +2515,7 @@ var Elem = function () {
         }, {
             key: "onClick",
             value: function onClick(handler) {
-                this.html.onclick = handler.bind(this, this);
+                this.html.onclick = handler;
                 return this;
             }
 
@@ -1824,7 +2528,7 @@ var Elem = function () {
         }, {
             key: "onDoubleClick",
             value: function onDoubleClick(handler) {
-                this.html.ondblclick = handler.bind(this, this);
+                this.html.ondblclick = handler;
                 return this;
             }
 
@@ -1837,7 +2541,7 @@ var Elem = function () {
         }, {
             key: "onContextMenu",
             value: function onContextMenu(handler) {
-                this.html.oncontextmenu = handler.bind(this, this);
+                this.html.oncontextmenu = handler;
                 return this;
             }
 
@@ -1850,7 +2554,7 @@ var Elem = function () {
         }, {
             key: "onMouseDown",
             value: function onMouseDown(handler) {
-                this.html.onmousedown = handler.bind(this, this);
+                this.html.onmousedown = handler;
                 return this;
             }
 
@@ -1863,7 +2567,7 @@ var Elem = function () {
         }, {
             key: "onMouseEnter",
             value: function onMouseEnter(handler) {
-                this.html.onmouseenter = handler.bind(this, this);
+                this.html.onmouseenter = handler;
                 return this;
             }
 
@@ -1876,7 +2580,7 @@ var Elem = function () {
         }, {
             key: "onMouseLeave",
             value: function onMouseLeave(handler) {
-                this.html.onmouseleave = handler.bind(this, this);
+                this.html.onmouseleave = handler;
                 return this;
             }
 
@@ -1889,7 +2593,7 @@ var Elem = function () {
         }, {
             key: "onMouseMove",
             value: function onMouseMove(handler) {
-                this.html.onmousemove = handler.bind(this, this);
+                this.html.onmousemove = handler;
                 return this;
             }
 
@@ -1902,7 +2606,7 @@ var Elem = function () {
         }, {
             key: "onMouseOver",
             value: function onMouseOver(handler) {
-                this.html.onmouseover = handler.bind(this, this);
+                this.html.onmouseover = handler;
                 return this;
             }
 
@@ -1915,7 +2619,7 @@ var Elem = function () {
         }, {
             key: "onMouseOut",
             value: function onMouseOut(handler) {
-                this.html.onmouseout = handler.bind(this, this);
+                this.html.onmouseout = handler;
                 return this;
             }
 
@@ -1928,7 +2632,7 @@ var Elem = function () {
         }, {
             key: "onMouseUp",
             value: function onMouseUp(handler) {
-                this.html.onmouseup = handler.bind(this, this);
+                this.html.onmouseup = handler;
                 return this;
             }
 
@@ -1941,7 +2645,7 @@ var Elem = function () {
         }, {
             key: "onWheel",
             value: function onWheel(handler) {
-                this.html.onwheel = handler.bind(this, this);
+                this.html.onwheel = handler;
                 return this;
             }
 
@@ -1955,7 +2659,7 @@ var Elem = function () {
         }, {
             key: "onScroll",
             value: function onScroll(handler) {
-                this.html.onscroll = handler.bind(this, this);
+                this.html.onscroll = handler;
                 return this;
             }
 
@@ -1967,7 +2671,7 @@ var Elem = function () {
         }, {
             key: "onResize",
             value: function onResize(handler) {
-                this.html.onresize = handler.bind(this, this);
+                this.html.onresize = handler;
                 return this;
             }
 
@@ -1981,7 +2685,7 @@ var Elem = function () {
         }, {
             key: "onError",
             value: function onError(handler) {
-                this.html.onerror = handler.bind(this, this);
+                this.html.onerror = handler;
                 return this;
             }
 
@@ -1994,7 +2698,7 @@ var Elem = function () {
         }, {
             key: "onLoad",
             value: function onLoad(handler) {
-                this.html.onload = handler.bind(this, this);
+                this.html.onload = handler;
                 return this;
             }
 
@@ -2007,7 +2711,7 @@ var Elem = function () {
         }, {
             key: "onUnload",
             value: function onUnload(handler) {
-                this.html.onunload = handler.bind(this, this);
+                this.html.onunload = handler;
                 return this;
             }
 
@@ -2020,7 +2724,7 @@ var Elem = function () {
         }, {
             key: "onBeforeUnload",
             value: function onBeforeUnload(handler) {
-                this.html.onbeforeunload = handler.bind(this, this);
+                this.html.onbeforeunload = handler;
                 return this;
             }
 
@@ -2034,7 +2738,7 @@ var Elem = function () {
         }, {
             key: "onKeyUp",
             value: function onKeyUp(handler) {
-                this.html.onkeyup = handler.bind(this, this);
+                this.html.onkeyup = handler;
                 return this;
             }
 
@@ -2047,7 +2751,7 @@ var Elem = function () {
         }, {
             key: "onKeyDown",
             value: function onKeyDown(handler) {
-                this.html.onkeydown = handler.bind(this, this);
+                this.html.onkeydown = handler;
                 return this;
             }
 
@@ -2060,7 +2764,7 @@ var Elem = function () {
         }, {
             key: "onKeyPress",
             value: function onKeyPress(handler) {
-                this.html.onkeypress = handler.bind(this, this);
+                this.html.onkeypress = handler;
                 return this;
             }
 
@@ -2073,7 +2777,7 @@ var Elem = function () {
         }, {
             key: "onInput",
             value: function onInput(handler) {
-                this.html.oninput = handler.bind(this, this);
+                this.html.oninput = handler;
                 return this;
             }
 
@@ -2087,7 +2791,7 @@ var Elem = function () {
         }, {
             key: "onChange",
             value: function onChange(handler) {
-                this.html.onchange = handler.bind(this, this);
+                this.html.onchange = handler;
                 return this;
             }
 
@@ -2100,7 +2804,7 @@ var Elem = function () {
         }, {
             key: "onSubmit",
             value: function onSubmit(handler) {
-                this.html.onsubmit = handler.bind(this, this);
+                this.html.onsubmit = handler;
                 return this;
             }
 
@@ -2113,7 +2817,7 @@ var Elem = function () {
         }, {
             key: "onSelect",
             value: function onSelect(handler) {
-                this.html.onselect = handler.bind(this, this);
+                this.html.onselect = handler;
                 return this;
             }
 
@@ -2126,7 +2830,7 @@ var Elem = function () {
         }, {
             key: "onReset",
             value: function onReset(handler) {
-                this.html.onreset = handler.bind(this, this);
+                this.html.onreset = handler;
                 return this;
             }
 
@@ -2139,7 +2843,7 @@ var Elem = function () {
         }, {
             key: "onFocus",
             value: function onFocus(handler) {
-                this.html.onfocus = handler.bind(this, this);
+                this.html.onfocus = handler;
                 return this;
             }
 
@@ -2152,7 +2856,7 @@ var Elem = function () {
         }, {
             key: "onFocusIn",
             value: function onFocusIn(handler) {
-                this.html.onfocusin = handler.bind(this, this);
+                this.html.onfocusin = handler;
                 return this;
             }
 
@@ -2165,7 +2869,7 @@ var Elem = function () {
         }, {
             key: "onFocusOut",
             value: function onFocusOut(handler) {
-                this.html.onfocusout = handler.bind(this, this);
+                this.html.onfocusout = handler;
                 return this;
             }
 
@@ -2178,7 +2882,7 @@ var Elem = function () {
         }, {
             key: "onBlur",
             value: function onBlur(handler) {
-                this.html.onblur = handler.bind(this, this);
+                this.html.onblur = handler;
                 return this;
             }
 
@@ -2192,7 +2896,7 @@ var Elem = function () {
         }, {
             key: "onCopy",
             value: function onCopy(handler) {
-                this.html.oncopy = handler.bind(this, this);
+                this.html.oncopy = handler;
                 return this;
             }
 
@@ -2205,7 +2909,7 @@ var Elem = function () {
         }, {
             key: "onCut",
             value: function onCut(handler) {
-                this.html.oncut = handler.bind(this, this);
+                this.html.oncut = handler;
                 return this;
             }
 
@@ -2218,7 +2922,7 @@ var Elem = function () {
         }, {
             key: "onPaste",
             value: function onPaste(handler) {
-                this.html.onpaste = handler.bind(this, this);
+                this.html.onpaste = handler;
                 return this;
             }
 
@@ -2232,7 +2936,7 @@ var Elem = function () {
         }, {
             key: "onAbort",
             value: function onAbort(handler) {
-                this.html.onabort = handler.bind(this, this);
+                this.html.onabort = handler;
                 return this;
             }
 
@@ -2245,7 +2949,7 @@ var Elem = function () {
         }, {
             key: "onWaiting",
             value: function onWaiting(handler) {
-                this.html.onwaiting = handler.bind(this, this);
+                this.html.onwaiting = handler;
                 return this;
             }
 
@@ -2258,7 +2962,7 @@ var Elem = function () {
         }, {
             key: "onVolumeChange",
             value: function onVolumeChange(handler) {
-                this.html.onvolumechange = handler.bind(this, this);
+                this.html.onvolumechange = handler;
                 return this;
             }
 
@@ -2271,7 +2975,7 @@ var Elem = function () {
         }, {
             key: "onTimeUpdate",
             value: function onTimeUpdate(handler) {
-                this.html.ontimeupdate = handler.bind(this, this);
+                this.html.ontimeupdate = handler;
                 return this;
             }
 
@@ -2284,7 +2988,7 @@ var Elem = function () {
         }, {
             key: "onSeeking",
             value: function onSeeking(handler) {
-                this.html.onseeking = handler.bind(this, this);
+                this.html.onseeking = handler;
                 return this;
             }
 
@@ -2297,7 +3001,7 @@ var Elem = function () {
         }, {
             key: "onSeekEnd",
             value: function onSeekEnd(handler) {
-                this.html.onseekend = handler.bind(this, this);
+                this.html.onseekend = handler;
                 return this;
             }
 
@@ -2310,7 +3014,7 @@ var Elem = function () {
         }, {
             key: "onRateChange",
             value: function onRateChange(handler) {
-                this.html.onratechange = handler.bind(this, this);
+                this.html.onratechange = handler;
                 return this;
             }
 
@@ -2323,7 +3027,7 @@ var Elem = function () {
         }, {
             key: "onProgress",
             value: function onProgress(handler) {
-                this.html.onprogress = handler.bind(this, this);
+                this.html.onprogress = handler;
                 return this;
             }
 
@@ -2336,7 +3040,7 @@ var Elem = function () {
         }, {
             key: "onLoadMetadata",
             value: function onLoadMetadata(handler) {
-                this.html.onloadmetadata = handler.bind(this, this);
+                this.html.onloadmetadata = handler;
                 return this;
             }
 
@@ -2349,7 +3053,7 @@ var Elem = function () {
         }, {
             key: "onLoadedData",
             value: function onLoadedData(handler) {
-                this.html.onloadeddata = handler.bind(this, this);
+                this.html.onloadeddata = handler;
                 return this;
             }
 
@@ -2362,7 +3066,7 @@ var Elem = function () {
         }, {
             key: "onLoadStart",
             value: function onLoadStart(handler) {
-                this.html.onloadstart = handler.bind(this, this);
+                this.html.onloadstart = handler;
                 return this;
             }
 
@@ -2375,7 +3079,7 @@ var Elem = function () {
         }, {
             key: "onPlaying",
             value: function onPlaying(handler) {
-                this.html.onplaying = handler.bind(this, this);
+                this.html.onplaying = handler;
                 return this;
             }
 
@@ -2388,7 +3092,7 @@ var Elem = function () {
         }, {
             key: "onPlay",
             value: function onPlay(handler) {
-                this.html.onplay = handler.bind(this, this);
+                this.html.onplay = handler;
                 return this;
             }
 
@@ -2401,7 +3105,7 @@ var Elem = function () {
         }, {
             key: "onPause",
             value: function onPause(handler) {
-                this.html.onpause = handler.bind(this, this);
+                this.html.onpause = handler;
                 return this;
             }
 
@@ -2414,7 +3118,7 @@ var Elem = function () {
         }, {
             key: "onEnded",
             value: function onEnded(handler) {
-                this.html.onended = handler.bind(this, this);
+                this.html.onended = handler;
                 return this;
             }
 
@@ -2427,7 +3131,7 @@ var Elem = function () {
         }, {
             key: "onDurationChange",
             value: function onDurationChange(handler) {
-                this.html.ondurationchange = handler.bind(this, this);
+                this.html.ondurationchange = handler;
                 return this;
             }
 
@@ -2440,7 +3144,7 @@ var Elem = function () {
         }, {
             key: "onCanPlay",
             value: function onCanPlay(handler) {
-                this.html.oncanplay = handler.bind(this, this);
+                this.html.oncanplay = handler;
                 return this;
             }
 
@@ -2453,7 +3157,7 @@ var Elem = function () {
         }, {
             key: "onCanPlayThrough",
             value: function onCanPlayThrough(handler) {
-                this.html.oncanplaythrough = handler.bind(this, this);
+                this.html.oncanplaythrough = handler;
                 return this;
             }
 
@@ -2466,7 +3170,7 @@ var Elem = function () {
         }, {
             key: "onStalled",
             value: function onStalled(handler) {
-                this.html.onstalled = handler.bind(this, this);
+                this.html.onstalled = handler;
                 return this;
             }
 
@@ -2479,7 +3183,7 @@ var Elem = function () {
         }, {
             key: "onSuspend",
             value: function onSuspend(handler) {
-                this.html.onsuspend = handler.bind(this, this);
+                this.html.onsuspend = handler;
                 return this;
             }
 
@@ -2493,7 +3197,7 @@ var Elem = function () {
         }, {
             key: "onPopState",
             value: function onPopState(handler) {
-                this.html.onpopstate = handler.bind(this, this);
+                this.html.onpopstate = handler;
                 return this;
             }
 
@@ -2506,7 +3210,7 @@ var Elem = function () {
         }, {
             key: "onStorage",
             value: function onStorage(handler) {
-                this.html.onstorage = handler.bind(this, this);
+                this.html.onstorage = handler;
                 return this;
             }
 
@@ -2519,7 +3223,7 @@ var Elem = function () {
         }, {
             key: "onHashChange",
             value: function onHashChange(handler) {
-                this.html.onhashchange = handler.bind(this, this);
+                this.html.onhashchange = handler;
                 return this;
             }
 
@@ -2532,7 +3236,7 @@ var Elem = function () {
         }, {
             key: "onAfterPrint",
             value: function onAfterPrint(handler) {
-                this.html.onafterprint = handler.bind(this, this);
+                this.html.onafterprint = handler;
                 return this;
             }
 
@@ -2544,7 +3248,7 @@ var Elem = function () {
         }, {
             key: "onBeforePrint",
             value: function onBeforePrint(handler) {
-                this.html.onbeforeprint = handler.bind(this, this);
+                this.html.onbeforeprint = handler;
                 return this;
             }
 
@@ -2556,7 +3260,7 @@ var Elem = function () {
         }, {
             key: "onPageHide",
             value: function onPageHide(handler) {
-                this.html.onpagehide = handler.bind(this, this);
+                this.html.onpagehide = handler;
                 return this;
             }
 
@@ -2568,7 +3272,7 @@ var Elem = function () {
         }, {
             key: "onPageShow",
             value: function onPageShow(handler) {
-                this.html.onpageshow = handler.bind(this, this);
+                this.html.onpageshow = handler;
                 return this;
             }
 
@@ -2603,7 +3307,7 @@ var Elem = function () {
              * return an array of Elem instances, otherwise single Elem instance is returned.
              * 
              * @param {Array} htmlDoc 
-             * @returns An array of the Elem objects a single Elem instance. 
+             * @returns An array of the Elem objects or a single Elem object. 
              */
 
         }, {
@@ -2620,6 +3324,362 @@ var Elem = function () {
         }]);
 
         return Elem;
+    }();
+
+    /**
+     * Templater class is able to create a Template out of an Elem object.
+     */
+
+
+    var Templater = function () {
+        function Templater() {
+            _classCallCheck(this, Templater);
+
+            this.instance;
+            this.template = {};
+            this.deep = true;
+        }
+
+        _createClass(Templater, [{
+            key: "toTemplate",
+            value: function toTemplate(elem, deep) {
+                if (!Util.isEmpty(deep)) this.deep = deep;
+                this.resolve(elem, this.template);
+                return this.template;
+            }
+
+            /**
+             * Function is called recursively and resolves an Elem object and its children in recursion
+             * @param {object} elem 
+             * @param {object} parent 
+             */
+
+        }, {
+            key: "resolve",
+            value: function resolve(elem, parent) {
+                var resolved = this.resolveElem(elem, this.resolveProps(elem));
+                for (var p in parent) {
+                    if (parent.hasOwnProperty(p)) {
+                        if (Util.isArray(parent[p])) parent[p].push(resolved);else this.extendMap(parent[p], resolved);
+                    }
+                }
+
+                var i = 0;
+                var children = Util.isArray(elem.getChildren()) ? elem.getChildren() : [elem.getChildren()];
+                if (children && this.deep) {
+                    while (i < children.length) {
+                        this.resolve(children[i], resolved);
+                        i++;
+                    }
+                }
+                this.template = resolved;
+            }
+        }, {
+            key: "extendMap",
+            value: function extendMap(map, next) {
+                for (var v in next) {
+                    if (next.hasOwnProperty(v)) {
+                        map[v] = next[v];
+                    }
+                }
+            }
+
+            /**
+             * Function will attach given properties into a given Elem and returns the resolved Elem.
+             * @param {object} elem 
+             * @param {object} props 
+             * @returns The resolved elem with attached properties.
+             */
+
+        }, {
+            key: "resolveElem",
+            value: function resolveElem(elem, props) {
+                var el = {};
+                var children = elem.getChildren();
+                if (Util.isArray(children) && children.length > 1) {
+                    var elTag = elem.getTagName().toLowerCase();
+                    var elName = this.resolveId(elTag, props);
+                    elName = this.resolveClass(elName, props);
+                    elName = this.resolveAttrs(elName, props);
+                    el[elName] = [];
+                } else {
+                    el[elem.getTagName().toLowerCase()] = props;
+                }
+                return el;
+            }
+
+            /**
+             * Function will place an ID attribute into an element tag if the ID attribute is found.
+             * @param {string} tag 
+             * @param {object} props 
+             * @returns The element tag with the ID or without.
+             */
+
+        }, {
+            key: "resolveId",
+            value: function resolveId(tag, props) {
+                if (props.id) return tag + "#" + props.id;else return tag;
+            }
+
+            /**
+             * Function will place a class attribute into an element tag if the class attribute is found.
+             * @param {string} tag 
+             * @param {object} props 
+             * @returns The element tag with the classes or without.
+             */
+
+        }, {
+            key: "resolveClass",
+            value: function resolveClass(tag, props) {
+                if (props.class) return tag + "." + props.class.replace(/ /g, ".");else return tag;
+            }
+
+            /**
+             * Function will resolve all other attributes and place them into an element tag if other attributes are found.
+             * @param {string} tag 
+             * @param {object} props 
+             * @returns The element tag with other attributes or without.
+             */
+
+        }, {
+            key: "resolveAttrs",
+            value: function resolveAttrs(tag, props) {
+                var tagName = tag;
+                for (var p in props) {
+                    if (props.hasOwnProperty(p) && p !== "id" && p !== "class") {
+                        tagName += "[" + p + "=" + props[p] + "]";
+                    }
+                }
+                return tagName;
+            }
+
+            /**
+             * Resolves a given Elem object and returns its properties in an object.
+             * @param {object} elem 
+             * @returns The properties object of the given element.
+             */
+
+        }, {
+            key: "resolveProps",
+            value: function resolveProps(elem) {
+                var props = {};
+                var attributes = elem.dom().attributes;
+                var a = 0;
+                if (attributes) {
+                    while (a < attributes.length) {
+                        props[this.resolveAttributeNames(attributes[a].name)] = attributes[a].value;
+                        a++;
+                    }
+                }
+
+                if (elem.dom().hasChildNodes() && elem.dom().childNodes[0].nodeType === 3) {
+                    props["text"] = elem.getText();
+                }
+
+                for (var p in elem.dom()) {
+                    if (p.indexOf("on") !== 0 || Util.isEmpty(elem.dom()[p])) continue;else props[this.resolveListeners(p)] = elem.dom()[p];
+                }
+
+                return props;
+            }
+
+            /**
+             * Resolves html data-* attributes by removing '-' and setting the next character to uppercase. If the attribute is not 
+             * data-* attribute then it is directly returned.
+             * @param {string} attrName 
+             * @returns Resolved attribute name.
+             */
+
+        }, {
+            key: "resolveAttributeNames",
+            value: function resolveAttributeNames(attrName) {
+                if (attrName.indexOf("data" === 0 && attrName.length > "data".length)) {
+                    while (attrName.search("-") > -1) {
+                        attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search("-") + 1).toUpperCase());
+                    }
+                    return attrName;
+                } else {
+                    return attrName;
+                }
+            }
+        }, {
+            key: "resolveListeners",
+            value: function resolveListeners(name) {
+                switch (name) {
+                    case "onanimationstart":
+                        return "onAnimationStart";
+                    case "onanimationiteration":
+                        return "onAnimationIteration";
+                    case "onanimationend":
+                        return "onAnimationEnd";
+                    case "ontransitionend":
+                        return "onTransitionEnd";
+                    case "ondrag":
+                        return "onDrag";
+                    case "ondragend":
+                        return "onDragEnd";
+                    case "ondragenter":
+                        return "onDragEnter";
+                    case "ondragover":
+                        return "onDragOver";
+                    case "ondragstart":
+                        return "onDragStart";
+                    case "ondrop":
+                        return "onDrop";
+                    case "onclick":
+                        return "onClick";
+                    case "ondblclick":
+                        return "onDoubleClick";
+                    case "oncontextmenu":
+                        return "onContextMenu";
+                    case "onmousedown":
+                        return "onMouseDown";
+                    case "onmouseenter":
+                        return "onMouseEnter";
+                    case "onmouseleave":
+                        return "onMouseLeave";
+                    case "onmousemove":
+                        return "onMouseMove";
+                    case "onmouseover":
+                        return "onMouseOver";
+                    case "onmouseout":
+                        return "onMouseOut";
+                    case "onmouseup":
+                        return "onMouseUp";
+                    case "onwheel":
+                        return "onWheel";
+                    case "onscroll":
+                        return "onScroll";
+                    case "onresize":
+                        return "onResize";
+                    case "onerror":
+                        return "onError";
+                    case "onload":
+                        return "onLoad";
+                    case "onunload":
+                        return "onUnload";
+                    case "onbeforeunload":
+                        return "onBeforeUnload";
+                    case "onkeyup":
+                        return "onKeyUp";
+                    case "onkeydown":
+                        return "onKeyDown";
+                    case "onkeypress":
+                        return "onKeyPress";
+                    case "oninput":
+                        return "onInput";
+                    case "onchange":
+                        return "onChange";
+                    case "onsubmit":
+                        return "onSubmit";
+                    case "onselect":
+                        return "onSelect";
+                    case "onreset":
+                        return "onReset";
+                    case "onfocus":
+                        return "onFocus";
+                    case "onfocusin":
+                        return "onFocusIn";
+                    case "onfocusout":
+                        return "onFocusOut";
+                    case "onblur":
+                        return "onBlur";
+                    case "oncopy":
+                        return "onCopy";
+                    case "oncut":
+                        return "onCut";
+                    case "onpaste":
+                        return "onPaste";
+                    case "onabort":
+                        return "onAbort";
+                    case "onwaiting":
+                        return "onWaiting";
+                    case "onvolumechange":
+                        return "onVolumeChange";
+                    case "ontimeupdate":
+                        return "onTimeUpdate";
+                    case "onseeking":
+                        return "onSeeking";
+                    case "onseekend":
+                        return "onSeekEnd";
+                    case "onratechange":
+                        return "onRateChange";
+                    case "onprogress":
+                        return "onProgress";
+                    case "onloadmetadata":
+                        return "onLoadMetadata";
+                    case "onloadeddata":
+                        return "onLoadedData";
+                    case "onloadstart":
+                        return "onLoadStart";
+                    case "onplaying":
+                        return "onPlaying";
+                    case "onplay":
+                        return "onPlay";
+                    case "onpause":
+                        return "onPause";
+                    case "onended":
+                        return "onEnded";
+                    case "ondurationchange":
+                        return "onDurationChange";
+                    case "oncanplay":
+                        return "onCanPlay";
+                    case "oncanplaythrough":
+                        return "onCanPlayThrough";
+                    case "onstalled":
+                        return "onStalled";
+                    case "onsuspend":
+                        return "onSuspend";
+                    case "onpopstate":
+                        return "onPopState";
+                    case "onstorage":
+                        return "onStorage";
+                    case "onhashchange":
+                        return "onHashChange";
+                    case "onafterprint":
+                        return "onAfterPrint";
+                    case "onbeforeprint":
+                        return "onBeforePrint";
+                    case "onpagehide":
+                        return "onPageHide";
+                    case "onpageshow":
+                        return "onPageShow";
+                }
+            }
+
+            /**
+             * Function by default resolves a given element and its' children and returns template representation of the element.
+             * @param {object} elem 
+             * @param {boolean} deep 
+             * @returns Template object representation of the Elem
+             */
+
+        }], [{
+            key: "toTemplate",
+            value: function toTemplate(elem, deep) {
+                return Templater.getInstance().toTemplate(elem, deep);
+            }
+
+            /**
+             * Function resolves and returns properties of a given Elem object.
+             * @param {object} elem 
+             * @returns The properties object of the given Elem.
+             */
+
+        }, {
+            key: "getElementProps",
+            value: function getElementProps(elem) {
+                return Templater.getInstance().resolveProps(elem);
+            }
+        }, {
+            key: "getInstance",
+            value: function getInstance() {
+                if (!this.instance) this.instance = new Templater();
+                return this.instance;
+            }
+        }]);
+
+        return Templater;
     }();
 
     /**
@@ -2698,9 +3758,10 @@ var Template = function () {
             this.template = {};
             this.root = null;
             /**
+             * Deprecated, is replaced with Template.isAttr(key, elem); function.
              * These attributes are supported inside an object notation: {div: {text: "some", class: "some", id:"some"....}}
              */
-            this.attributes = ["id", "name", "class", "text", "value", "content", "tabIndex", "type", "src", "href", "editable", "placeholder", "size", "checked", "disabled", "visible", "display", "draggable", "styles", "for", "message", "target", "title"];
+            this.attributes = ["id", "name", "class", "text", "value", "content", "tabIndex", "type", "src", "href", "editable", "placeholder", "size", "checked", "disabled", "visible", "display", "draggable", "styles", "for", "message", "target", "title", "click", "focus", "blur"];
         }
 
         /**
@@ -2738,7 +3799,7 @@ var Template = function () {
                             if (Util.isArray(template[obj])) this.resolveArray(template[obj], this.root, round);else if (!this.isComponent(obj) && Util.isObject(template[obj])) this.resolve(template[obj], this.root, round);else if (Util.isFunction(template[obj])) this.resolveFunction(this.root, template[obj]);
                         } else {
                             ++round;
-                            if (this.isAttributeKey(obj)) {
+                            if (Template.isAttr(obj, parent)) {
                                 this.resolveAttributes(parent, obj, template[obj]);
                             } else if (this.isEventKeyVal(obj, template[obj])) {
                                 parent[obj].call(parent, template[obj]);
@@ -2819,7 +3880,7 @@ var Template = function () {
             value: function isMessage(message) {
                 var params = this.getMessageParams(message);
                 if (!Util.isEmpty(params)) message = message.replace(params.join(), "");
-                return Messages.message(message) != message;
+                return !Util.isEmpty(Messages.message(message)) && Messages.message(message) != message;
             }
 
             /**
@@ -2847,7 +3908,7 @@ var Template = function () {
                 match = tag.match(/\.[a-zA-Z-0-9\-]+/g); //find classes
                 if (!Util.isEmpty(match)) resolved.addClasses(match.join(" ").replace(/\./g, ""));
 
-                match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_]+\]/g); //find attributes
+                match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_&%@!?£$+¤|\\<\\>\\"]+\]/g); //find attributes
                 if (!Util.isEmpty(match)) resolved = this.addAttributes(resolved, match);
 
                 return resolved;
@@ -2898,7 +3959,7 @@ var Template = function () {
                         elem.setText(val);
                         break;
                     case "content":
-                        elem.setContent(val);
+                        this.resolveContent(elem, key, val);
                         break;
                     case "tabIndex":
                         elem.setTabIndex(val);
@@ -2924,9 +3985,51 @@ var Template = function () {
                     case "message":
                         this.resolveMessage(elem, val);
                         break;
+                    case "click":
+                        elem.click();
+                        break;
+                    case "focus":
+                        elem.focus();
+                        break;
+                    case "blur":
+                        elem.blur();
+                        break;
+                    case "maxLength":
+                        elem.setMaxLength(val);
+                        break;
+                    case "minLength":
+                        elem.setMinLength(val);
+                        break;
                     default:
-                        elem.setAttribute(key, val);
+                        this.resolveDefault(elem, key, val);
                 }
+            }
+
+            /**
+             * Resolves the attribute that did not match on cases. Usually nothing needs to be done except when handling html dom data-* attributes. In such case
+             * this function will auto format the data-* attribute to a correct format.
+             * @param {object} elem 
+             * @param {string} key 
+             * @param {*} val 
+             */
+
+        }, {
+            key: "resolveDefault",
+            value: function resolveDefault(elem, key, val) {
+                if (key.indexOf("data") === 0 && key.length > "data".length) elem.setData(key.replace(/[A-Z]/, key.charAt(4).toLowerCase()).replace("data", ""), val);else elem.setAttribute(key, val);
+            }
+
+            /**
+             * Function sets the content of the element according to the element.
+             * @param {object} elem 
+             * @param {string} key 
+             * @param {string} val 
+             */
+
+        }, {
+            key: "resolveContent",
+            value: function resolveContent(elem, key, val) {
+                if (elem.getTagName().toLowerCase() === "meta") elem.setAttribute(key, val);else elem.setContent(val);
             }
 
             /**
@@ -2973,6 +4076,7 @@ var Template = function () {
             }
 
             /**
+             * Deprecated
              * Checks is a given key is an attribute key.
              * @param {key}
              * @returns True if the given key is attribute key otherwise false.
@@ -3046,11 +4150,26 @@ var Template = function () {
                 var isTemplate = false;
                 if (Util.isObject(object) && !Util.isArray(object) && !(object instanceof Elem)) {
                     for (var p in object) {
-                        isTemplate = object.hasOwnProperty(p) && Template.isTag(p);
+                        isTemplate = object.hasOwnProperty(p) && Template.isTagOrComponent(p);
                         if (isTemplate) break;
                     }
                 }
                 return isTemplate;
+            }
+
+            /**
+             * Method takes a string and returns true if the given string is a html tag or a component, otherwise returns false.
+             * @param {string} tag 
+             * @returns True if the given tag is a HTML tag otherwise false.
+             */
+
+        }, {
+            key: "isTagOrComponent",
+            value: function isTagOrComponent(tag) {
+                tag = tag.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join().replace("component:", "");
+                if (RME.hasComponent(tag)) return true;
+
+                return Template.isTag(tag);
             }
 
             /**
@@ -3062,25 +4181,11 @@ var Template = function () {
         }, {
             key: "isTag",
             value: function isTag(tag) {
-                tag = tag.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join().replace("component:", "");
-                if (RME.hasComponent(tag)) return true;
-
-                var i = 0;
-                var tagArray = Template.tags()[tag.substring(0, 1)];
-                while (i < tagArray.length) {
-                    if (tagArray[i] === tag) return true;
-                    i++;
-                }
-                return false;
-            }
-        }, {
-            key: "tags",
-            value: function tags() {
-                return {
+                var tags = {
                     a: ["a", "abbr", "acronym", "address", "applet", "area", "article", "aside", "audio"],
                     b: ["button", "br", "b", "base", "basefont", "bdi", "bdo", "big", "blockquote", "body"],
                     c: ["canvas", "caption", "center", "cite", "code", "col", "colgroup"],
-                    d: ["div", "dd", "dl", "dt", "data", "datalist", "del", "details", "dfn", "dialog", "dir"],
+                    d: ["div", "dd", "dl", "dt", "data", "datalist", "del", "details", "dfn", "dialog"],
                     e: ["em", "embed"],
                     f: ["form", "fieldset", "figcaption", "figure", "font", "footer", "frame", "frameset"],
                     h: ["h1", "h2", "h3", "h4", "h5", "h6", "head", "header", "hr", "html"],
@@ -3099,6 +4204,82 @@ var Template = function () {
                     v: ["var", "video"],
                     w: ["wbr"]
                 };
+                var i = 0;
+                var tagArray = tags[tag.substring(0, 1)];
+                while (i < tagArray.length) {
+                    if (tagArray[i] === tag) return true;
+                    i++;
+                }
+                return false;
+            }
+
+            /**
+             * Function checks if the given key is an attribute and returns true if it is otherwise false.
+             * @param {string} key 
+             * @param {object} elem 
+             * @returns True if the given key as an attribute otherwise false.
+             */
+
+        }, {
+            key: "isAttr",
+            value: function isAttr(key, elem) {
+                /**
+                 * special cases below.
+                 */
+                if (key === "span" && Template.isElem(elem.getTagName(), ["col", "colgroup"])) //special case, span might be an attribute also for these two elements.
+                    return true;else if (key === "label" && Template.isElem(elem.getTagName(), ["track", "option", "optgroup"])) return true;else if (key === "title" && (elem.parent() === null || elem.parent().getTagName().toLowerCase() !== "head")) return true;else if (key === "cite" && Template.isElem(elem.getTagName(), ["blockquote", "del", "ins", "q"])) return true;else if (key === "form" && Template.isElem(elem.getTagName(), ["button", "fieldset", "input", "label", "meter", "object", "output", "select", "textarea"])) return true;else if (key.indexOf("data") === 0 && (!RME.hasComponent(key) && !Template.isElem(elem.getTagName(), ["data"]) || Template.isElem(elem.getTagName(), ["object"]))) return true;
+
+                var attrs = {
+                    a: ["alt", "async", "autocomplete", "autofocus", "autoplay", "accept", "accept-charset", "accpetCharset", "accesskey", "action"],
+                    b: ["blur"],
+                    c: ["class", "checked", "content", "contenteditable", "click", "charset", "cols", "colspan", "controls", "coords"],
+                    d: ["disabled", "display", "draggable", "dropzone", "datetime", "default", "defer", "dir", "dirname", "download"],
+                    e: ["editable", "enctype"],
+                    f: ["for", "focus", "formaction"],
+                    h: ["href", "height", "hidden", "high", "hreflang", "headers", "http-equiv", "httpEquiv"],
+                    i: ["id", "ismap"],
+                    k: ["kind"],
+                    l: ["lang", "list", "loop", "low"],
+                    m: ["message", "max", "maxlength", "maxLength", "min", "minlength", "minLength", "multiple", "media", "method", "muted"],
+                    n: ["name", "novalidate"],
+                    o: ["open", "optimum"],
+                    p: ["placeholder", "pattern", "poster", "preload"],
+                    r: ["rel", "readonly", "required", "reversed", "rows", "rowspan"],
+                    s: ["src", "size", "selected", "step", "style", "styles", "shape", "sandbox", "scope", "sizes", "spellcheck", "srcdoc", "srclang", "srcset", "start"],
+                    t: ["text", "type", "target", "tabindex", "tabIndex", "translate"],
+                    u: ["usemap"],
+                    v: ["value", "visible"],
+                    w: ["width", "wrap"]
+                };
+
+                var i = 0;
+                var keys = attrs[key.substring(0, 1)];
+                if (keys) {
+                    while (i < keys.length) {
+                        if (keys[i] === key) return true;
+                        i++;
+                    }
+                }
+                return false;
+            }
+
+            /**
+             * Internal use.
+             * Function checks if a given element tag is in a given array of tag names.
+             * @param {string} elemTag 
+             * @param {array} array 
+             * @returns True if the tag is in the given array otherwise false.
+             */
+
+        }, {
+            key: "isElem",
+            value: function isElem(elemTag, array) {
+                var i = 0;
+                while (i < array.length) {
+                    if (array[i] === elemTag.toLowerCase()) return true;
+                    i++;
+                }
+                return false;
             }
         }]);
 
@@ -3350,32 +4531,59 @@ var Router = function () {
      */
     var Router = function () {
         function Router() {
-            var _this4 = this;
+            var _this9 = this;
 
             _classCallCheck(this, Router);
 
             this.instance = null;
             this.root = null;
+            this.origRoot = null;
             this.routes = [];
+            this.origRoutes = [];
+            this.currentRoute = {};
             this.prevUrl = location.pathname;
             this.loadCall = function () {
-                return _this4.navigateUrl(location.pathname);
+                return _this9.navigateUrl(location.pathname);
             };
             this.hashCall = function () {
-                return _this4.navigateUrl(location.hash);
+                return _this9.navigateUrl(location.hash);
             };
             this.useHistory = true;
             this.autoListen = true;
             this.useHash = false;
             this.scrolltop = true;
+            this.app;
+            this.registerRouter();
         }
 
         /**
-         * Register listeners according to the useHistory and the autoListen state.
+         * Initializes the Router.
          */
 
 
         _createClass(Router, [{
+            key: "registerRouter",
+            value: function registerRouter() {
+                var _this10 = this;
+
+                document.addEventListener("readystatechange", function () {
+                    if (document.readyState === "complete") {
+                        var check = Util.setInterval(function () {
+                            var hasRoot = !Util.isEmpty(_this10.root.elem) ? document.querySelector(_this10.root.elem) : false;
+                            if (hasRoot) {
+                                Util.clearInterval(check);
+                                _this10.resolveRoutes();
+                            }
+                        }, 50);
+                    }
+                });
+            }
+
+            /**
+             * Register listeners according to the useHistory and the autoListen state.
+             */
+
+        }, {
             key: "registerListeners",
             value: function registerListeners() {
                 if (this.useHistory && this.autoListen) window.addEventListener("load", this.loadCall);else if (!this.useHistory && this.autoListen) window.addEventListener("hashchange", this.hashCall);
@@ -3441,6 +4649,38 @@ var Router = function () {
             }
 
             /**
+             * Set the app instance that the Router invokes on update.
+             * @param {object} appInstance 
+             */
+
+        }, {
+            key: "setApp",
+            value: function setApp(appInstance) {
+                this.app = appInstance;
+            }
+
+            /**
+             * Resolves the root and the first page.
+             */
+
+        }, {
+            key: "resolveRoutes",
+            value: function resolveRoutes() {
+                if (Util.isString(this.root.elem)) {
+                    this.root.elem = this.resolveElem(this.root.elem);
+                } else if (Util.isEmpty(this.root)) {
+                    this.root = this.routes.shift();
+                    this.root.elem = this.resolveElem(this.root.elem);
+                    this.origRoot = this.root.elem;
+                }
+                if (this.useHash) {
+                    this.renderRoute(location.hash);
+                } else {
+                    this.renderRoute(location.pathname);
+                }
+            }
+
+            /**
              * Set the routes and if a root is not set then the first element will be the root route element.
              * @param {array} routes
              */
@@ -3448,13 +4688,7 @@ var Router = function () {
         }, {
             key: "setRoutes",
             value: function setRoutes(routes) {
-                this.routes = this.resolveRouteElems(routes);
-                if (Util.isEmpty(this.root)) this.root = this.routes.shift();
-                if (this.useHash) {
-                    this.renderRoute(location.hash);
-                } else {
-                    this.renderRoute(location.pathname);
-                }
+                this.routes = routes;
             }
 
             /**
@@ -3465,7 +4699,6 @@ var Router = function () {
         }, {
             key: "addRoute",
             value: function addRoute(route) {
-                route.elem = this.resolveElem(route.elem);
                 this.routes.push(route);
             }
 
@@ -3477,8 +4710,8 @@ var Router = function () {
         }, {
             key: "setRoot",
             value: function setRoot(route) {
-                route.elem = this.resolveElem(route.elem);
                 this.root = route;
+                this.origRoot = route.elem;
             }
 
             /**
@@ -3509,7 +4742,7 @@ var Router = function () {
                 if (Util.isString(elem) && RME.hasComponent(elem)) {
                     return RME.component(elem);
                 } else if (Util.isString(elem)) {
-                    return new Elem(elem);
+                    return Tree.getFirst(elem);
                 }
                 return elem;
             }
@@ -3531,7 +4764,8 @@ var Router = function () {
                 if (!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
                     if (route.scrolltop === true || route.scrolltop === undefined && this.scrolltop) Browser.scrollTo(0, 0);
                     this.prevUrl = url;
-                    this.root.elem.render(route.elem);
+                    this.currentRoute = route;
+                    if (Util.isEmpty(this.app)) this.root.elem.render(this.resolveElem(route.elem));else this.app.refresh();
                 }
             }
 
@@ -3565,7 +4799,16 @@ var Router = function () {
             key: "renderRoute",
             value: function renderRoute(url) {
                 var route = this.findRoute(url, true);
-                if (!Util.isEmpty(route)) this.root.elem.render(route.elem);else this.root.elem.render();
+                if (!Util.isEmpty(route) && Util.isEmpty(this.app)) {
+                    this.root.elem.render(this.resolveElem(route.elem));
+                    this.currentRoute = route;
+                } else if (Util.isEmpty(this.app)) {
+                    this.root.elem.render();
+                } else if (!Util.isEmpty(route) && !Util.isEmpty(this.app)) {
+                    this.app.refresh();
+                    this.currentRoute = route;
+                }
+
                 this.prevUrl = location.pathname;
             }
 
@@ -3592,6 +4835,16 @@ var Router = function () {
                     if (!Util.isEmpty(found)) found = found.join();
                     return url === found && found === hash;
                 }
+            }
+
+            /**
+             * @returns The current status of the Router in an object.
+             */
+
+        }, {
+            key: "getCurrentState",
+            value: function getCurrentState() {
+                return { root: this.origRoot, current: this.resolveElem(this.currentRoute.elem) };
             }
 
             /**
@@ -3640,6 +4893,7 @@ var Router = function () {
             key: "add",
             value: function add(url, elem, hide) {
                 Router.getInstance().addRoute({ route: url, elem: elem, hide: hide });
+                return Router;
             }
 
             /**
@@ -3652,6 +4906,7 @@ var Router = function () {
             value: function routes(_routes) {
                 if (!Util.isArray(_routes)) throw "Could not set routes. Given parameter: \"" + _routes + "\" is not an array.";
                 Router.getInstance().setRoutes(_routes);
+                return Router;
             }
 
             /**
@@ -3710,7 +4965,7 @@ var Router = function () {
             }
 
             /**
-             * Method default level behavior for route naviagation. If the given value is true then the Browser auto-scrolls up 
+             * Method sets default level behavior for route naviagation. If the given value is true then the Browser auto-scrolls up 
              * when navigating to a new resource. If set false then the Browser does not auto-scroll up. Default value is true.
              * @param {boolean} auto 
              * @returns Router
@@ -3723,6 +4978,29 @@ var Router = function () {
                     Router.getInstance().setAutoScrollUp(auto);
                 }
                 return Router;
+            }
+
+            /**
+             * Set the app instance to be invoked on the Router update.
+             * @param {object} appInstance 
+             * @returns Router
+             */
+
+        }, {
+            key: "setApp",
+            value: function setApp(appInstance) {
+                if (!Util.isEmpty(appInstance)) Router.getInstance().setApp(appInstance);
+                return Router;
+            }
+
+            /**
+             * @returns The current status of the router.
+             */
+
+        }, {
+            key: "getCurrentState",
+            value: function getCurrentState() {
+                return Router.getInstance().getCurrentState();
             }
         }, {
             key: "getInstance",
@@ -3742,7 +5020,9 @@ var Router = function () {
         routes: Router.routes,
         url: Router.url,
         hash: Router.hash,
-        scroll: Router.scroll
+        scroll: Router.scroll,
+        getCurrentState: Router.getCurrentState,
+        setApp: Router.setApp
     };
 }();
 
@@ -3761,12 +5041,37 @@ var Messages = function () {
             this.translated = [];
             this.load = function () {};
             this.messagesType;
+            this.app;
+            this.ready = false;
+            this.registerMessages();
         }
 
+        /**
+         * Initializes the Messages
+         */
+
+
         _createClass(Messages, [{
+            key: "registerMessages",
+            value: function registerMessages() {
+                var _this11 = this;
+
+                document.addEventListener("readystatechange", function () {
+                    if (document.readyState === "complete") {
+                        _this11.ready = true;
+                        _this11.runTranslated.call(_this11);
+                    }
+                });
+            }
+        }, {
             key: "setLoad",
             value: function setLoad(loader) {
                 this.load = loader;
+            }
+        }, {
+            key: "setAppInstance",
+            value: function setAppInstance(appInstance) {
+                this.app = appInstance;
             }
         }, {
             key: "setLocale",
@@ -3866,12 +5171,14 @@ var Messages = function () {
         }, {
             key: "resolveParams",
             value: function resolveParams(msg, params) {
-                var i = 0;
-                while (i < params.length) {
-                    msg = msg.replace("{" + i + "}", params[i]);
-                    i++;
+                if (!Util.isEmpty(msg)) {
+                    var i = 0;
+                    while (i < params.length) {
+                        msg = msg.replace("{" + i + "}", params[i]);
+                        i++;
+                    }
+                    return msg;
                 }
-                return msg;
             }
 
             /**
@@ -3883,10 +5190,12 @@ var Messages = function () {
         }, {
             key: "getTranslatedElemIfExist",
             value: function getTranslatedElemIfExist(key, params) {
-                var last = params[params.length - 1];
-                if (Util.isObject(last) && last instanceof Elem) {
-                    last = params.pop();
-                    this.translated.push({ key: key, params: params, obj: last });
+                if (Util.isEmpty(this.app)) {
+                    var last = params[params.length - 1];
+                    if (Util.isObject(last) && last instanceof Elem) {
+                        last = params.pop();
+                        this.translated.push({ key: key, params: params, obj: last });
+                    }
                 }
             }
 
@@ -3897,47 +5206,19 @@ var Messages = function () {
         }, {
             key: "runTranslated",
             value: function runTranslated() {
-                Util.setTimeout(function () {
-                    var i = 0;
-                    while (i < this.translated.length) {
-                        this.translated[i].obj.setText.call(this.translated[i].obj, Messages.message(this.translated[i].key, this.translated[i].params));
-                        i++;
-                    }
-                }.bind(this));
-            }
+                var _this12 = this;
 
-            /**
-             * Deprecated
-             * Method is called automatically and removes removed nodes from the translated objects array.
-             * @param {NodeList} removedNodes 
-             */
-
-        }, {
-            key: "clearTranslated",
-            value: function clearTranslated(removedNodes) {
-                if (removedNodes.length > 0) Util.setTimeout(function () {
-                    var translatedCopy = this.translated.slice(0, this.translated.length);
-                    var i = 0;
-                    while (i < removedNodes.length) {
-                        var j = 0;
-                        while (j < translatedCopy.length) {
-                            if (removedNodes[i] === translatedCopy[j].obj.dom()) {
-                                delete translatedCopy[j];
-                            } else if (removedNodes[i].contains(translatedCopy[j].obj.dom())) {
-                                delete translatedCopy[j];
-                            }
-                            j++;
+                if (Util.isEmpty(this.app) && this.ready) {
+                    Util.setTimeout(function () {
+                        var i = 0;
+                        while (i < _this12.translated.length) {
+                            _this12.translated[i].obj.setText.call(_this12.translated[i].obj, Messages.message(_this12.translated[i].key, _this12.translated[i].params));
+                            i++;
                         }
-                        i++;
-                    }
-                    this.translated = [];
-                    var k = 0;
-                    while (k < translatedCopy.length) {
-                        if (!Util.isEmpty(translatedCopy[k])) this.translated.push(translatedCopy[k]);
-                        k++;
-                    }
-                    translatedCopy = null;
-                }.bind(this));
+                    });
+                } else if (this.ready) {
+                    this.app.refresh();
+                }
             }
 
             /**
@@ -3954,14 +5235,22 @@ var Messages = function () {
             /**
              * Lang function is used to change or set the current locale to be the given locale. After calling this method
              * the Messages.load function will be automatically invoked.
-             * @param {string} locale 
+             * @param {string} locale String
+             * @param {object} locale Event
              */
 
         }, {
             key: "lang",
             value: function lang(locale) {
-                if (!Util.isString(locale)) throw "locale must be type string " + Util.getType(locale);
-                Messages.getInstance().setLocale(locale).load.call(null, Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
+                var loc = void 0;
+                if (Util.isObject(locale) && locale instanceof Event) {
+                    locale.preventDefault();
+                    var el = Elem.wrap(locale.target);
+                    loc = el.getHref();
+                    if (Util.isEmpty(loc)) loc = el.getValue();
+                    if (Util.isEmpty(loc)) loc = el.getText();
+                } else if (Util.isString(locale)) loc = locale;else throw "Given parameter must be type string or instance of Event, given value: " + locale;
+                if (!Util.isEmpty(loc)) Messages.getInstance().setLocale(loc).load.call(null, Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
             }
 
             /**
@@ -3996,6 +5285,18 @@ var Messages = function () {
                 if (!Util.isFunction(loader)) throw "loader must be type function " + Util.getType(loader);
                 Messages.getInstance().setLoad(loader);
             }
+
+            /**
+             * Set the app instance to be invoked on the Messages update.
+             * @param {object} appInstance 
+             */
+
+        }, {
+            key: "setApp",
+            value: function setApp(appInstance) {
+                Messages.getInstance().setAppInstance(appInstance);
+                return Messages;
+            }
         }, {
             key: "getInstance",
             value: function getInstance() {
@@ -4007,23 +5308,12 @@ var Messages = function () {
         return Messages;
     }();
 
-    // Deprecated
-    // var observer = new MutationObserver(function(mutations) {
-    //     if(document.readyState === "complete") {
-    //         let i = 0;
-    //         while(i < mutations.length) {
-    //             Messages.getInstance().clearTranslated(mutations[i].removedNodes);
-    //             i++;
-    //         }
-    //     }
-    // });
-    // observer.observe(document, {childList: true, subtree: true});
-
     return {
         lang: Messages.lang,
         message: Messages.message,
         load: Messages.load,
-        locale: Messages.locale
+        locale: Messages.locale,
+        setApp: Messages.setApp
     };
 }();
 
