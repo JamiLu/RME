@@ -8,7 +8,7 @@ The RME does not require any installation nor any other libraries.
 
 Documentation
 -----
- - [http://jlcv.sytes.net/rme/](http://jlcv.sytes.net/rme/) (explanatories not yet fully updated)
+ - [http://jlcv.sytes.net/rme/](http://jlcv.sytes.net/rme/)
 
 Download
 -----
