@@ -1,0 +1,52 @@
+{
+  "name": "rme.js",
+  "version": "1.2.0",
+  "description": "Functional JavaScript library for HTML 5 web sites.",
+  "main": "devindex.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "demo": "webpack-dev-server --open --config ./webpack/webpack.demo.js",
+    "calculator": "webpack-dev-server --open --config ./webpack/webpack.calculator.js",
+    "docs": "node ./webpack/docserver.js",
+    "dev": "webpack-dev-server --open --config ./webpack/webpack.dev.js",
+    "rme": "node ./webpack/webpack.build.rme.js",
+    "rme5es": "./node_modules/.bin/babel ./rme-build-current/rme.js -o ./rme-build-current/rme.es5.js --presets=@babel/env",
+    "rme5esmin": "./node_modules/.bin/babel --minified --no-comments ./rme-build-current/rme.js -o ./rme-build-current/rme.es5.min.js --presets=@babel/env",
+    "buildRme": "npm run rme && npm run rme5es && npm run rme5esmin"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JamiLu/RME.git"
+  },
+  "author": "Jami Lu",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/JamiLu/RME/issues"
+  },
+  "homepage": "https://github.com/JamiLu/RME#readme",
+  "dependencies": {},
+  "devDependencies": {
+    "@babel/cli": "^7.2.3",
+    "@babel/core": "^7.2.2",
+    "@babel/polyfill": "^7.2.5",
+    "@babel/preset-env": "^7.3.1",
+    "animate.css": "^3.7.0",
+    "babel-loader": "^8.0.5",
+    "babel-minify-webpack-plugin": "^0.3.1",
+    "babelify": "^10.0.0",
+    "browserify": "^16.2.3",
+    "clean-webpack-plugin": "^1.0.1",
+    "copy-webpack-plugin": "^4.6.0",
+    "css-loader": "^2.1.0",
+    "file-loader": "^3.0.1",
+    "html-webpack-plugin": "^3.2.0",
+    "opn": "^5.4.0",
+    "style-loader": "^0.23.1",
+    "terser-webpack-plugin": "^1.2.2",
+    "webpack": "^4.29.2",
+    "webpack-cli": "^3.2.3",
+    "webpack-dev-middleware": "^3.5.1",
+    "webpack-dev-server": "^3.1.14",
+    "webpack-merge": "^4.2.1"
+  }
+}

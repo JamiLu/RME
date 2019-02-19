@@ -1,0 +1,17 @@
+
+.result-screen {
+    height: 200px;
+}
+
+.button-row {
+    max-width: 400px;
+    flex-wrap: wrap;
+    display: flex;
+}
+
+.keypad-button {
+    display: block;
+    min-height: 150px;
+    min-width: 150px;
+    width: 100%;
+}
