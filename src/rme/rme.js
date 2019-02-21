@@ -1,5 +1,6 @@
 import Elem from '../elem';
 import Tree from '../tree';
+import Template from '../template';
 import Util from '../util';
 
 let RME = (function() {

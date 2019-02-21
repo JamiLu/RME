@@ -1,6 +1,7 @@
 import RME from '../rme';
 import Elem from '../elem';
 import Tree from '../tree';
+import Browser from '../browser';
 import Util from '../util';
 
 let Router = (function() {

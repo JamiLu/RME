@@ -3,7 +3,6 @@ import Util from '../util';
 import Renderer from './renderer';
 import Template from '../template';
 import Tree from '../tree';
-import Util from '../util';
 
 let App = (function() {
 
