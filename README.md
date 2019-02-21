@@ -12,9 +12,9 @@ Documentation
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.2.0/rme.js](https://github.com/JamiLu/RME/releases/download/v1.2.0/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.2.0/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.2.0/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.2.0/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.2.0/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.2.5/rme.js](https://github.com/JamiLu/RME/releases/download/v1.2.5/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.2.5/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.2.0/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.2.5/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.2.5/rme.es5.min.js)
 
 NPM
 ---
@@ -39,7 +39,7 @@ __See Basics online from:__ [http://jlcv.sytes.net/rme/howto](http://jlcv.sytes.
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.2.0/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.2.5/rme.es5.min.js"></script>`
 
 __Or with NPM__
 
