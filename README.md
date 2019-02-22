@@ -4,25 +4,24 @@ RME.js
 RME is a functional JavaScript library that enables user to make small and medium size websites with ease only writing 
 JavaScript. 
 
-The RME does not require any installation nor any other libraries. 
-
-Documentation
+Links
 -----
- - [http://jlcv.sytes.net/rme/](http://jlcv.sytes.net/rme/)
+ - [http://jlcv.sytes.net/rme/](http://jlcv.sytes.net/rme/) (Online documentation)
+ - [http://jlcv.sytes.net/rme/howto](http://jlcv.sytes.net/rme/howto) (Online examples)
 
 Download
 -----
 - [https://github.com/JamiLu/RME/releases/download/v1.2.5/rme.js](https://github.com/JamiLu/RME/releases/download/v1.2.5/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.2.5/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.2.0/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.2.5/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.2.5/rme.es5.js)
 - [https://github.com/JamiLu/RME/releases/download/v1.2.5/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.2.5/rme.es5.min.js)
 
 NPM
 ---
-Install rme: 
+Install RME: 
 
 `npm i rme.js`
 
-On index.js file import what is needed:
+On an appropriate js file import what is needed. Possible imports below:
 
 `import RME, { App, Elem, Tree, Template, Messages, Router, Http, Cookie, Session, Storage, Key, Browser, Util } from 'rme.js'`
 
@@ -35,13 +34,13 @@ Some run commands that has been defined for this project.
 Basics
 -----
 
-__See Basics online from:__ [http://jlcv.sytes.net/rme/howto](http://jlcv.sytes.net/rme/howto)
-
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
 `<script src="https://github.com/JamiLu/RME/releases/download/v1.2.5/rme.es5.min.js"></script>`
 
-__Or with NPM__
+__Or use NPM__
+
+`npm i rme.js`
 
 `import RME, { App } from 'rme.js'`
 
@@ -181,14 +180,30 @@ Classes & Functions
 >Not comprehensive. Just to name few.
 
 * RME
-  - run(runnable) **Runs application script type fuction _(runnable)_ immediately _MAX 1 run per RME application_**
+  - run(runnable) **Runs application script type fuction _(runnable)_ immediately**
   - ready(runnable) **Runs application script type function _(runnable)_ when body is ready _MAX 1 ready per RME application_**
+  - use({config}) **Configures RME to use _Router_, _Messages_ and _App_ classes together**
   - component(object|function(){}) **Create and return created component on the callback**
   - component("componentName", {param: 1, param: 2}) **Get and invoke the component**
   - storage(key, val) **Store data in RME instance**
   - storage(key) **Read data from RME instance storage**
-  - onrmestoragechange(rmeState) **If defined, will be invoked every time when something was saved into the storage. Changed state will be given as parameter to the callback**
+  - onStorageChange(rmeState) **If defined, will be invoked every time when something was saved into the storage. Changed state will be given as parameter to the callback**
   - script(source, id, type, text, defer, crossOrigin, charset, async) **Add a script file on the go _source is required other parameters are optional_**
+* App **_Handles default application_**
+  - root(selector) **Selects a root element for an application to work in**
+  - name(appName) **Gives an applicatian a name**
+  - create({template}|Elem) **Creates and instantiates a specified application**
+  - get(appName) **Returns a specified application instance if empty a default application will be returned.**
+  - component({ compName: props => {..}})(appName) **Create a statefull application component, _appName_ parameter is optional if not given the component is created for a default application**
+  - setState(refName, {state} | {refName: {state}}) **Set state according to application reference name, _FOR default app_**
+  - getState(refName) **Get state according to application reference name, _FOR default app_**
+  - mergeState(refName, {state}) **Merges state according to application reference name, _FOR default app_**
+  - clearState(refName, update) **Clear state according to application reference name, update is boolean if true application is re-rendered, _FOR default app_**
+* AppInstance **_Handles appropriate application instance received from App.get(appName)_**
+  - setState(refName, {state} | {refName: {state}}) **Set state according to application reference name**
+  - getState(refName) **Get state according to application reference name**
+  - mergeState(refName, {state}) **Merges state according to application reference name**
+  - clearState(refName, update) **Clear state according to application reference name, update is boolean if true application is re-rendered**
 * Http
   - get(url).then(success).catch(error)
   - post()...
