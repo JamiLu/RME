@@ -63,11 +63,17 @@ let RME = (function() {
                 props["ref"] = state;
                 props = this.extendProps(props, comp.update.call()(state));
             }
+            if (!Util.isEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate))
+                props.onBeforeCreate.call(props, props);
+
             let ret = comp.component.call(props, props);
             if(Template.isTemplate(ret))
-                return Template.resolve(ret);
-            else
-                return ret;
+                ret = Template.resolve(ret);
+
+            if (!Util.isEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate))
+                props.onAfterCreate.call(props, ret, props);
+
+            return ret;
         }
 
         extendProps(props, newProps) {

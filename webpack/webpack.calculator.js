@@ -11,7 +11,7 @@ module.exports = Merge(modules, {
     },
     plugins: [
         new CopyWebpackPlugin([
-            {from: './rme/rme.js', to: Path.resolve(__dirname, '../dist/')}
+            {from: './rme-build-current/rme.js', to: Path.resolve(__dirname, '../dist/')}
         ]),
         new HtmlWebpackPlugin({
             template: './calculator/calculator.html'
