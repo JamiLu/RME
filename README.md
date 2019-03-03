@@ -23,7 +23,23 @@ Install RME:
 
 On an appropriate js file import what is needed. Possible imports below:
 
-`import RME, { App, Elem, Tree, Template, Messages, Router, Http, Cookie, Session, Storage, Key, Browser, Util } from 'rme.js'`
+```
+import RME, { 
+    App, 
+    Elem, 
+    Tree, 
+    Template, 
+    Messages, 
+    Router, 
+    Http, 
+    Cookie, 
+    Session, 
+    Storage, 
+    Key, 
+    Browser, 
+    Util 
+} from 'rme.js'
+```
 
 Some run commands that has been defined for this project.
 
