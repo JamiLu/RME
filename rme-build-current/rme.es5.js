@@ -4771,8 +4771,12 @@ var RME = function () {
           props = this.extendProps(props, comp.update.call()(state));
         }
 
+        if (Util.isEmpty(props)) props = {};
+        if (!Util.isEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate)) props.onBeforeCreate.call(props, props);
         var ret = comp.component.call(props, props);
-        if (Template.isTemplate(ret)) return Template.resolve(ret);else return ret;
+        if (Template.isTemplate(ret)) ret = Template.resolve(ret);
+        if (!Util.isEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate)) props.onAfterCreate.call(props, ret, props);
+        return ret;
       }
     }, {
       key: "extendProps",
@@ -5481,62 +5485,6 @@ var Router = function () {
   };
 }();
 /**
- * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
- */
-
-
-var Storage =
-/*#__PURE__*/
-function () {
-  function Storage() {
-    _classCallCheck(this, Storage);
-  }
-
-  _createClass(Storage, null, [{
-    key: "set",
-
-    /**
-     * Save data into the local storage. 
-     * @param {string} key
-     * @param {*} value
-     */
-    value: function set(key, value) {
-      localStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the local storage.
-     * @param {string} key
-     */
-
-  }, {
-    key: "get",
-    value: function get(key) {
-      return localStorage.getItem(key);
-    }
-    /**
-     * Remove data from the local storage.
-     * @param {string} key
-     */
-
-  }, {
-    key: "remove",
-    value: function remove(key) {
-      localStorage.removeItem(key);
-    }
-    /**
-     * Clears the local storage.
-     */
-
-  }, {
-    key: "clear",
-    value: function clear() {
-      localStorage.clear();
-    }
-  }]);
-
-  return Storage;
-}();
-/**
  * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
  */
 
@@ -5591,6 +5539,220 @@ function () {
   }]);
 
   return Session;
+}();
+/**
+ * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
+ * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
+ * 
+ * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
+ * operation functionalities.
+ */
+
+
+var Tree =
+/*#__PURE__*/
+function () {
+  function Tree() {
+    _classCallCheck(this, Tree);
+  }
+
+  _createClass(Tree, null, [{
+    key: "get",
+
+    /**
+     * Uses CSS selector to find elements on the HTML Document Tree. 
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} selector 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    value: function get(selector) {
+      return Elem.wrapElems(document.querySelectorAll(selector));
+    }
+    /**
+     * Uses CSS selector to find the first match element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} selector 
+     * @returns An Elem instance.
+     */
+
+  }, {
+    key: "getFirst",
+    value: function getFirst(selector) {
+      return Elem.wrap(document.querySelector(selector));
+    }
+    /**
+     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
+     * @param {string} tag 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+
+  }, {
+    key: "getByTag",
+    value: function getByTag(tag) {
+      return Elem.wrapElems(document.getElementsByTagName(tag));
+    }
+    /**
+     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
+     * Found elements will be wrappedn in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} name 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+
+  }, {
+    key: "getByName",
+    value: function getByName(name) {
+      return Elem.wrapElems(document.getElementsByName(name));
+    }
+    /**
+     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} id 
+     * @returns Elem instance.
+     */
+
+  }, {
+    key: "getById",
+    value: function getById(id) {
+      return Elem.wrap(document.getElementById(id));
+    }
+    /**
+     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
+     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} classname 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+
+  }, {
+    key: "getByClass",
+    value: function getByClass(classname) {
+      return Elem.wrapElems(document.getElementsByClassName(classname));
+    }
+    /**
+     * @returns body wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getBody",
+    value: function getBody() {
+      return Elem.wrap(document.body);
+    }
+    /**
+     * @returns head wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getHead",
+    value: function getHead() {
+      return Elem.wrap(document.head);
+    }
+    /**
+     * @returns title of the html document page.
+     */
+
+  }, {
+    key: "getTitle",
+    value: function getTitle() {
+      return document.title;
+    }
+    /**
+     * Set an new title for html document page.
+     * @param {string} title 
+     */
+
+  }, {
+    key: "setTitle",
+    value: function setTitle(title) {
+      document.title = title;
+    }
+    /**
+     * @returns active element wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getActiveElement",
+    value: function getActiveElement() {
+      return Elem.wrap(document.activeElement);
+    }
+    /**
+     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
+     */
+
+  }, {
+    key: "getAnchors",
+    value: function getAnchors() {
+      return Elem.wrapElems(document.anchors);
+    }
+    /**
+     * @returns <html> element.
+     */
+
+  }, {
+    key: "getHtmlElement",
+    value: function getHtmlElement() {
+      return document.documentElement;
+    }
+    /**
+     * @returns <!DOCTYPE> element.
+     */
+
+  }, {
+    key: "getDoctype",
+    value: function getDoctype() {
+      return document.doctype;
+    }
+    /**
+     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
+     */
+
+  }, {
+    key: "getEmbeds",
+    value: function getEmbeds() {
+      return Elem.wrapElems(document.embeds);
+    }
+    /**
+     * @returns an array of image elements (<img>) wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getImages",
+    value: function getImages() {
+      return Elem.wrapElems(document.images);
+    }
+    /**
+     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getLinks",
+    value: function getLinks() {
+      return Elem.wrapElems(document.links);
+    }
+    /**
+     * @returns an array of scripts wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getScripts",
+    value: function getScripts() {
+      return Elem.wrapElems(document.scripts);
+    }
+    /**
+     * @returns an array of form elements wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getForms",
+    value: function getForms() {
+      return Elem.wrapElems(document.forms);
+    }
+  }]);
+
+  return Tree;
 }();
 
 var Template = function () {
@@ -6158,218 +6320,60 @@ var Template = function () {
   };
 }();
 /**
- * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
- * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
- * 
- * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
- * operation functionalities.
+ * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
  */
 
 
-var Tree =
+var Storage =
 /*#__PURE__*/
 function () {
-  function Tree() {
-    _classCallCheck(this, Tree);
+  function Storage() {
+    _classCallCheck(this, Storage);
   }
 
-  _createClass(Tree, null, [{
+  _createClass(Storage, null, [{
+    key: "set",
+
+    /**
+     * Save data into the local storage. 
+     * @param {string} key
+     * @param {*} value
+     */
+    value: function set(key, value) {
+      localStorage.setItem(key, value);
+    }
+    /**
+     * Get the saved data from the local storage.
+     * @param {string} key
+     */
+
+  }, {
     key: "get",
-
-    /**
-     * Uses CSS selector to find elements on the HTML Document Tree. 
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} selector 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    value: function get(selector) {
-      return Elem.wrapElems(document.querySelectorAll(selector));
+    value: function get(key) {
+      return localStorage.getItem(key);
     }
     /**
-     * Uses CSS selector to find the first match element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} selector 
-     * @returns An Elem instance.
+     * Remove data from the local storage.
+     * @param {string} key
      */
 
   }, {
-    key: "getFirst",
-    value: function getFirst(selector) {
-      return Elem.wrap(document.querySelector(selector));
+    key: "remove",
+    value: function remove(key) {
+      localStorage.removeItem(key);
     }
     /**
-     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
-     * @param {string} tag 
-     * @returns An array of Elem instances or a single Elem instance.
+     * Clears the local storage.
      */
 
   }, {
-    key: "getByTag",
-    value: function getByTag(tag) {
-      return Elem.wrapElems(document.getElementsByTagName(tag));
-    }
-    /**
-     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
-     * Found elements will be wrappedn in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} name 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-
-  }, {
-    key: "getByName",
-    value: function getByName(name) {
-      return Elem.wrapElems(document.getElementsByName(name));
-    }
-    /**
-     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} id 
-     * @returns Elem instance.
-     */
-
-  }, {
-    key: "getById",
-    value: function getById(id) {
-      return Elem.wrap(document.getElementById(id));
-    }
-    /**
-     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
-     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} classname 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-
-  }, {
-    key: "getByClass",
-    value: function getByClass(classname) {
-      return Elem.wrapElems(document.getElementsByClassName(classname));
-    }
-    /**
-     * @returns body wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getBody",
-    value: function getBody() {
-      return Elem.wrap(document.body);
-    }
-    /**
-     * @returns head wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getHead",
-    value: function getHead() {
-      return Elem.wrap(document.head);
-    }
-    /**
-     * @returns title of the html document page.
-     */
-
-  }, {
-    key: "getTitle",
-    value: function getTitle() {
-      return document.title;
-    }
-    /**
-     * Set an new title for html document page.
-     * @param {string} title 
-     */
-
-  }, {
-    key: "setTitle",
-    value: function setTitle(title) {
-      document.title = title;
-    }
-    /**
-     * @returns active element wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getActiveElement",
-    value: function getActiveElement() {
-      return Elem.wrap(document.activeElement);
-    }
-    /**
-     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
-     */
-
-  }, {
-    key: "getAnchors",
-    value: function getAnchors() {
-      return Elem.wrapElems(document.anchors);
-    }
-    /**
-     * @returns <html> element.
-     */
-
-  }, {
-    key: "getHtmlElement",
-    value: function getHtmlElement() {
-      return document.documentElement;
-    }
-    /**
-     * @returns <!DOCTYPE> element.
-     */
-
-  }, {
-    key: "getDoctype",
-    value: function getDoctype() {
-      return document.doctype;
-    }
-    /**
-     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
-     */
-
-  }, {
-    key: "getEmbeds",
-    value: function getEmbeds() {
-      return Elem.wrapElems(document.embeds);
-    }
-    /**
-     * @returns an array of image elements (<img>) wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getImages",
-    value: function getImages() {
-      return Elem.wrapElems(document.images);
-    }
-    /**
-     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getLinks",
-    value: function getLinks() {
-      return Elem.wrapElems(document.links);
-    }
-    /**
-     * @returns an array of scripts wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getScripts",
-    value: function getScripts() {
-      return Elem.wrapElems(document.scripts);
-    }
-    /**
-     * @returns an array of form elements wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getForms",
-    value: function getForms() {
-      return Elem.wrapElems(document.forms);
+    key: "clear",
+    value: function clear() {
+      localStorage.clear();
     }
   }]);
 
-  return Tree;
+  return Storage;
 }();
 /**
  * General Utility methods.

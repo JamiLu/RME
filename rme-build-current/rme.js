@@ -1164,8 +1164,6 @@ class HttpFetchRequest {
 
 
 
-
-
 let Http = (function() {
     /**
      * FOR XmlHttpRequest
@@ -1423,6 +1421,8 @@ let Http = (function() {
 
     return Http;
 }());
+
+
 
 
 
@@ -3894,11 +3894,17 @@ let RME = (function() {
                 props["ref"] = state;
                 props = this.extendProps(props, comp.update.call()(state));
             }
+            if(Util.isEmpty(props))
+                props = {};
+            if(!Util.isEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate))
+                props.onBeforeCreate.call(props, props);
             let ret = comp.component.call(props, props);
             if(Template.isTemplate(ret))
-                return Template.resolve(ret);
-            else
-                return ret;
+                ret = Template.resolve(ret);
+            if(!Util.isEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate))
+                props.onAfterCreate.call(props, ret, props);
+
+            return ret;
         }
 
         extendProps(props, newProps) {
@@ -4529,42 +4535,6 @@ let Router = (function() {
 
 
 /**
- * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
- */
-class Storage {
-    /**
-     * Save data into the local storage. 
-     * @param {string} key
-     * @param {*} value
-     */
-    static set(key, value) {
-        localStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the local storage.
-     * @param {string} key
-     */
-    static get(key) {
-        return localStorage.getItem(key);
-    }
-    /**
-     * Remove data from the local storage.
-     * @param {string} key
-     */
-    static remove(key) {
-        localStorage.removeItem(key);
-    }
-    /**
-     * Clears the local storage.
-     */
-    static clear() {
-        localStorage.clear();
-    }
-}
-
-
-
-/**
  * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
  */
 class Session {
@@ -4597,6 +4567,175 @@ class Session {
         sessionStorage.clear();
     }
 }
+
+
+
+/**
+ * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
+ * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
+ * 
+ * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
+ * operation functionalities.
+ */
+class Tree {
+    /**
+     * Uses CSS selector to find elements on the HTML Document Tree. 
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} selector 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    static get(selector) {
+        return Elem.wrapElems(document.querySelectorAll(selector));
+    }
+
+    /**
+     * Uses CSS selector to find the first match element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} selector 
+     * @returns An Elem instance.
+     */
+    static getFirst(selector) {
+        return Elem.wrap(document.querySelector(selector));
+    }
+
+    /**
+     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
+     * @param {string} tag 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    static getByTag(tag) {
+        return Elem.wrapElems(document.getElementsByTagName(tag));
+    }
+
+    /**
+     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
+     * Found elements will be wrappedn in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} name 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    static getByName(name) {
+        return Elem.wrapElems(document.getElementsByName(name));
+    }
+
+    /**
+     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} id 
+     * @returns Elem instance.
+     */
+    static getById(id) {
+        return Elem.wrap(document.getElementById(id));
+    }
+
+    /**
+     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
+     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} classname 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    static getByClass(classname) {
+        return Elem.wrapElems(document.getElementsByClassName(classname));
+    }
+
+    /**
+     * @returns body wrapped in an Elem instance.
+     */
+    static getBody() {
+        return Elem.wrap(document.body);
+    }
+
+    /**
+     * @returns head wrapped in an Elem instance.
+     */
+    static getHead() {
+        return Elem.wrap(document.head);
+    }
+
+    /**
+     * @returns title of the html document page.
+     */
+    static getTitle() {
+        return document.title;
+    }
+
+    /**
+     * Set an new title for html document page.
+     * @param {string} title 
+     */
+    static setTitle(title) {
+        document.title = title;
+    }
+
+    /**
+     * @returns active element wrapped in an Elem instance.
+     */
+    static getActiveElement() {
+        return Elem.wrap(document.activeElement);
+    }
+
+    /**
+     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
+     */
+    static getAnchors() {
+        return Elem.wrapElems(document.anchors);
+    }
+
+    /**
+     * @returns <html> element.
+     */
+    static getHtmlElement() {
+        return document.documentElement;
+    }
+
+    /**
+     * @returns <!DOCTYPE> element.
+     */
+    static getDoctype() {
+        return document.doctype;
+    }
+
+    /**
+     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
+     */
+    static getEmbeds() {
+        return Elem.wrapElems(document.embeds);
+    }
+
+    /**
+     * @returns an array of image elements (<img>) wrapped in an Elem instance.
+     */
+    static getImages() {
+        return Elem.wrapElems(document.images);
+    }
+
+    /**
+     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
+     */
+    static getLinks() {
+        return Elem.wrapElems(document.links);
+    }
+
+    /**
+     * @returns an array of scripts wrapped in an Elem instance.
+     */
+    static getScripts() {
+        return Elem.wrapElems(document.scripts);
+    }
+
+    /**
+     * @returns an array of form elements wrapped in an Elem instance.
+     */
+    static getForms() {
+        return Elem.wrapElems(document.forms);
+    }
+}
+
+
 
 
 
@@ -5118,170 +5257,37 @@ let Template = (function() {
 
 
 
-
-
 /**
- * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
- * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
- * 
- * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
- * operation functionalities.
+ * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
  */
-class Tree {
+class Storage {
     /**
-     * Uses CSS selector to find elements on the HTML Document Tree. 
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} selector 
-     * @returns An array of Elem instances or a single Elem instance.
+     * Save data into the local storage. 
+     * @param {string} key
+     * @param {*} value
      */
-    static get(selector) {
-        return Elem.wrapElems(document.querySelectorAll(selector));
+    static set(key, value) {
+        localStorage.setItem(key, value);
     }
-
     /**
-     * Uses CSS selector to find the first match element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} selector 
-     * @returns An Elem instance.
+     * Get the saved data from the local storage.
+     * @param {string} key
      */
-    static getFirst(selector) {
-        return Elem.wrap(document.querySelector(selector));
+    static get(key) {
+        return localStorage.getItem(key);
     }
-
     /**
-     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
-     * @param {string} tag 
-     * @returns An array of Elem instances or a single Elem instance.
+     * Remove data from the local storage.
+     * @param {string} key
      */
-    static getByTag(tag) {
-        return Elem.wrapElems(document.getElementsByTagName(tag));
+    static remove(key) {
+        localStorage.removeItem(key);
     }
-
     /**
-     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
-     * Found elements will be wrappedn in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} name 
-     * @returns An array of Elem instances or a single Elem instance.
+     * Clears the local storage.
      */
-    static getByName(name) {
-        return Elem.wrapElems(document.getElementsByName(name));
-    }
-
-    /**
-     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} id 
-     * @returns Elem instance.
-     */
-    static getById(id) {
-        return Elem.wrap(document.getElementById(id));
-    }
-
-    /**
-     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
-     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} classname 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    static getByClass(classname) {
-        return Elem.wrapElems(document.getElementsByClassName(classname));
-    }
-
-    /**
-     * @returns body wrapped in an Elem instance.
-     */
-    static getBody() {
-        return Elem.wrap(document.body);
-    }
-
-    /**
-     * @returns head wrapped in an Elem instance.
-     */
-    static getHead() {
-        return Elem.wrap(document.head);
-    }
-
-    /**
-     * @returns title of the html document page.
-     */
-    static getTitle() {
-        return document.title;
-    }
-
-    /**
-     * Set an new title for html document page.
-     * @param {string} title 
-     */
-    static setTitle(title) {
-        document.title = title;
-    }
-
-    /**
-     * @returns active element wrapped in an Elem instance.
-     */
-    static getActiveElement() {
-        return Elem.wrap(document.activeElement);
-    }
-
-    /**
-     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
-     */
-    static getAnchors() {
-        return Elem.wrapElems(document.anchors);
-    }
-
-    /**
-     * @returns <html> element.
-     */
-    static getHtmlElement() {
-        return document.documentElement;
-    }
-
-    /**
-     * @returns <!DOCTYPE> element.
-     */
-    static getDoctype() {
-        return document.doctype;
-    }
-
-    /**
-     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
-     */
-    static getEmbeds() {
-        return Elem.wrapElems(document.embeds);
-    }
-
-    /**
-     * @returns an array of image elements (<img>) wrapped in an Elem instance.
-     */
-    static getImages() {
-        return Elem.wrapElems(document.images);
-    }
-
-    /**
-     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
-     */
-    static getLinks() {
-        return Elem.wrapElems(document.links);
-    }
-
-    /**
-     * @returns an array of scripts wrapped in an Elem instance.
-     */
-    static getScripts() {
-        return Elem.wrapElems(document.scripts);
-    }
-
-    /**
-     * @returns an array of form elements wrapped in an Elem instance.
-     */
-    static getForms() {
-        return Elem.wrapElems(document.forms);
+    static clear() {
+        localStorage.clear();
     }
 }
 
