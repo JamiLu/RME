@@ -123,7 +123,8 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         append(elem) {
-            this.html.appendChild(Template.isTemplate(elem) ? Template.resolve(elem).dom() : elem.dom());
+            if(!Util.isEmpty(elem))
+                this.html.appendChild(Template.isTemplate(elem) ? Template.resolve(elem).dom() : elem.dom());
             return this;
         }
 

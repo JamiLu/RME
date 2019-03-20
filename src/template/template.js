@@ -50,6 +50,8 @@ let Template = (function() {
                             this.resolveArray(template[obj], this.root, round);
                         else if(!this.isComponent(obj) && Util.isObject(template[obj]))
                             this.resolve(template[obj], this.root, round);
+                        else if(Util.isString(template[obj]) || Util.isNumber(template[obj]))
+                            this.resolveStringNumber(this.root, template[obj]);
                         else if(Util.isFunction(template[obj]))
                             this.resolveFunction(this.root, template[obj]);
                     } else {
@@ -65,6 +67,8 @@ let Template = (function() {
                                 this.resolveArray(template[obj], child, round);
                             } else if(!this.isComponent(obj) && Util.isObject(template[obj])) {
                                 this.resolve(template[obj], child, round);
+                            } else if(Util.isString(template[obj]) || Util.isNumber(template[obj])) {
+                                this.resolveStringNumber(child, template[obj]);
                             } else if(Util.isFunction(template[obj])) {
                                 this.resolveFunction(child, template[obj]);
                             }
@@ -88,6 +92,10 @@ let Template = (function() {
                     if(o.hasOwnProperty(key)) {
                         if(Util.isObject(o[key])) {
                             this.resolve(o, parent, round);
+                        } else if(Util.isString(o[key]) || Util.isNumber(o[key])) {
+                            var el = this.resolveElement(key);
+                            this.resolveStringNumber(el, o[key]);
+                            parent.append(el);
                         } else if(Util.isFunction(o[key])) {
                             var el = this.resolveElement(key);
                             this.resolveFunction(el, o[key]);
@@ -97,6 +105,13 @@ let Template = (function() {
                 }
                 i++;
             }
+        }
+
+        resolveStringNumber(elem, value) {
+            if(Util.isString(value) && this.isMessage(value))
+                this.resolveMessage(elem, value);
+            else
+                elem.setText(value);
         }
     
         /**
@@ -140,8 +155,8 @@ let Template = (function() {
         resolveElement(tag, obj) {
             let resolved = null;
             var match = [];
-            var el = tag.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join();
-            if(this.isComponent(el)) {
+            var el = this.getElementName(tag);
+            if(RME.hasComponent(el)) {
                 el = el.replace(/component:/, "");
                 resolved = RME.component(el, obj);
             } else if(Util.isEmpty(el))
@@ -157,11 +172,16 @@ let Template = (function() {
             if(!Util.isEmpty(match)) 
                 resolved.addClasses(match.join(" ").replace(/\./g, ""));
 
-            match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_&%@!?£$+¤|\\<\\>\\"]+\]/g); //find attributes
+            match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_&%@!?£$+¤|;\\<\\>\\"]+\]/g); //find attributes
             if(!Util.isEmpty(match))
                 resolved = this.addAttributes(resolved, match);
 
             return resolved;
+        }
+
+        getElementName(str) {
+            if(!Util.isEmpty(str))
+                return str.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join();
         }
 
         /**
@@ -348,7 +368,7 @@ let Template = (function() {
          * @returns True if the component exist or the key contains component keyword and exist, otherwise false.
          */
         isComponent(key) {
-            return RME.hasComponent(key) || key.indexOf("component:") === 0 && RME.hasComponent(key.replace(/component:/, ""));
+            return RME.hasComponent(this.getElementName(key));
         }
 
         /**
