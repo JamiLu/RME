@@ -11,9 +11,9 @@ Links
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.2.6/rme.js](https://github.com/JamiLu/RME/releases/download/v1.2.6/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.2.6/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.2.6/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.2.6/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.2.6/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.2.7/rme.js](https://github.com/JamiLu/RME/releases/download/v1.2.7/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.2.7/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.2.7/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.2.7/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.2.7/rme.es5.min.js)
 
 NPM
 ---
@@ -41,7 +41,7 @@ import RME, {
 } from 'rme.js'
 ```
 
-Some run commands that has been defined for this project.
+Some run commands that has been defined for this dev project.
 
  - `npm run docs` will open documentation on the browser.
  - `npm run demo` will open rme demo on the browser.
@@ -52,7 +52,7 @@ Basics
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.2.6/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.2.7/rme.es5.min.js"></script>`
 
 __Or use NPM__
 
