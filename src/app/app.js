@@ -1,6 +1,6 @@
 import RME from '../rme';
 import Util from '../util';
-import Renderer from './renderer';
+import RMEElemRenderer from './renderer';
 import Template from '../template';
 import Tree from '../tree';
 
@@ -214,7 +214,7 @@ let App = (function() {
          */
         init(root) {
             this.root = Util.isEmpty(root) ? Tree.getBody() : Tree.getFirst(root);
-            this.renderer = new Renderer(this.root);
+            this.renderer = new RMEElemRenderer(this.root);
             this.ready = true;
             this.refreshApp();
         }

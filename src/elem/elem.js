@@ -1,5 +1,5 @@
 import Template from '../template';
-import Templater from './templater';
+import RMEElemTemplater from './templater';
 import Messages from '../messages';
 import Util from '../util';
 
@@ -188,7 +188,7 @@ let Elem = (function() {
          * @returns Template representation of the element tree.
          */
         toTemplate(deep) {
-            return Templater.toTemplate(this, deep);
+            return RMEElemTemplater.toTemplate(this, deep);
         }
 
         /**
@@ -199,7 +199,7 @@ let Elem = (function() {
          */
         getProps(json) {
             if(Util.isBoolean(json) && json === true)
-                return JSON.stringify(Templater.getElementProps(this));
+                return JSON.stringify(RMEElemTemplater.getElementProps(this));
             else
                 return Templater.getElementProps(this);
         }

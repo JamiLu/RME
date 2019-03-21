@@ -1,7 +1,7 @@
 import Elem from '../elem';
 import Util from '../util';
 
-class Renderer {
+class RMEElemRenderer {
     constructor(root) {
         this.root = root;
         this.mergedStage;
@@ -123,4 +123,4 @@ class Renderer {
 
 }
 
-export default Renderer;
+export default RMEElemRenderer;

@@ -1,9 +1,9 @@
 import Util from '../util';
 
 /**
- * Templater class is able to create a Template out of an Elem object.
+ * RMEElemTemplater class is able to create a Template out of an Elem object.
  */
-class Templater {
+class RMEElemTemplater {
     constructor() {
         this.instance;
         this.template = {};
@@ -312,7 +312,7 @@ class Templater {
      * @returns Template object representation of the Elem
      */
     static toTemplate(elem, deep) {
-        return Templater.getInstance().toTemplate(elem, deep);
+        return RMEElemTemplater.getInstance().toTemplate(elem, deep);
     }
 
     /**
@@ -321,14 +321,14 @@ class Templater {
      * @returns The properties object of the given Elem.
      */
     static getElementProps(elem) {
-        return Templater.getInstance().resolveProps(elem);
+        return RMEElemTemplater.getInstance().resolveProps(elem);
     }
 
     static getInstance() {
         if(!this.instance)
-            this.instance = new Templater();
+            this.instance = new RMEElemTemplater();
         return this.instance;
     }
 }
 
-export default Templater;
+export default RMEElemTemplater;
