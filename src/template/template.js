@@ -107,6 +107,11 @@ let Template = (function() {
             }
         }
 
+        /**
+         * Function will set String or Number values for the given element.
+         * @param {object} elem 
+         * @param {*} value 
+         */
         resolveStringNumber(elem, value) {
             if(Util.isString(value) && this.isMessage(value))
                 this.resolveMessage(elem, value);
@@ -179,6 +184,12 @@ let Template = (function() {
             return resolved;
         }
 
+        /**
+         * Function will try to parse an element name from the given string. If the given string
+         * is no empty a matched string is returned. If the given string is empty nothing is returned
+         * @param {string} str 
+         * @returns The matched string.
+         */
         getElementName(str) {
             if(!Util.isEmpty(str))
                 return str.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join();
