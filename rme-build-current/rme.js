@@ -214,7 +214,7 @@ let App = (function() {
          */
         init(root) {
             this.root = Util.isEmpty(root) ? Tree.getBody() : Tree.getFirst(root);
-            this.renderer = new Renderer(this.root);
+            this.renderer = new RMEElemRenderer(this.root);
             this.ready = true;
             this.refreshApp();
         }
@@ -360,7 +360,7 @@ let App = (function() {
                         oldMap[key] = oldMap[key].concat(newMap[key]);
                     else if(Util.isObject(oldMap[key]) && Util.isObject(newMap[key]))
                         this.recursiveMergeState(oldMap[key], newMap[key]);
-                    else if(Util.isEmpty(oldMap[key]))
+                    else
                         oldMap[key] = newMap[key];
                 }
             }
@@ -390,7 +390,7 @@ let App = (function() {
 
 
 
-class Renderer {
+class RMEElemRenderer {
     constructor(root) {
         this.root = root;
         this.mergedStage;
@@ -1066,364 +1066,6 @@ let Cookie = (function() {
 
 
 
-/**
- * Before using this class you should also be familiar on how to use fetch since usage of this class
- * will be quite similar to fetch except predefined candy that is added on a class.
- *
- * The class is added some predefined candy over the JavaScript Fetch interface.
- * get|post|put|delete methods will automatically use JSON as a Content-Type
- * and request methods will be predefined also.
- *
- * FOR Fetch
- * A Config object supports following:
- *  {
- *      url: url,
- *      method: method,
- *      contentType: contentType,
- *      init: init
- *  }
- *
- *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
- *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
- *
- *  If a total custom request is desired you should use a method do({}) e.g.
- *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
- */
-class HttpFetchRequest {
-    constructor() {}
-    /**
-     * Does Fetch GET request. Content-Type JSON is used by default.
-     * @param {stirng} url *Required
-     * @param {*} init 
-     */
-    get(url, init) {
-        if(!init) init = {};
-        init.method = "GET";
-        return this.do({url: url, init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does Fetch POST request. Content-Type JSON is used by default.
-     * @param {string} url *Required
-     * @param {*} body 
-     * @param {*} init 
-     */
-    post(url, body, init) {
-        if(!init) init = {};
-        init.method = "POST";
-        init.body = body;
-        return this.do({url: url, init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does Fetch PUT request. Content-Type JSON is used by default.
-     * @param {string} url *Required
-     * @param {*} body 
-     * @param {*} init 
-     */
-    put(url, body, init) {
-        if(!init) init = {};
-        init.method = "PUT";
-        init.body = body;
-        return this.do({url: url, init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does Fetch DELETE request. Content-Type JSON is used by default.
-     * @param {string} url 
-     * @param {*} init 
-     */
-    delete(url, init) {
-        if(!init) init = {};
-        init.method = "DELETE";
-        return this.do({url: url,  init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does any Fetch request a given config object defines.
-     * 
-     * Config object can contain parameters:
-     * {
-     *      url: url,
-     *      method: method,
-     *      contentType: contentType,
-     *      init: init
-     *  }
-     * @param {object} config 
-     */
-    do(config) {
-        if(!config.init) config.init = {};
-        if(config.contentType) {
-            if(!config.init.headers)
-                config.init.headers = new Headers({});
-            if(!config.init.headers.has("Content-Type"))
-                config.init.headers.set("Content-Type", config.contentType);
-        }
-        if(config.method) {
-            config.init.method = config.method;
-        }
-        return fetch(config.url, config.init);
-    }
-}
-
-
-
-let Http = (function() {
-    /**
-     * FOR XmlHttpRequest
-     * A config object supports following. More features could be added.
-     *  {
-     *    method: method,
-     *    url: url,
-     *    data: data,
-     *    contentType: contentType,
-     *    onProgress: function(event),
-     *    onTimeout: function(event),
-     *    headers: headersObject{"header": "value"},
-     *    useFetch: true|false **determines that is fetch used or not.
-     *  }
-     * 
-     * If contentType is not defined, application/json is used, if set to null, default is used, otherwise used defined is used.
-     * If contentType is application/json, data is automatically stringified with JSON.stringify()
-     * 
-     * Http class automatically tries to parse reuqest.responseText to JSON using JSON.parse().
-     * If parsing succeeds, parsed JSON will be set on request.responseJSON attribute.
-     */
-    class Http {
-        constructor(config) {
-            config.contentType = config.contentType === undefined ? Http.JSON : config.contentType;
-            if(config.useFetch) {
-                this.self = new HttpFetchRequest();
-            } else if(window.Promise) {
-                this.self = new HttpPromiseAjax(config).instance();
-            } else {
-                this.self = new HttpAjax(config);
-            }
-        }
-
-        instance() {
-            return this.self;
-        }
-
-        /**
-         * Do GET XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-         * @param {string} url *Required
-         * @param {string} requestContentType 
-         */
-        static get(url, requestContentType) {
-            return new Http({method: "GET", url: url, data: undefined, contentType: requestContentType}).instance();
-        }
-
-        /**
-         * Do POST XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-         * @param {string} url *Required
-         * @param {*} data 
-         * @param {string} requestContentType 
-         */
-        static post(url, data, requestContentType) {
-            return new Http({method: "POST", url: url, data: data, contentType: requestContentType}).instance();
-        }
-
-        /**
-         * Do PUT XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-         * @param {string} url *Required
-         * @param {*} data 
-         * @param {string} requestContentType 
-         */
-        static put(url, data, requestContentType) {
-            return new Http({method: "PUT", url: url, data: data, contentType: requestContentType}).instance();
-        }
-
-        /**
-         * Do DELETE XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-         * @param {string} url *Required
-         * @param {*} requestContentType 
-         */
-        static delete(url, requestContentType) {
-            return new Http({method: "DELETE", url: url, data: undefined, contentType: requestContentType}).instance();
-        }
-
-        /**
-         * Does any XMLHttpRequest that is defined by a given config object. Promise will be used if available.
-         * 
-         * Config object can contain parameters:
-         * {
-         *    method: method,
-         *    url: url,
-         *    data: data,
-         *    contentType: contentType,
-         *    onProgress: function(event),
-         *    onTimeout: function(event),
-         *    headers: headersObject{"header": "value"},
-         *    useFetch: true|false **determines that is fetch used or not.
-         *  }
-         * @param {object} config 
-         */
-        static do(config) {
-            return new Http(config).instance();
-        }
-
-        /**
-         * Uses Fetch interface to make a request to server.
-         * 
-         * Before using fetch you should also be familiar on how to use fetch since usage of this function
-         * will be quite similar to fetch except predefined candy that is added.
-         *
-         * The fetch interface adds some predefined candy over the JavaScript Fetch interface.
-         * get|post|put|delete methods will automatically use JSON as a Content-Type
-         * and request methods will be predefined also.
-         *
-         * FOR Fetch
-         * A Config object supports following:
-         *  {
-         *      url: url,
-         *      method: method,
-         *      contentType: contentType,
-         *      init: init
-         *  }
-         *
-         *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
-         *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-         *
-         *  If a total custom request is desired you should use a method do({}) e.g.
-         *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
-         */
-        static fetch() {
-            return new Http({useFetch: true}).instance();
-        }
-    }
-    /**
-     * Content-Type application/json;charset=UTF-8
-     */
-    Http.JSON = "application/json;charset=UTF-8";
-    /**
-     * Content-Type multipart/form-data
-     */
-    Http.FORM_DATA = "multipart/form-data";
-    /**
-     * Content-Type text/plain
-     */
-    Http.TEXT_PLAIN = "text/plain";
-
-    /**
-     * Old Fashion XMLHttpRequest made into the Promise pattern.
-     */
-    class HttpAjax {
-        constructor(config) {
-            this.progressHandler = config.onProgress ? config.onProgress : function(event) {};
-            this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
-            this.xhr = new XMLHttpRequest();
-            this.xhr.open(config.method, config.url);
-            if(config.contentType)
-                this.xhr.setRequestHeader("Content-Type", config.contentType);
-            if(config.headers)
-                setXhrHeaders(this.xhr, config.headers);
-        }
-        then(successHandler, errorHandler) {
-            this.xhr.onload = () => {
-                this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
-                isResponseOK(this.xhr.status) ? successHandler(resolveResponse(this.xhr.response), this.xhr) : errorHandler(this.xhr)
-            };
-            this.xhr.onprogress = (event) => {
-                if(this.progressHandler)
-                    this.progressHandler(event);
-            };
-            if(this.xhr.ontimeout && config.onTimeout) {
-                this.xhr.ontimeout = (event) => {
-                    config.onTimeout(event);
-                }
-            }
-            this.xhr.onerror = () => {
-                this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
-                if(errorHandler)
-                    errorHandler(this.xhr);
-            };
-            this.data ? this.xhr.send(this.data) : this.xhr.send();
-            return this;
-        }
-        catch(errorHandler) {
-            this.xhr.onerror = () => {
-                this.xhr.responseJSON = tryParseJSON(this.xhr.responrenderseText);
-                if(errorHandler)
-                    errorHandler(this.xhr);
-            }
-        }
-    }
-
-    /**
-     * XMLHttpRequest using the Promise.
-     */
-    class HttpPromiseAjax {
-        constructor(config) {
-            this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
-            this.promise = new Promise((resolve, reject) => {
-                var request = new XMLHttpRequest();
-                request.open(config.method, config.url);
-                if(config.contentType)
-                    request.setRequestHeader("Content-Type", config.contentType);
-                if(config.headers)
-                    setXhrHeaders(request, config.headers);
-                request.onload = () => {
-                    request.responseJSON = tryParseJSON(request.responseText);
-                    isResponseOK(request.status) ? resolve(resolveResponse(request.response)) : reject(request);
-                };
-                if(request.ontimeout && config.onTimeout) {
-                    request.ontimeout = (event) => {
-                        config.onTimeout(event);
-                    }
-                }
-                request.onprogress = (event) => {
-                    if(config.onProgress)
-                        config.onProgress(event);
-                }
-                request.onerror = () => {
-                    request.responseJSON = tryParseJSON(request.responseText);
-                    reject(request)
-                };
-                this.data ? request.send(this.data) : request.send();
-            });
-        }
-        instance() {
-            return this.promise;
-        }
-    }
-
-    const resolveResponse = (response) => {
-        let resp = tryParseJSON(response);
-        if(Util.isEmpty(resp))
-            resp = response;
-        return resp;
-    }
-    
-    const setXhrHeaders = (xhr, headers) => {
-        for(let header in headers) {
-            if(headers.hasOwnProperty(header))
-                xhr.setRequestHeader(header, headers[header]);
-        }
-    }
-    
-    const isResponseOK = (status) => {
-        let okResponses = [200, 201, 202, 203, 204, 205, 206, 207, 208, 226];
-        let i = 0;
-        while(i < okResponses.length) {
-            if(okResponses[i] === status)
-                return true;
-            i++;
-        }
-        return false;
-    }
-    
-    const isContentTypeJson = (contentType) => {
-        return contentType === Http.JSON;
-    }
-    
-    const tryParseJSON = (text) => {
-        try {
-            return JSON.parse(text);
-        } catch(e) {}
-    }
-
-    return Http;
-}());
-
-
-
 
 
 
@@ -1548,7 +1190,8 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         append(elem) {
-            this.html.appendChild(Template.isTemplate(elem) ? Template.resolve(elem).dom() : elem.dom());
+            if(!Util.isEmpty(elem))
+                this.html.appendChild(Template.isTemplate(elem) ? Template.resolve(elem).dom() : elem.dom());
             return this;
         }
 
@@ -1612,7 +1255,7 @@ let Elem = (function() {
          * @returns Template representation of the element tree.
          */
         toTemplate(deep) {
-            return Templater.toTemplate(this, deep);
+            return RMEElemTemplater.toTemplate(this, deep);
         }
 
         /**
@@ -1623,7 +1266,7 @@ let Elem = (function() {
          */
         getProps(json) {
             if(Util.isBoolean(json) && json === true)
-                return JSON.stringify(Templater.getElementProps(this));
+                return JSON.stringify(RMEElemTemplater.getElementProps(this));
             else
                 return Templater.getElementProps(this);
         }
@@ -3081,9 +2724,9 @@ let Elem = (function() {
 
 
 /**
- * Templater class is able to create a Template out of an Elem object.
+ * RMEElemTemplater class is able to create a Template out of an Elem object.
  */
-class Templater {
+class RMEElemTemplater {
     constructor() {
         this.instance;
         this.template = {};
@@ -3392,7 +3035,7 @@ class Templater {
      * @returns Template object representation of the Elem
      */
     static toTemplate(elem, deep) {
-        return Templater.getInstance().toTemplate(elem, deep);
+        return RMEElemTemplater.getInstance().toTemplate(elem, deep);
     }
 
     /**
@@ -3401,15 +3044,373 @@ class Templater {
      * @returns The properties object of the given Elem.
      */
     static getElementProps(elem) {
-        return Templater.getInstance().resolveProps(elem);
+        return RMEElemTemplater.getInstance().resolveProps(elem);
     }
 
     static getInstance() {
         if(!this.instance)
-            this.instance = new Templater();
+            this.instance = new RMEElemTemplater();
         return this.instance;
     }
 }
+
+/**
+ * Before using this class you should also be familiar on how to use fetch since usage of this class
+ * will be quite similar to fetch except predefined candy that is added on a class.
+ *
+ * The class is added some predefined candy over the JavaScript Fetch interface.
+ * get|post|put|delete methods will automatically use JSON as a Content-Type
+ * and request methods will be predefined also.
+ *
+ * FOR Fetch
+ * A Config object supports following:
+ *  {
+ *      url: url,
+ *      method: method,
+ *      contentType: contentType,
+ *      init: init
+ *  }
+ *
+ *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
+ *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+ *
+ *  If a total custom request is desired you should use a method do({}) e.g.
+ *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
+ */
+class HttpFetchRequest {
+    constructor() {}
+    /**
+     * Does Fetch GET request. Content-Type JSON is used by default.
+     * @param {stirng} url *Required
+     * @param {*} init 
+     */
+    get(url, init) {
+        if(!init) init = {};
+        init.method = "GET";
+        return this.do({url: url, init: init, contentType: Http.JSON});
+    }
+    /**
+     * Does Fetch POST request. Content-Type JSON is used by default.
+     * @param {string} url *Required
+     * @param {*} body 
+     * @param {*} init 
+     */
+    post(url, body, init) {
+        if(!init) init = {};
+        init.method = "POST";
+        init.body = body;
+        return this.do({url: url, init: init, contentType: Http.JSON});
+    }
+    /**
+     * Does Fetch PUT request. Content-Type JSON is used by default.
+     * @param {string} url *Required
+     * @param {*} body 
+     * @param {*} init 
+     */
+    put(url, body, init) {
+        if(!init) init = {};
+        init.method = "PUT";
+        init.body = body;
+        return this.do({url: url, init: init, contentType: Http.JSON});
+    }
+    /**
+     * Does Fetch DELETE request. Content-Type JSON is used by default.
+     * @param {string} url 
+     * @param {*} init 
+     */
+    delete(url, init) {
+        if(!init) init = {};
+        init.method = "DELETE";
+        return this.do({url: url,  init: init, contentType: Http.JSON});
+    }
+    /**
+     * Does any Fetch request a given config object defines.
+     * 
+     * Config object can contain parameters:
+     * {
+     *      url: url,
+     *      method: method,
+     *      contentType: contentType,
+     *      init: init
+     *  }
+     * @param {object} config 
+     */
+    do(config) {
+        if(!config.init) config.init = {};
+        if(config.contentType) {
+            if(!config.init.headers)
+                config.init.headers = new Headers({});
+            if(!config.init.headers.has("Content-Type"))
+                config.init.headers.set("Content-Type", config.contentType);
+        }
+        if(config.method) {
+            config.init.method = config.method;
+        }
+        return fetch(config.url, config.init);
+    }
+}
+
+
+
+let Http = (function() {
+    /**
+     * FOR XmlHttpRequest
+     * A config object supports following. More features could be added.
+     *  {
+     *    method: method,
+     *    url: url,
+     *    data: data,
+     *    contentType: contentType,
+     *    onProgress: function(event),
+     *    onTimeout: function(event),
+     *    headers: headersObject{"header": "value"},
+     *    useFetch: true|false **determines that is fetch used or not.
+     *  }
+     * 
+     * If contentType is not defined, application/json is used, if set to null, default is used, otherwise used defined is used.
+     * If contentType is application/json, data is automatically stringified with JSON.stringify()
+     * 
+     * Http class automatically tries to parse reuqest.responseText to JSON using JSON.parse().
+     * If parsing succeeds, parsed JSON will be set on request.responseJSON attribute.
+     */
+    class Http {
+        constructor(config) {
+            config.contentType = config.contentType === undefined ? Http.JSON : config.contentType;
+            if(config.useFetch) {
+                this.self = new HttpFetchRequest();
+            } else if(window.Promise) {
+                this.self = new HttpPromiseAjax(config).instance();
+            } else {
+                this.self = new HttpAjax(config);
+            }
+        }
+
+        instance() {
+            return this.self;
+        }
+
+        /**
+         * Do GET XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+         * @param {string} url *Required
+         * @param {string} requestContentType 
+         */
+        static get(url, requestContentType) {
+            return new Http({method: "GET", url: url, data: undefined, contentType: requestContentType}).instance();
+        }
+
+        /**
+         * Do POST XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+         * @param {string} url *Required
+         * @param {*} data 
+         * @param {string} requestContentType 
+         */
+        static post(url, data, requestContentType) {
+            return new Http({method: "POST", url: url, data: data, contentType: requestContentType}).instance();
+        }
+
+        /**
+         * Do PUT XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+         * @param {string} url *Required
+         * @param {*} data 
+         * @param {string} requestContentType 
+         */
+        static put(url, data, requestContentType) {
+            return new Http({method: "PUT", url: url, data: data, contentType: requestContentType}).instance();
+        }
+
+        /**
+         * Do DELETE XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+         * @param {string} url *Required
+         * @param {*} requestContentType 
+         */
+        static delete(url, requestContentType) {
+            return new Http({method: "DELETE", url: url, data: undefined, contentType: requestContentType}).instance();
+        }
+
+        /**
+         * Does any XMLHttpRequest that is defined by a given config object. Promise will be used if available.
+         * 
+         * Config object can contain parameters:
+         * {
+         *    method: method,
+         *    url: url,
+         *    data: data,
+         *    contentType: contentType,
+         *    onProgress: function(event),
+         *    onTimeout: function(event),
+         *    headers: headersObject{"header": "value"},
+         *    useFetch: true|false **determines that is fetch used or not.
+         *  }
+         * @param {object} config 
+         */
+        static do(config) {
+            return new Http(config).instance();
+        }
+
+        /**
+         * Uses Fetch interface to make a request to server.
+         * 
+         * Before using fetch you should also be familiar on how to use fetch since usage of this function
+         * will be quite similar to fetch except predefined candy that is added.
+         *
+         * The fetch interface adds some predefined candy over the JavaScript Fetch interface.
+         * get|post|put|delete methods will automatically use JSON as a Content-Type
+         * and request methods will be predefined also.
+         *
+         * FOR Fetch
+         * A Config object supports following:
+         *  {
+         *      url: url,
+         *      method: method,
+         *      contentType: contentType,
+         *      init: init
+         *  }
+         *
+         *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
+         *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+         *
+         *  If a total custom request is desired you should use a method do({}) e.g.
+         *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
+         */
+        static fetch() {
+            return new Http({useFetch: true}).instance();
+        }
+    }
+    /**
+     * Content-Type application/json;charset=UTF-8
+     */
+    Http.JSON = "application/json;charset=UTF-8";
+    /**
+     * Content-Type multipart/form-data
+     */
+    Http.FORM_DATA = "multipart/form-data";
+    /**
+     * Content-Type text/plain
+     */
+    Http.TEXT_PLAIN = "text/plain";
+
+    /**
+     * Old Fashion XMLHttpRequest made into the Promise pattern.
+     */
+    class HttpAjax {
+        constructor(config) {
+            this.progressHandler = config.onProgress ? config.onProgress : function(event) {};
+            this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
+            this.xhr = new XMLHttpRequest();
+            this.xhr.open(config.method, config.url);
+            if(config.contentType)
+                this.xhr.setRequestHeader("Content-Type", config.contentType);
+            if(config.headers)
+                setXhrHeaders(this.xhr, config.headers);
+        }
+        then(successHandler, errorHandler) {
+            this.xhr.onload = () => {
+                this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
+                isResponseOK(this.xhr.status) ? successHandler(resolveResponse(this.xhr.response), this.xhr) : errorHandler(this.xhr)
+            };
+            this.xhr.onprogress = (event) => {
+                if(this.progressHandler)
+                    this.progressHandler(event);
+            };
+            if(this.xhr.ontimeout && config.onTimeout) {
+                this.xhr.ontimeout = (event) => {
+                    config.onTimeout(event);
+                }
+            }
+            this.xhr.onerror = () => {
+                this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
+                if(errorHandler)
+                    errorHandler(this.xhr);
+            };
+            this.data ? this.xhr.send(this.data) : this.xhr.send();
+            return this;
+        }
+        catch(errorHandler) {
+            this.xhr.onerror = () => {
+                this.xhr.responseJSON = tryParseJSON(this.xhr.responrenderseText);
+                if(errorHandler)
+                    errorHandler(this.xhr);
+            }
+        }
+    }
+
+    /**
+     * XMLHttpRequest using the Promise.
+     */
+    class HttpPromiseAjax {
+        constructor(config) {
+            this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
+            this.promise = new Promise((resolve, reject) => {
+                var request = new XMLHttpRequest();
+                request.open(config.method, config.url);
+                if(config.contentType)
+                    request.setRequestHeader("Content-Type", config.contentType);
+                if(config.headers)
+                    setXhrHeaders(request, config.headers);
+                request.onload = () => {
+                    request.responseJSON = tryParseJSON(request.responseText);
+                    isResponseOK(request.status) ? resolve(resolveResponse(request.response)) : reject(request);
+                };
+                if(request.ontimeout && config.onTimeout) {
+                    request.ontimeout = (event) => {
+                        config.onTimeout(event);
+                    }
+                }
+                request.onprogress = (event) => {
+                    if(config.onProgress)
+                        config.onProgress(event);
+                }
+                request.onerror = () => {
+                    request.responseJSON = tryParseJSON(request.responseText);
+                    reject(request)
+                };
+                this.data ? request.send(this.data) : request.send();
+            });
+        }
+        instance() {
+            return this.promise;
+        }
+    }
+
+    const resolveResponse = (response) => {
+        let resp = tryParseJSON(response);
+        if(Util.isEmpty(resp))
+            resp = response;
+        return resp;
+    }
+    
+    const setXhrHeaders = (xhr, headers) => {
+        for(let header in headers) {
+            if(headers.hasOwnProperty(header))
+                xhr.setRequestHeader(header, headers[header]);
+        }
+    }
+    
+    const isResponseOK = (status) => {
+        let okResponses = [200, 201, 202, 203, 204, 205, 206, 207, 208, 226];
+        let i = 0;
+        while(i < okResponses.length) {
+            if(okResponses[i] === status)
+                return true;
+            i++;
+        }
+        return false;
+    }
+    
+    const isContentTypeJson = (contentType) => {
+        return contentType === Http.JSON;
+    }
+    
+    const tryParseJSON = (text) => {
+        try {
+            return JSON.parse(text);
+        } catch(e) {}
+    }
+
+    return Http;
+}());
+
+
 
 
 
@@ -3580,255 +3581,6 @@ Key.ARROW_LEFT = "ArrowLeft";
 Key.COMMA = ",";
 /** . */
 Key.DOT = ".";
-
-
-
-
-
-let Messages = (function() {
-    /**
-     * Messages class handles internationalization. The class offers public methods that enable easy 
-     * using of translated content.
-     */
-    class Messages {
-        constructor() {
-            this.instance = this;
-            this.messages = [];
-            this.locale = "";
-            this.translated = [];
-            this.load = function() {};
-            this.messagesType;
-            this.app;
-            this.ready = false;
-            this.registerMessages();
-        }
-
-        /**
-         * Initializes the Messages
-         */
-        registerMessages() {
-            document.addEventListener("readystatechange", () => {
-                if(document.readyState === "complete") {
-                    this.ready = true;
-                    this.runTranslated.call(this);
-                }
-            });
-        }
-
-        setLoad(loader) {
-            this.load = loader;
-        }
-
-        setAppInstance(appInstance) {
-            this.app = appInstance;
-        }
-
-        setLocale(locale) {
-            this.locale = locale;
-            return this;
-        }
-
-        setMessages(messages) {
-            if(Util.isArray(messages))
-                this.messagesType = "array";
-            else if(Util.isObject(messages))
-                this.messagesType = "map";
-            else
-                throw "messages must be type array or object";
-            this.messages = messages;
-            this.runTranslated.call(this);
-        }
-
-        getMessage(text, ...params) {
-            if(Util.isEmpty(params[0][0])) {
-                return this.resolveMessage(text);
-            } else {
-                this.getTranslatedElemIfExist(text, params[0][0]);
-                let msg = this.resolveMessage(text);
-                return this.resolveParams(msg, params[0][0]);
-            }
-        }
-
-        /**
-         * Resolves translated message key and returns a resolved message if exist
-         * otherwise returns the given key.
-         * @param {string} text 
-         * @returns A resolved message if exist otherwise the given key.
-         */
-        resolveMessage(text) {
-            if(this.messagesType === "array") {
-                return this.resolveMessagesArray(text);
-            } else if(this.messagesType === "map") {
-                return this.resolveMessagesMap(text);
-            }
-        }
-
-        /**
-         * Resolves a translated message key from the map. Returns a resolved message 
-         * if found otherwise returns the key.
-         * @param {string} text 
-         * @returns A resolved message
-         */
-        resolveMessagesMap(text) {
-            let msg = text;
-            for(let i in this.messages) {
-                if(i === text) {
-                    msg = this.messages[i];
-                    break;
-                }
-            }
-            return msg;
-        }
-
-        /**
-         * Resolves a translated message key from the array. Returns a resolved message
-         * if found otherwise returns the key.
-         * @param {string} text 
-         * @returns A resolved message
-         */
-        resolveMessagesArray(text) {
-            let i = 0;
-            let msg = text;
-            while(i < this.messages.length) {
-                if(!Util.isEmpty(this.messages[i][text])) {
-                    msg = this.messages[i][text];
-                    break;
-                }
-                i++;
-            }
-            return msg;
-        }
-
-        /**
-         * Resolves the message parameters if exist otherwise does nothing.
-         * @param {string} msg 
-         * @param {*} params 
-         * @returns The message with resolved message parameteres if parameters exist.
-         */
-        resolveParams(msg, params) {
-            if(!Util.isEmpty(msg)) {
-                let i = 0;
-                while(i < params.length) {
-                    msg = msg.replace("{"+i+"}", params[i]);
-                    i++;
-                }
-                return msg;
-            }
-        }
-
-        /**
-         * Function gets a Elem object and inserts it into a translated object array if it exists.
-         * @param {string} key 
-         * @param {*} params 
-         */
-        getTranslatedElemIfExist(key, params) {
-            if(Util.isEmpty(this.app)) {
-                let last = params[params.length - 1];
-                if(Util.isObject(last) && last instanceof Elem) {
-                    last = params.pop();
-                    this.translated.push({key: key, params: params, obj: last});
-                }
-            }
-        }
-
-        /**
-         * Function goes through the translated objects array and sets a translated message to the translated elements.
-         */
-        runTranslated() {
-            if(Util.isEmpty(this.app) && this.ready) {
-                Util.setTimeout(() => {
-                    let i = 0;
-                    while(i < this.translated.length) {
-                        this.translated[i].obj.setText.call(this.translated[i].obj, Messages.message(this.translated[i].key, this.translated[i].params));
-                        i++;
-                    }
-                });
-            } else if(this.ready) {
-                this.app.refresh();
-            }
-        }
-
-        /**
-         * Function returns current locale of the Messages
-         * @returns Current locale
-         */
-        static locale() {
-            return Messages.getInstance().locale;
-        }
-
-        /**
-         * Lang function is used to change or set the current locale to be the given locale. After calling this method
-         * the Messages.load function will be automatically invoked.
-         * @param {string} locale String
-         * @param {object} locale Event
-         */
-        static lang(locale) {
-            let loc;
-            if(Util.isObject(locale) && locale instanceof Event) {
-                locale.preventDefault();
-                let el = Elem.wrap(locale.target);
-                loc = el.getHref();
-                if(Util.isEmpty(loc))
-                    loc = el.getValue();
-                if(Util.isEmpty(loc))
-                    loc = el.getText();
-            } else if(Util.isString(locale))
-                loc = locale;
-            else
-                throw "Given parameter must be type string or instance of Event, given value: " + locale;
-            if(!Util.isEmpty(loc))
-                Messages.getInstance().setLocale(loc).load.call(null, 
-                    Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
-        }
-
-        /**
-         * Message function is used to retrieve translated messages. The function also supports message parameters
-         * that can be given as a comma separeted list. 
-         * @param {string} text 
-         * @param {*} params 
-         * @returns A resolved message or the given key if the message is not found.
-         */
-        static message(text, ...params) {
-            return Messages.getInstance().getMessage(text, params);
-        }
-
-        /**
-         * Load function is used to load new messages or change already loaded messages.
-         * Implementation of the function receives two parameters. The one of the parameters is the changed locale and 
-         * the other is setMessages(messagesArrayOrObject) function that is used to change the translated messages.
-         * This function is called automatically when language is changed by calling the Messages.lang() function.
-         * @param {function} loader 
-         */
-        static load(loader) {
-            if(!Util.isFunction(loader))
-                throw "loader must be type function " + Util.getType(loader);
-            Messages.getInstance().setLoad(loader);
-        }
-
-        /**
-         * Set the app instance to be invoked on the Messages update.
-         * @param {object} appInstance 
-         */
-        static setApp(appInstance) {
-            Messages.getInstance().setAppInstance(appInstance);
-            return Messages;
-        }
-
-        static getInstance() {
-            if(!this.instance)
-                this.instance = new Messages();
-            return this.instance;
-        }
-    }
-
-    return {
-        lang: Messages.lang,
-        message: Messages.message,
-        load: Messages.load,
-        locale: Messages.locale,
-        setApp: Messages.setApp
-    };
-}());
 
 
 
@@ -4103,6 +3855,255 @@ let RME = (function() {
         hasComponent: RME.hasComponent,
         use: RME.use
     }
+}());
+
+
+
+
+
+let Messages = (function() {
+    /**
+     * Messages class handles internationalization. The class offers public methods that enable easy 
+     * using of translated content.
+     */
+    class Messages {
+        constructor() {
+            this.instance = this;
+            this.messages = [];
+            this.locale = "";
+            this.translated = [];
+            this.load = function() {};
+            this.messagesType;
+            this.app;
+            this.ready = false;
+            this.registerMessages();
+        }
+
+        /**
+         * Initializes the Messages
+         */
+        registerMessages() {
+            document.addEventListener("readystatechange", () => {
+                if(document.readyState === "complete") {
+                    this.ready = true;
+                    this.runTranslated.call(this);
+                }
+            });
+        }
+
+        setLoad(loader) {
+            this.load = loader;
+        }
+
+        setAppInstance(appInstance) {
+            this.app = appInstance;
+        }
+
+        setLocale(locale) {
+            this.locale = locale;
+            return this;
+        }
+
+        setMessages(messages) {
+            if(Util.isArray(messages))
+                this.messagesType = "array";
+            else if(Util.isObject(messages))
+                this.messagesType = "map";
+            else
+                throw "messages must be type array or object";
+            this.messages = messages;
+            this.runTranslated.call(this);
+        }
+
+        getMessage(text, ...params) {
+            if(Util.isEmpty(params[0][0])) {
+                return this.resolveMessage(text);
+            } else {
+                this.getTranslatedElemIfExist(text, params[0][0]);
+                let msg = this.resolveMessage(text);
+                return this.resolveParams(msg, params[0][0]);
+            }
+        }
+
+        /**
+         * Resolves translated message key and returns a resolved message if exist
+         * otherwise returns the given key.
+         * @param {string} text 
+         * @returns A resolved message if exist otherwise the given key.
+         */
+        resolveMessage(text) {
+            if(this.messagesType === "array") {
+                return this.resolveMessagesArray(text);
+            } else if(this.messagesType === "map") {
+                return this.resolveMessagesMap(text);
+            }
+        }
+
+        /**
+         * Resolves a translated message key from the map. Returns a resolved message 
+         * if found otherwise returns the key.
+         * @param {string} text 
+         * @returns A resolved message
+         */
+        resolveMessagesMap(text) {
+            let msg = text;
+            for(let i in this.messages) {
+                if(i === text) {
+                    msg = this.messages[i];
+                    break;
+                }
+            }
+            return msg;
+        }
+
+        /**
+         * Resolves a translated message key from the array. Returns a resolved message
+         * if found otherwise returns the key.
+         * @param {string} text 
+         * @returns A resolved message
+         */
+        resolveMessagesArray(text) {
+            let i = 0;
+            let msg = text;
+            while(i < this.messages.length) {
+                if(!Util.isEmpty(this.messages[i][text])) {
+                    msg = this.messages[i][text];
+                    break;
+                }
+                i++;
+            }
+            return msg;
+        }
+
+        /**
+         * Resolves the message parameters if exist otherwise does nothing.
+         * @param {string} msg 
+         * @param {*} params 
+         * @returns The message with resolved message parameteres if parameters exist.
+         */
+        resolveParams(msg, params) {
+            if(!Util.isEmpty(msg)) {
+                let i = 0;
+                while(i < params.length) {
+                    msg = msg.replace("{"+i+"}", params[i]);
+                    i++;
+                }
+                return msg;
+            }
+        }
+
+        /**
+         * Function gets a Elem object and inserts it into a translated object array if it exists.
+         * @param {string} key 
+         * @param {*} params 
+         */
+        getTranslatedElemIfExist(key, params) {
+            if(Util.isEmpty(this.app)) {
+                let last = params[params.length - 1];
+                if(Util.isObject(last) && last instanceof Elem) {
+                    last = params.pop();
+                    this.translated.push({key: key, params: params, obj: last});
+                }
+            }
+        }
+
+        /**
+         * Function goes through the translated objects array and sets a translated message to the translated elements.
+         */
+        runTranslated() {
+            if(Util.isEmpty(this.app) && this.ready) {
+                Util.setTimeout(() => {
+                    let i = 0;
+                    while(i < this.translated.length) {
+                        this.translated[i].obj.setText.call(this.translated[i].obj, Messages.message(this.translated[i].key, this.translated[i].params));
+                        i++;
+                    }
+                });
+            } else if(this.ready) {
+                this.app.refresh();
+            }
+        }
+
+        /**
+         * Function returns current locale of the Messages
+         * @returns Current locale
+         */
+        static locale() {
+            return Messages.getInstance().locale;
+        }
+
+        /**
+         * Lang function is used to change or set the current locale to be the given locale. After calling this method
+         * the Messages.load function will be automatically invoked.
+         * @param {string} locale String
+         * @param {object} locale Event
+         */
+        static lang(locale) {
+            let loc;
+            if(Util.isObject(locale) && locale instanceof Event) {
+                locale.preventDefault();
+                let el = Elem.wrap(locale.target);
+                loc = el.getHref();
+                if(Util.isEmpty(loc))
+                    loc = el.getValue();
+                if(Util.isEmpty(loc))
+                    loc = el.getText();
+            } else if(Util.isString(locale))
+                loc = locale;
+            else
+                throw "Given parameter must be type string or instance of Event, given value: " + locale;
+            if(!Util.isEmpty(loc))
+                Messages.getInstance().setLocale(loc).load.call(null, 
+                    Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
+        }
+
+        /**
+         * Message function is used to retrieve translated messages. The function also supports message parameters
+         * that can be given as a comma separeted list. 
+         * @param {string} text 
+         * @param {*} params 
+         * @returns A resolved message or the given key if the message is not found.
+         */
+        static message(text, ...params) {
+            return Messages.getInstance().getMessage(text, params);
+        }
+
+        /**
+         * Load function is used to load new messages or change already loaded messages.
+         * Implementation of the function receives two parameters. The one of the parameters is the changed locale and 
+         * the other is setMessages(messagesArrayOrObject) function that is used to change the translated messages.
+         * This function is called automatically when language is changed by calling the Messages.lang() function.
+         * @param {function} loader 
+         */
+        static load(loader) {
+            if(!Util.isFunction(loader))
+                throw "loader must be type function " + Util.getType(loader);
+            Messages.getInstance().setLoad(loader);
+        }
+
+        /**
+         * Set the app instance to be invoked on the Messages update.
+         * @param {object} appInstance 
+         */
+        static setApp(appInstance) {
+            Messages.getInstance().setAppInstance(appInstance);
+            return Messages;
+        }
+
+        static getInstance() {
+            if(!this.instance)
+                this.instance = new Messages();
+            return this.instance;
+        }
+    }
+
+    return {
+        lang: Messages.lang,
+        message: Messages.message,
+        load: Messages.load,
+        locale: Messages.locale,
+        setApp: Messages.setApp
+    };
 }());
 
 
@@ -4571,167 +4572,36 @@ class Session {
 
 
 /**
- * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
- * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
- * 
- * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
- * operation functionalities.
+ * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
  */
-class Tree {
+class Storage {
     /**
-     * Uses CSS selector to find elements on the HTML Document Tree. 
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} selector 
-     * @returns An array of Elem instances or a single Elem instance.
+     * Save data into the local storage. 
+     * @param {string} key
+     * @param {*} value
      */
-    static get(selector) {
-        return Elem.wrapElems(document.querySelectorAll(selector));
+    static set(key, value) {
+        localStorage.setItem(key, value);
     }
-
     /**
-     * Uses CSS selector to find the first match element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} selector 
-     * @returns An Elem instance.
+     * Get the saved data from the local storage.
+     * @param {string} key
      */
-    static getFirst(selector) {
-        return Elem.wrap(document.querySelector(selector));
+    static get(key) {
+        return localStorage.getItem(key);
     }
-
     /**
-     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
-     * @param {string} tag 
-     * @returns An array of Elem instances or a single Elem instance.
+     * Remove data from the local storage.
+     * @param {string} key
      */
-    static getByTag(tag) {
-        return Elem.wrapElems(document.getElementsByTagName(tag));
+    static remove(key) {
+        localStorage.removeItem(key);
     }
-
     /**
-     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
-     * Found elements will be wrappedn in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} name 
-     * @returns An array of Elem instances or a single Elem instance.
+     * Clears the local storage.
      */
-    static getByName(name) {
-        return Elem.wrapElems(document.getElementsByName(name));
-    }
-
-    /**
-     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} id 
-     * @returns Elem instance.
-     */
-    static getById(id) {
-        return Elem.wrap(document.getElementById(id));
-    }
-
-    /**
-     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
-     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} classname 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    static getByClass(classname) {
-        return Elem.wrapElems(document.getElementsByClassName(classname));
-    }
-
-    /**
-     * @returns body wrapped in an Elem instance.
-     */
-    static getBody() {
-        return Elem.wrap(document.body);
-    }
-
-    /**
-     * @returns head wrapped in an Elem instance.
-     */
-    static getHead() {
-        return Elem.wrap(document.head);
-    }
-
-    /**
-     * @returns title of the html document page.
-     */
-    static getTitle() {
-        return document.title;
-    }
-
-    /**
-     * Set an new title for html document page.
-     * @param {string} title 
-     */
-    static setTitle(title) {
-        document.title = title;
-    }
-
-    /**
-     * @returns active element wrapped in an Elem instance.
-     */
-    static getActiveElement() {
-        return Elem.wrap(document.activeElement);
-    }
-
-    /**
-     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
-     */
-    static getAnchors() {
-        return Elem.wrapElems(document.anchors);
-    }
-
-    /**
-     * @returns <html> element.
-     */
-    static getHtmlElement() {
-        return document.documentElement;
-    }
-
-    /**
-     * @returns <!DOCTYPE> element.
-     */
-    static getDoctype() {
-        return document.doctype;
-    }
-
-    /**
-     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
-     */
-    static getEmbeds() {
-        return Elem.wrapElems(document.embeds);
-    }
-
-    /**
-     * @returns an array of image elements (<img>) wrapped in an Elem instance.
-     */
-    static getImages() {
-        return Elem.wrapElems(document.images);
-    }
-
-    /**
-     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
-     */
-    static getLinks() {
-        return Elem.wrapElems(document.links);
-    }
-
-    /**
-     * @returns an array of scripts wrapped in an Elem instance.
-     */
-    static getScripts() {
-        return Elem.wrapElems(document.scripts);
-    }
-
-    /**
-     * @returns an array of form elements wrapped in an Elem instance.
-     */
-    static getForms() {
-        return Elem.wrapElems(document.forms);
+    static clear() {
+        localStorage.clear();
     }
 }
 
@@ -4788,6 +4658,8 @@ let Template = (function() {
                             this.resolveArray(template[obj], this.root, round);
                         else if(!this.isComponent(obj) && Util.isObject(template[obj]))
                             this.resolve(template[obj], this.root, round);
+                        else if(Util.isString(template[obj]) || Util.isNumber(template[obj]))
+                            this.resolveStringNumber(this.root, template[obj]);
                         else if(Util.isFunction(template[obj]))
                             this.resolveFunction(this.root, template[obj]);
                     } else {
@@ -4803,6 +4675,8 @@ let Template = (function() {
                                 this.resolveArray(template[obj], child, round);
                             } else if(!this.isComponent(obj) && Util.isObject(template[obj])) {
                                 this.resolve(template[obj], child, round);
+                            } else if(Util.isString(template[obj]) || Util.isNumber(template[obj])) {
+                                this.resolveStringNumber(child, template[obj]);
                             } else if(Util.isFunction(template[obj])) {
                                 this.resolveFunction(child, template[obj]);
                             }
@@ -4826,6 +4700,10 @@ let Template = (function() {
                     if(o.hasOwnProperty(key)) {
                         if(Util.isObject(o[key])) {
                             this.resolve(o, parent, round);
+                        } else if(Util.isString(o[key]) || Util.isNumber(o[key])) {
+                            var el = this.resolveElement(key);
+                            this.resolveStringNumber(el, o[key]);
+                            parent.append(el);
                         } else if(Util.isFunction(o[key])) {
                             var el = this.resolveElement(key);
                             this.resolveFunction(el, o[key]);
@@ -4835,6 +4713,18 @@ let Template = (function() {
                 }
                 i++;
             }
+        }
+
+        /**
+         * Function will set String or Number values for the given element.
+         * @param {object} elem 
+         * @param {*} value 
+         */
+        resolveStringNumber(elem, value) {
+            if(Util.isString(value) && this.isMessage(value))
+                this.resolveMessage(elem, value);
+            else
+                elem.setText(value);
         }
     
         /**
@@ -4878,8 +4768,8 @@ let Template = (function() {
         resolveElement(tag, obj) {
             let resolved = null;
             var match = [];
-            var el = tag.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join();
-            if(this.isComponent(el)) {
+            var el = this.getElementName(tag);
+            if(RME.hasComponent(el)) {
                 el = el.replace(/component:/, "");
                 resolved = RME.component(el, obj);
             } else if(Util.isEmpty(el))
@@ -4895,11 +4785,22 @@ let Template = (function() {
             if(!Util.isEmpty(match)) 
                 resolved.addClasses(match.join(" ").replace(/\./g, ""));
 
-            match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_&%@!?£$+¤|\\<\\>\\"]+\]/g); //find attributes
+            match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_&%@!?£$+¤|;\\<\\>\\"]+\]/g); //find attributes
             if(!Util.isEmpty(match))
                 resolved = this.addAttributes(resolved, match);
 
             return resolved;
+        }
+
+        /**
+         * Function will try to parse an element name from the given string. If the given string
+         * is no empty a matched string is returned. If the given string is empty nothing is returned
+         * @param {string} str 
+         * @returns The matched string.
+         */
+        getElementName(str) {
+            if(!Util.isEmpty(str))
+                return str.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join();
         }
 
         /**
@@ -5086,7 +4987,7 @@ let Template = (function() {
          * @returns True if the component exist or the key contains component keyword and exist, otherwise false.
          */
         isComponent(key) {
-            return RME.hasComponent(key) || key.indexOf("component:") === 0 && RME.hasComponent(key.replace(/component:/, ""));
+            return RME.hasComponent(this.getElementName(key));
         }
 
         /**
@@ -5258,36 +5159,167 @@ let Template = (function() {
 
 
 /**
- * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
+ * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
+ * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
+ * 
+ * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
+ * operation functionalities.
  */
-class Storage {
+class Tree {
     /**
-     * Save data into the local storage. 
-     * @param {string} key
-     * @param {*} value
+     * Uses CSS selector to find elements on the HTML Document Tree. 
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} selector 
+     * @returns An array of Elem instances or a single Elem instance.
      */
-    static set(key, value) {
-        localStorage.setItem(key, value);
+    static get(selector) {
+        return Elem.wrapElems(document.querySelectorAll(selector));
     }
+
     /**
-     * Get the saved data from the local storage.
-     * @param {string} key
+     * Uses CSS selector to find the first match element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} selector 
+     * @returns An Elem instance.
      */
-    static get(key) {
-        return localStorage.getItem(key);
+    static getFirst(selector) {
+        return Elem.wrap(document.querySelector(selector));
     }
+
     /**
-     * Remove data from the local storage.
-     * @param {string} key
+     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
+     * @param {string} tag 
+     * @returns An array of Elem instances or a single Elem instance.
      */
-    static remove(key) {
-        localStorage.removeItem(key);
+    static getByTag(tag) {
+        return Elem.wrapElems(document.getElementsByTagName(tag));
     }
+
     /**
-     * Clears the local storage.
+     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
+     * Found elements will be wrappedn in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} name 
+     * @returns An array of Elem instances or a single Elem instance.
      */
-    static clear() {
-        localStorage.clear();
+    static getByName(name) {
+        return Elem.wrapElems(document.getElementsByName(name));
+    }
+
+    /**
+     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} id 
+     * @returns Elem instance.
+     */
+    static getById(id) {
+        return Elem.wrap(document.getElementById(id));
+    }
+
+    /**
+     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
+     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} classname 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    static getByClass(classname) {
+        return Elem.wrapElems(document.getElementsByClassName(classname));
+    }
+
+    /**
+     * @returns body wrapped in an Elem instance.
+     */
+    static getBody() {
+        return Elem.wrap(document.body);
+    }
+
+    /**
+     * @returns head wrapped in an Elem instance.
+     */
+    static getHead() {
+        return Elem.wrap(document.head);
+    }
+
+    /**
+     * @returns title of the html document page.
+     */
+    static getTitle() {
+        return document.title;
+    }
+
+    /**
+     * Set an new title for html document page.
+     * @param {string} title 
+     */
+    static setTitle(title) {
+        document.title = title;
+    }
+
+    /**
+     * @returns active element wrapped in an Elem instance.
+     */
+    static getActiveElement() {
+        return Elem.wrap(document.activeElement);
+    }
+
+    /**
+     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
+     */
+    static getAnchors() {
+        return Elem.wrapElems(document.anchors);
+    }
+
+    /**
+     * @returns <html> element.
+     */
+    static getHtmlElement() {
+        return document.documentElement;
+    }
+
+    /**
+     * @returns <!DOCTYPE> element.
+     */
+    static getDoctype() {
+        return document.doctype;
+    }
+
+    /**
+     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
+     */
+    static getEmbeds() {
+        return Elem.wrapElems(document.embeds);
+    }
+
+    /**
+     * @returns an array of image elements (<img>) wrapped in an Elem instance.
+     */
+    static getImages() {
+        return Elem.wrapElems(document.images);
+    }
+
+    /**
+     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
+     */
+    static getLinks() {
+        return Elem.wrapElems(document.links);
+    }
+
+    /**
+     * @returns an array of scripts wrapped in an Elem instance.
+     */
+    static getScripts() {
+        return Elem.wrapElems(document.scripts);
+    }
+
+    /**
+     * @returns an array of form elements wrapped in an Elem instance.
+     */
+    static getForms() {
+        return Elem.wrapElems(document.forms);
     }
 }
 

@@ -263,7 +263,7 @@ var App = function () {
       key: "init",
       value: function init(root) {
         this.root = Util.isEmpty(root) ? Tree.getBody() : Tree.getFirst(root);
-        this.renderer = new Renderer(this.root);
+        this.renderer = new RMEElemRenderer(this.root);
         this.ready = true;
         this.refreshApp();
       }
@@ -409,7 +409,7 @@ var App = function () {
       value: function recursiveMergeState(oldMap, newMap) {
         for (var key in newMap) {
           if (newMap.hasOwnProperty(key)) {
-            if (Util.isArray(oldMap[key]) && !Util.isArray(newMap[key])) oldMap[key].push(newMap[key]);else if (Util.isArray(oldMap[key]) && Util.isArray(newMap[key])) oldMap[key] = oldMap[key].concat(newMap[key]);else if (Util.isObject(oldMap[key]) && Util.isObject(newMap[key])) this.recursiveMergeState(oldMap[key], newMap[key]);else if (Util.isEmpty(oldMap[key])) oldMap[key] = newMap[key];
+            if (Util.isArray(oldMap[key]) && !Util.isArray(newMap[key])) oldMap[key].push(newMap[key]);else if (Util.isArray(oldMap[key]) && Util.isArray(newMap[key])) oldMap[key] = oldMap[key].concat(newMap[key]);else if (Util.isObject(oldMap[key]) && Util.isObject(newMap[key])) this.recursiveMergeState(oldMap[key], newMap[key]);else oldMap[key] = newMap[key];
           }
         }
       }
@@ -437,11 +437,11 @@ var App = function () {
   };
 }();
 
-var Renderer =
+var RMEElemRenderer =
 /*#__PURE__*/
 function () {
-  function Renderer(root) {
-    _classCallCheck(this, Renderer);
+  function RMEElemRenderer(root) {
+    _classCallCheck(this, RMEElemRenderer);
 
     this.root = root;
     this.mergedStage;
@@ -458,7 +458,7 @@ function () {
    */
 
 
-  _createClass(Renderer, [{
+  _createClass(RMEElemRenderer, [{
     key: "merge",
     value: function merge(oldStage, newStage) {
       if (Util.isEmpty(this.root.getChildren())) {
@@ -575,7 +575,7 @@ function () {
     }
   }]);
 
-  return Renderer;
+  return RMEElemRenderer;
 }();
 /**
  * Browser class contains all the rest utility functions which JavaScript has to offer from Window, Navigator, Screen, History, Location objects.
@@ -1266,478 +1266,6 @@ var Cookie = function () {
 
   return Cookie;
 }();
-/**
- * Before using this class you should also be familiar on how to use fetch since usage of this class
- * will be quite similar to fetch except predefined candy that is added on a class.
- *
- * The class is added some predefined candy over the JavaScript Fetch interface.
- * get|post|put|delete methods will automatically use JSON as a Content-Type
- * and request methods will be predefined also.
- *
- * FOR Fetch
- * A Config object supports following:
- *  {
- *      url: url,
- *      method: method,
- *      contentType: contentType,
- *      init: init
- *  }
- *
- *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
- *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
- *
- *  If a total custom request is desired you should use a method do({}) e.g.
- *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
- */
-
-
-var HttpFetchRequest =
-/*#__PURE__*/
-function () {
-  function HttpFetchRequest() {
-    _classCallCheck(this, HttpFetchRequest);
-  }
-  /**
-   * Does Fetch GET request. Content-Type JSON is used by default.
-   * @param {stirng} url *Required
-   * @param {*} init 
-   */
-
-
-  _createClass(HttpFetchRequest, [{
-    key: "get",
-    value: function get(url, init) {
-      if (!init) init = {};
-      init.method = "GET";
-      return this.do({
-        url: url,
-        init: init,
-        contentType: Http.JSON
-      });
-    }
-    /**
-     * Does Fetch POST request. Content-Type JSON is used by default.
-     * @param {string} url *Required
-     * @param {*} body 
-     * @param {*} init 
-     */
-
-  }, {
-    key: "post",
-    value: function post(url, body, init) {
-      if (!init) init = {};
-      init.method = "POST";
-      init.body = body;
-      return this.do({
-        url: url,
-        init: init,
-        contentType: Http.JSON
-      });
-    }
-    /**
-     * Does Fetch PUT request. Content-Type JSON is used by default.
-     * @param {string} url *Required
-     * @param {*} body 
-     * @param {*} init 
-     */
-
-  }, {
-    key: "put",
-    value: function put(url, body, init) {
-      if (!init) init = {};
-      init.method = "PUT";
-      init.body = body;
-      return this.do({
-        url: url,
-        init: init,
-        contentType: Http.JSON
-      });
-    }
-    /**
-     * Does Fetch DELETE request. Content-Type JSON is used by default.
-     * @param {string} url 
-     * @param {*} init 
-     */
-
-  }, {
-    key: "delete",
-    value: function _delete(url, init) {
-      if (!init) init = {};
-      init.method = "DELETE";
-      return this.do({
-        url: url,
-        init: init,
-        contentType: Http.JSON
-      });
-    }
-    /**
-     * Does any Fetch request a given config object defines.
-     * 
-     * Config object can contain parameters:
-     * {
-     *      url: url,
-     *      method: method,
-     *      contentType: contentType,
-     *      init: init
-     *  }
-     * @param {object} config 
-     */
-
-  }, {
-    key: "do",
-    value: function _do(config) {
-      if (!config.init) config.init = {};
-
-      if (config.contentType) {
-        if (!config.init.headers) config.init.headers = new Headers({});
-        if (!config.init.headers.has("Content-Type")) config.init.headers.set("Content-Type", config.contentType);
-      }
-
-      if (config.method) {
-        config.init.method = config.method;
-      }
-
-      return fetch(config.url, config.init);
-    }
-  }]);
-
-  return HttpFetchRequest;
-}();
-
-var Http = function () {
-  /**
-   * FOR XmlHttpRequest
-   * A config object supports following. More features could be added.
-   *  {
-   *    method: method,
-   *    url: url,
-   *    data: data,
-   *    contentType: contentType,
-   *    onProgress: function(event),
-   *    onTimeout: function(event),
-   *    headers: headersObject{"header": "value"},
-   *    useFetch: true|false **determines that is fetch used or not.
-   *  }
-   * 
-   * If contentType is not defined, application/json is used, if set to null, default is used, otherwise used defined is used.
-   * If contentType is application/json, data is automatically stringified with JSON.stringify()
-   * 
-   * Http class automatically tries to parse reuqest.responseText to JSON using JSON.parse().
-   * If parsing succeeds, parsed JSON will be set on request.responseJSON attribute.
-   */
-  var Http =
-  /*#__PURE__*/
-  function () {
-    function Http(config) {
-      _classCallCheck(this, Http);
-
-      config.contentType = config.contentType === undefined ? Http.JSON : config.contentType;
-
-      if (config.useFetch) {
-        this.self = new HttpFetchRequest();
-      } else if (window.Promise) {
-        this.self = new HttpPromiseAjax(config).instance();
-      } else {
-        this.self = new HttpAjax(config);
-      }
-    }
-
-    _createClass(Http, [{
-      key: "instance",
-      value: function instance() {
-        return this.self;
-      }
-      /**
-       * Do GET XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-       * @param {string} url *Required
-       * @param {string} requestContentType 
-       */
-
-    }], [{
-      key: "get",
-      value: function get(url, requestContentType) {
-        return new Http({
-          method: "GET",
-          url: url,
-          data: undefined,
-          contentType: requestContentType
-        }).instance();
-      }
-      /**
-       * Do POST XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-       * @param {string} url *Required
-       * @param {*} data 
-       * @param {string} requestContentType 
-       */
-
-    }, {
-      key: "post",
-      value: function post(url, data, requestContentType) {
-        return new Http({
-          method: "POST",
-          url: url,
-          data: data,
-          contentType: requestContentType
-        }).instance();
-      }
-      /**
-       * Do PUT XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-       * @param {string} url *Required
-       * @param {*} data 
-       * @param {string} requestContentType 
-       */
-
-    }, {
-      key: "put",
-      value: function put(url, data, requestContentType) {
-        return new Http({
-          method: "PUT",
-          url: url,
-          data: data,
-          contentType: requestContentType
-        }).instance();
-      }
-      /**
-       * Do DELETE XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-       * @param {string} url *Required
-       * @param {*} requestContentType 
-       */
-
-    }, {
-      key: "delete",
-      value: function _delete(url, requestContentType) {
-        return new Http({
-          method: "DELETE",
-          url: url,
-          data: undefined,
-          contentType: requestContentType
-        }).instance();
-      }
-      /**
-       * Does any XMLHttpRequest that is defined by a given config object. Promise will be used if available.
-       * 
-       * Config object can contain parameters:
-       * {
-       *    method: method,
-       *    url: url,
-       *    data: data,
-       *    contentType: contentType,
-       *    onProgress: function(event),
-       *    onTimeout: function(event),
-       *    headers: headersObject{"header": "value"},
-       *    useFetch: true|false **determines that is fetch used or not.
-       *  }
-       * @param {object} config 
-       */
-
-    }, {
-      key: "do",
-      value: function _do(config) {
-        return new Http(config).instance();
-      }
-      /**
-       * Uses Fetch interface to make a request to server.
-       * 
-       * Before using fetch you should also be familiar on how to use fetch since usage of this function
-       * will be quite similar to fetch except predefined candy that is added.
-       *
-       * The fetch interface adds some predefined candy over the JavaScript Fetch interface.
-       * get|post|put|delete methods will automatically use JSON as a Content-Type
-       * and request methods will be predefined also.
-       *
-       * FOR Fetch
-       * A Config object supports following:
-       *  {
-       *      url: url,
-       *      method: method,
-       *      contentType: contentType,
-       *      init: init
-       *  }
-       *
-       *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
-       *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-       *
-       *  If a total custom request is desired you should use a method do({}) e.g.
-       *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
-       */
-
-    }, {
-      key: "fetch",
-      value: function fetch() {
-        return new Http({
-          useFetch: true
-        }).instance();
-      }
-    }]);
-
-    return Http;
-  }();
-  /**
-   * Content-Type application/json;charset=UTF-8
-   */
-
-
-  Http.JSON = "application/json;charset=UTF-8";
-  /**
-   * Content-Type multipart/form-data
-   */
-
-  Http.FORM_DATA = "multipart/form-data";
-  /**
-   * Content-Type text/plain
-   */
-
-  Http.TEXT_PLAIN = "text/plain";
-  /**
-   * Old Fashion XMLHttpRequest made into the Promise pattern.
-   */
-
-  var HttpAjax =
-  /*#__PURE__*/
-  function () {
-    function HttpAjax(config) {
-      _classCallCheck(this, HttpAjax);
-
-      this.progressHandler = config.onProgress ? config.onProgress : function (event) {};
-      this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
-      this.xhr = new XMLHttpRequest();
-      this.xhr.open(config.method, config.url);
-      if (config.contentType) this.xhr.setRequestHeader("Content-Type", config.contentType);
-      if (config.headers) setXhrHeaders(this.xhr, config.headers);
-    }
-
-    _createClass(HttpAjax, [{
-      key: "then",
-      value: function then(successHandler, errorHandler) {
-        var _this3 = this;
-
-        this.xhr.onload = function () {
-          _this3.xhr.responseJSON = tryParseJSON(_this3.xhr.responseText);
-          isResponseOK(_this3.xhr.status) ? successHandler(resolveResponse(_this3.xhr.response), _this3.xhr) : errorHandler(_this3.xhr);
-        };
-
-        this.xhr.onprogress = function (event) {
-          if (_this3.progressHandler) _this3.progressHandler(event);
-        };
-
-        if (this.xhr.ontimeout && config.onTimeout) {
-          this.xhr.ontimeout = function (event) {
-            config.onTimeout(event);
-          };
-        }
-
-        this.xhr.onerror = function () {
-          _this3.xhr.responseJSON = tryParseJSON(_this3.xhr.responseText);
-          if (errorHandler) errorHandler(_this3.xhr);
-        };
-
-        this.data ? this.xhr.send(this.data) : this.xhr.send();
-        return this;
-      }
-    }, {
-      key: "catch",
-      value: function _catch(errorHandler) {
-        var _this4 = this;
-
-        this.xhr.onerror = function () {
-          _this4.xhr.responseJSON = tryParseJSON(_this4.xhr.responrenderseText);
-          if (errorHandler) errorHandler(_this4.xhr);
-        };
-      }
-    }]);
-
-    return HttpAjax;
-  }();
-  /**
-   * XMLHttpRequest using the Promise.
-   */
-
-
-  var HttpPromiseAjax =
-  /*#__PURE__*/
-  function () {
-    function HttpPromiseAjax(config) {
-      var _this5 = this;
-
-      _classCallCheck(this, HttpPromiseAjax);
-
-      this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
-      this.promise = new Promise(function (resolve, reject) {
-        var request = new XMLHttpRequest();
-        request.open(config.method, config.url);
-        if (config.contentType) request.setRequestHeader("Content-Type", config.contentType);
-        if (config.headers) setXhrHeaders(request, config.headers);
-
-        request.onload = function () {
-          request.responseJSON = tryParseJSON(request.responseText);
-          isResponseOK(request.status) ? resolve(resolveResponse(request.response)) : reject(request);
-        };
-
-        if (request.ontimeout && config.onTimeout) {
-          request.ontimeout = function (event) {
-            config.onTimeout(event);
-          };
-        }
-
-        request.onprogress = function (event) {
-          if (config.onProgress) config.onProgress(event);
-        };
-
-        request.onerror = function () {
-          request.responseJSON = tryParseJSON(request.responseText);
-          reject(request);
-        };
-
-        _this5.data ? request.send(_this5.data) : request.send();
-      });
-    }
-
-    _createClass(HttpPromiseAjax, [{
-      key: "instance",
-      value: function instance() {
-        return this.promise;
-      }
-    }]);
-
-    return HttpPromiseAjax;
-  }();
-
-  var resolveResponse = function resolveResponse(response) {
-    var resp = tryParseJSON(response);
-    if (Util.isEmpty(resp)) resp = response;
-    return resp;
-  };
-
-  var setXhrHeaders = function setXhrHeaders(xhr, headers) {
-    for (var header in headers) {
-      if (headers.hasOwnProperty(header)) xhr.setRequestHeader(header, headers[header]);
-    }
-  };
-
-  var isResponseOK = function isResponseOK(status) {
-    var okResponses = [200, 201, 202, 203, 204, 205, 206, 207, 208, 226];
-    var i = 0;
-
-    while (i < okResponses.length) {
-      if (okResponses[i] === status) return true;
-      i++;
-    }
-
-    return false;
-  };
-
-  var isContentTypeJson = function isContentTypeJson(contentType) {
-    return contentType === Http.JSON;
-  };
-
-  var tryParseJSON = function tryParseJSON(text) {
-    try {
-      return JSON.parse(text);
-    } catch (e) {}
-  };
-
-  return Http;
-}();
 
 var Elem = function () {
   /**
@@ -1882,7 +1410,7 @@ var Elem = function () {
     }, {
       key: "append",
       value: function append(elem) {
-        this.html.appendChild(Template.isTemplate(elem) ? Template.resolve(elem).dom() : elem.dom());
+        if (!Util.isEmpty(elem)) this.html.appendChild(Template.isTemplate(elem) ? Template.resolve(elem).dom() : elem.dom());
         return this;
       }
       /**
@@ -1955,7 +1483,7 @@ var Elem = function () {
     }, {
       key: "toTemplate",
       value: function toTemplate(deep) {
-        return Templater.toTemplate(this, deep);
+        return RMEElemTemplater.toTemplate(this, deep);
       }
       /**
        * Returns properties of an Elem in an object. If a boolean json is true
@@ -1967,7 +1495,7 @@ var Elem = function () {
     }, {
       key: "getProps",
       value: function getProps(json) {
-        if (Util.isBoolean(json) && json === true) return JSON.stringify(Templater.getElementProps(this));else return Templater.getElementProps(this);
+        if (Util.isBoolean(json) && json === true) return JSON.stringify(RMEElemTemplater.getElementProps(this));else return Templater.getElementProps(this);
       }
       /**
        * Method is able to render child elements dynamically as illustrated below:
@@ -2632,10 +2160,10 @@ var Elem = function () {
     }, {
       key: "click",
       value: function click() {
-        var _this6 = this;
+        var _this3 = this;
 
         Util.setTimeout(function () {
-          return _this6.html.click();
+          return _this3.html.click();
         });
         return this;
       }
@@ -2647,10 +2175,10 @@ var Elem = function () {
     }, {
       key: "focus",
       value: function focus() {
-        var _this7 = this;
+        var _this4 = this;
 
         Util.setTimeout(function () {
-          return _this7.html.focus();
+          return _this4.html.focus();
         });
         return this;
       }
@@ -2662,10 +2190,10 @@ var Elem = function () {
     }, {
       key: "blur",
       value: function blur() {
-        var _this8 = this;
+        var _this5 = this;
 
         Util.setTimeout(function () {
-          return _this8.html.blur();
+          return _this5.html.blur();
         });
         return this;
       }
@@ -3716,22 +3244,22 @@ var Elem = function () {
   return Elem;
 }();
 /**
- * Templater class is able to create a Template out of an Elem object.
+ * RMEElemTemplater class is able to create a Template out of an Elem object.
  */
 
 
-var Templater =
+var RMEElemTemplater =
 /*#__PURE__*/
 function () {
-  function Templater() {
-    _classCallCheck(this, Templater);
+  function RMEElemTemplater() {
+    _classCallCheck(this, RMEElemTemplater);
 
     this.instance;
     this.template = {};
     this.deep = true;
   }
 
-  _createClass(Templater, [{
+  _createClass(RMEElemTemplater, [{
     key: "toTemplate",
     value: function toTemplate(elem, deep) {
       if (!Util.isEmpty(deep)) this.deep = deep;
@@ -4117,7 +3645,7 @@ function () {
   }], [{
     key: "toTemplate",
     value: function toTemplate(elem, deep) {
-      return Templater.getInstance().toTemplate(elem, deep);
+      return RMEElemTemplater.getInstance().toTemplate(elem, deep);
     }
     /**
      * Function resolves and returns properties of a given Elem object.
@@ -4128,17 +3656,489 @@ function () {
   }, {
     key: "getElementProps",
     value: function getElementProps(elem) {
-      return Templater.getInstance().resolveProps(elem);
+      return RMEElemTemplater.getInstance().resolveProps(elem);
     }
   }, {
     key: "getInstance",
     value: function getInstance() {
-      if (!this.instance) this.instance = new Templater();
+      if (!this.instance) this.instance = new RMEElemTemplater();
       return this.instance;
     }
   }]);
 
-  return Templater;
+  return RMEElemTemplater;
+}();
+/**
+ * Before using this class you should also be familiar on how to use fetch since usage of this class
+ * will be quite similar to fetch except predefined candy that is added on a class.
+ *
+ * The class is added some predefined candy over the JavaScript Fetch interface.
+ * get|post|put|delete methods will automatically use JSON as a Content-Type
+ * and request methods will be predefined also.
+ *
+ * FOR Fetch
+ * A Config object supports following:
+ *  {
+ *      url: url,
+ *      method: method,
+ *      contentType: contentType,
+ *      init: init
+ *  }
+ *
+ *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
+ *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+ *
+ *  If a total custom request is desired you should use a method do({}) e.g.
+ *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
+ */
+
+
+var HttpFetchRequest =
+/*#__PURE__*/
+function () {
+  function HttpFetchRequest() {
+    _classCallCheck(this, HttpFetchRequest);
+  }
+  /**
+   * Does Fetch GET request. Content-Type JSON is used by default.
+   * @param {stirng} url *Required
+   * @param {*} init 
+   */
+
+
+  _createClass(HttpFetchRequest, [{
+    key: "get",
+    value: function get(url, init) {
+      if (!init) init = {};
+      init.method = "GET";
+      return this.do({
+        url: url,
+        init: init,
+        contentType: Http.JSON
+      });
+    }
+    /**
+     * Does Fetch POST request. Content-Type JSON is used by default.
+     * @param {string} url *Required
+     * @param {*} body 
+     * @param {*} init 
+     */
+
+  }, {
+    key: "post",
+    value: function post(url, body, init) {
+      if (!init) init = {};
+      init.method = "POST";
+      init.body = body;
+      return this.do({
+        url: url,
+        init: init,
+        contentType: Http.JSON
+      });
+    }
+    /**
+     * Does Fetch PUT request. Content-Type JSON is used by default.
+     * @param {string} url *Required
+     * @param {*} body 
+     * @param {*} init 
+     */
+
+  }, {
+    key: "put",
+    value: function put(url, body, init) {
+      if (!init) init = {};
+      init.method = "PUT";
+      init.body = body;
+      return this.do({
+        url: url,
+        init: init,
+        contentType: Http.JSON
+      });
+    }
+    /**
+     * Does Fetch DELETE request. Content-Type JSON is used by default.
+     * @param {string} url 
+     * @param {*} init 
+     */
+
+  }, {
+    key: "delete",
+    value: function _delete(url, init) {
+      if (!init) init = {};
+      init.method = "DELETE";
+      return this.do({
+        url: url,
+        init: init,
+        contentType: Http.JSON
+      });
+    }
+    /**
+     * Does any Fetch request a given config object defines.
+     * 
+     * Config object can contain parameters:
+     * {
+     *      url: url,
+     *      method: method,
+     *      contentType: contentType,
+     *      init: init
+     *  }
+     * @param {object} config 
+     */
+
+  }, {
+    key: "do",
+    value: function _do(config) {
+      if (!config.init) config.init = {};
+
+      if (config.contentType) {
+        if (!config.init.headers) config.init.headers = new Headers({});
+        if (!config.init.headers.has("Content-Type")) config.init.headers.set("Content-Type", config.contentType);
+      }
+
+      if (config.method) {
+        config.init.method = config.method;
+      }
+
+      return fetch(config.url, config.init);
+    }
+  }]);
+
+  return HttpFetchRequest;
+}();
+
+var Http = function () {
+  /**
+   * FOR XmlHttpRequest
+   * A config object supports following. More features could be added.
+   *  {
+   *    method: method,
+   *    url: url,
+   *    data: data,
+   *    contentType: contentType,
+   *    onProgress: function(event),
+   *    onTimeout: function(event),
+   *    headers: headersObject{"header": "value"},
+   *    useFetch: true|false **determines that is fetch used or not.
+   *  }
+   * 
+   * If contentType is not defined, application/json is used, if set to null, default is used, otherwise used defined is used.
+   * If contentType is application/json, data is automatically stringified with JSON.stringify()
+   * 
+   * Http class automatically tries to parse reuqest.responseText to JSON using JSON.parse().
+   * If parsing succeeds, parsed JSON will be set on request.responseJSON attribute.
+   */
+  var Http =
+  /*#__PURE__*/
+  function () {
+    function Http(config) {
+      _classCallCheck(this, Http);
+
+      config.contentType = config.contentType === undefined ? Http.JSON : config.contentType;
+
+      if (config.useFetch) {
+        this.self = new HttpFetchRequest();
+      } else if (window.Promise) {
+        this.self = new HttpPromiseAjax(config).instance();
+      } else {
+        this.self = new HttpAjax(config);
+      }
+    }
+
+    _createClass(Http, [{
+      key: "instance",
+      value: function instance() {
+        return this.self;
+      }
+      /**
+       * Do GET XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+       * @param {string} url *Required
+       * @param {string} requestContentType 
+       */
+
+    }], [{
+      key: "get",
+      value: function get(url, requestContentType) {
+        return new Http({
+          method: "GET",
+          url: url,
+          data: undefined,
+          contentType: requestContentType
+        }).instance();
+      }
+      /**
+       * Do POST XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+       * @param {string} url *Required
+       * @param {*} data 
+       * @param {string} requestContentType 
+       */
+
+    }, {
+      key: "post",
+      value: function post(url, data, requestContentType) {
+        return new Http({
+          method: "POST",
+          url: url,
+          data: data,
+          contentType: requestContentType
+        }).instance();
+      }
+      /**
+       * Do PUT XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+       * @param {string} url *Required
+       * @param {*} data 
+       * @param {string} requestContentType 
+       */
+
+    }, {
+      key: "put",
+      value: function put(url, data, requestContentType) {
+        return new Http({
+          method: "PUT",
+          url: url,
+          data: data,
+          contentType: requestContentType
+        }).instance();
+      }
+      /**
+       * Do DELETE XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+       * @param {string} url *Required
+       * @param {*} requestContentType 
+       */
+
+    }, {
+      key: "delete",
+      value: function _delete(url, requestContentType) {
+        return new Http({
+          method: "DELETE",
+          url: url,
+          data: undefined,
+          contentType: requestContentType
+        }).instance();
+      }
+      /**
+       * Does any XMLHttpRequest that is defined by a given config object. Promise will be used if available.
+       * 
+       * Config object can contain parameters:
+       * {
+       *    method: method,
+       *    url: url,
+       *    data: data,
+       *    contentType: contentType,
+       *    onProgress: function(event),
+       *    onTimeout: function(event),
+       *    headers: headersObject{"header": "value"},
+       *    useFetch: true|false **determines that is fetch used or not.
+       *  }
+       * @param {object} config 
+       */
+
+    }, {
+      key: "do",
+      value: function _do(config) {
+        return new Http(config).instance();
+      }
+      /**
+       * Uses Fetch interface to make a request to server.
+       * 
+       * Before using fetch you should also be familiar on how to use fetch since usage of this function
+       * will be quite similar to fetch except predefined candy that is added.
+       *
+       * The fetch interface adds some predefined candy over the JavaScript Fetch interface.
+       * get|post|put|delete methods will automatically use JSON as a Content-Type
+       * and request methods will be predefined also.
+       *
+       * FOR Fetch
+       * A Config object supports following:
+       *  {
+       *      url: url,
+       *      method: method,
+       *      contentType: contentType,
+       *      init: init
+       *  }
+       *
+       *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
+       *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+       *
+       *  If a total custom request is desired you should use a method do({}) e.g.
+       *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
+       */
+
+    }, {
+      key: "fetch",
+      value: function fetch() {
+        return new Http({
+          useFetch: true
+        }).instance();
+      }
+    }]);
+
+    return Http;
+  }();
+  /**
+   * Content-Type application/json;charset=UTF-8
+   */
+
+
+  Http.JSON = "application/json;charset=UTF-8";
+  /**
+   * Content-Type multipart/form-data
+   */
+
+  Http.FORM_DATA = "multipart/form-data";
+  /**
+   * Content-Type text/plain
+   */
+
+  Http.TEXT_PLAIN = "text/plain";
+  /**
+   * Old Fashion XMLHttpRequest made into the Promise pattern.
+   */
+
+  var HttpAjax =
+  /*#__PURE__*/
+  function () {
+    function HttpAjax(config) {
+      _classCallCheck(this, HttpAjax);
+
+      this.progressHandler = config.onProgress ? config.onProgress : function (event) {};
+      this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
+      this.xhr = new XMLHttpRequest();
+      this.xhr.open(config.method, config.url);
+      if (config.contentType) this.xhr.setRequestHeader("Content-Type", config.contentType);
+      if (config.headers) setXhrHeaders(this.xhr, config.headers);
+    }
+
+    _createClass(HttpAjax, [{
+      key: "then",
+      value: function then(successHandler, errorHandler) {
+        var _this6 = this;
+
+        this.xhr.onload = function () {
+          _this6.xhr.responseJSON = tryParseJSON(_this6.xhr.responseText);
+          isResponseOK(_this6.xhr.status) ? successHandler(resolveResponse(_this6.xhr.response), _this6.xhr) : errorHandler(_this6.xhr);
+        };
+
+        this.xhr.onprogress = function (event) {
+          if (_this6.progressHandler) _this6.progressHandler(event);
+        };
+
+        if (this.xhr.ontimeout && config.onTimeout) {
+          this.xhr.ontimeout = function (event) {
+            config.onTimeout(event);
+          };
+        }
+
+        this.xhr.onerror = function () {
+          _this6.xhr.responseJSON = tryParseJSON(_this6.xhr.responseText);
+          if (errorHandler) errorHandler(_this6.xhr);
+        };
+
+        this.data ? this.xhr.send(this.data) : this.xhr.send();
+        return this;
+      }
+    }, {
+      key: "catch",
+      value: function _catch(errorHandler) {
+        var _this7 = this;
+
+        this.xhr.onerror = function () {
+          _this7.xhr.responseJSON = tryParseJSON(_this7.xhr.responrenderseText);
+          if (errorHandler) errorHandler(_this7.xhr);
+        };
+      }
+    }]);
+
+    return HttpAjax;
+  }();
+  /**
+   * XMLHttpRequest using the Promise.
+   */
+
+
+  var HttpPromiseAjax =
+  /*#__PURE__*/
+  function () {
+    function HttpPromiseAjax(config) {
+      var _this8 = this;
+
+      _classCallCheck(this, HttpPromiseAjax);
+
+      this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
+      this.promise = new Promise(function (resolve, reject) {
+        var request = new XMLHttpRequest();
+        request.open(config.method, config.url);
+        if (config.contentType) request.setRequestHeader("Content-Type", config.contentType);
+        if (config.headers) setXhrHeaders(request, config.headers);
+
+        request.onload = function () {
+          request.responseJSON = tryParseJSON(request.responseText);
+          isResponseOK(request.status) ? resolve(resolveResponse(request.response)) : reject(request);
+        };
+
+        if (request.ontimeout && config.onTimeout) {
+          request.ontimeout = function (event) {
+            config.onTimeout(event);
+          };
+        }
+
+        request.onprogress = function (event) {
+          if (config.onProgress) config.onProgress(event);
+        };
+
+        request.onerror = function () {
+          request.responseJSON = tryParseJSON(request.responseText);
+          reject(request);
+        };
+
+        _this8.data ? request.send(_this8.data) : request.send();
+      });
+    }
+
+    _createClass(HttpPromiseAjax, [{
+      key: "instance",
+      value: function instance() {
+        return this.promise;
+      }
+    }]);
+
+    return HttpPromiseAjax;
+  }();
+
+  var resolveResponse = function resolveResponse(response) {
+    var resp = tryParseJSON(response);
+    if (Util.isEmpty(resp)) resp = response;
+    return resp;
+  };
+
+  var setXhrHeaders = function setXhrHeaders(xhr, headers) {
+    for (var header in headers) {
+      if (headers.hasOwnProperty(header)) xhr.setRequestHeader(header, headers[header]);
+    }
+  };
+
+  var isResponseOK = function isResponseOK(status) {
+    var okResponses = [200, 201, 202, 203, 204, 205, 206, 207, 208, 226];
+    var i = 0;
+
+    while (i < okResponses.length) {
+      if (okResponses[i] === status) return true;
+      i++;
+    }
+
+    return false;
+  };
+
+  var isContentTypeJson = function isContentTypeJson(contentType) {
+    return contentType === Http.JSON;
+  };
+
+  var tryParseJSON = function tryParseJSON(text) {
+    try {
+      return JSON.parse(text);
+    } catch (e) {}
+  };
+
+  return Http;
 }();
 /**
  * Key class does not have any methods as it only contains key mappings for keyevent. For example:
@@ -4392,6 +4392,296 @@ Key.COMMA = ",";
 /** . */
 
 Key.DOT = ".";
+
+var RME = function () {
+  /**
+   * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create RESTfull webpages with ease and speed.
+   * This library is free to use under the MIT License.
+   * 
+   * RME class is a core of the RME library. The RME class offers functionality to start a RME application, control components, external script files and rme storage.
+   */
+  var RME =
+  /*#__PURE__*/
+  function () {
+    function RME() {
+      _classCallCheck(this, RME);
+
+      this.instance = this;
+
+      this.completeRun = function () {};
+
+      this.runner = function () {};
+
+      this.onStorageChange = function (state) {};
+
+      this.components = {};
+      this.rmeState = {};
+      this.router;
+      this.messages;
+      this.defaultApp;
+    }
+
+    _createClass(RME, [{
+      key: "complete",
+      value: function complete() {
+        this.completeRun.call();
+      }
+    }, {
+      key: "start",
+      value: function start() {
+        this.runner.call();
+      }
+    }, {
+      key: "setComplete",
+      value: function setComplete(runnable) {
+        this.completeRun = runnable;
+      }
+    }, {
+      key: "setRunner",
+      value: function setRunner(runnable) {
+        this.runner = runnable;
+        return this.instance;
+      }
+    }, {
+      key: "addComponent",
+      value: function addComponent(runnable, props) {
+        var comp;
+        if (Util.isFunction(runnable)) comp = runnable.call();else if (Util.isObject(runnable)) comp = runnable;
+
+        for (var p in comp) {
+          if (comp.hasOwnProperty(p)) {
+            this.components[p] = {
+              component: comp[p],
+              update: Util.isFunction(props) ? props : undefined
+            };
+          }
+        }
+
+        comp = null;
+      }
+    }, {
+      key: "getComponent",
+      value: function getComponent(name, props) {
+        var comp = this.components[name];
+        if (!comp) throw "Cannot find a component: \"" + name + "\"";
+
+        if (!Util.isEmpty(props) && Util.isFunction(comp.update)) {
+          var state = Util.isEmpty(props.key) ? name : "".concat(name).concat(props.key);
+          props["ref"] = state;
+          props = this.extendProps(props, comp.update.call()(state));
+        }
+
+        if (Util.isEmpty(props)) props = {};
+        if (!Util.isEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate)) props.onBeforeCreate.call(props, props);
+        var ret = comp.component.call(props, props);
+        if (Template.isTemplate(ret)) ret = Template.resolve(ret);
+        if (!Util.isEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate)) props.onAfterCreate.call(props, ret, props);
+        return ret;
+      }
+    }, {
+      key: "extendProps",
+      value: function extendProps(props, newProps) {
+        if (!Util.isEmpty(newProps)) {
+          for (var p in newProps) {
+            if (newProps.hasOwnProperty(p)) {
+              props[p] = newProps[p];
+            }
+          }
+        }
+
+        return props;
+      }
+    }, {
+      key: "setRmeState",
+      value: function setRmeState(key, value) {
+        this.rmeState[key] = value;
+        this.onStorageChange.call(this, this.rmeState);
+      }
+    }, {
+      key: "getRmeState",
+      value: function getRmeState(key) {
+        return this.rmeState[key];
+      }
+    }, {
+      key: "configure",
+      value: function configure(config) {
+        this.router = config.router;
+        this.messages = config.messages;
+        this.defaultApp = config.app;
+        if (!Util.isEmpty(this.router)) this.router.setApp(this.defaultApp);
+        if (!Util.isEmpty(this.messages)) this.messages.setApp(this.defaultApp);
+        if (!Util.isEmpty(this.defaultApp)) this.defaultApp.setRouter(this.router);
+      }
+      /** 
+       * Runs a runnable script immedeately. If multpile run functions are declared they will be invoked by the declaration order.
+       */
+
+    }], [{
+      key: "run",
+      value: function run(runnable) {
+        if (runnable && Util.isFunction(runnable)) RME.getInstance().setRunner(runnable).start();
+      }
+      /**
+       * Waits until body has been loaded and then runs a runnable script. 
+       * If multiple ready functions are declared the latter one is invoked.
+       */
+
+    }, {
+      key: "ready",
+      value: function ready(runnable) {
+        if (runnable && Util.isFunction(runnable)) RME.getInstance().setComplete(runnable);
+      }
+      /**
+       * Creates or retrieves a RME component. 
+       * If the first parameter is a function then this method will try to create a RME component and store it
+       * in the RME instance.
+       * If the first parameter is a string then this method will try to retrieve a RME component from the 
+       * RME instance.
+       * @param {*} runnable Type function or String.
+       * @param {Object} props 
+       */
+
+    }, {
+      key: "component",
+      value: function component(runnable, props) {
+        if (runnable && (Util.isFunction(runnable) || Util.isObject(runnable))) RME.getInstance().addComponent(runnable, props);else if (runnable && Util.isString(runnable)) return RME.getInstance().getComponent(runnable, props);
+      }
+      /**
+       * Saves data to or get data from the RME instance storage.
+       * If key and value parameters are not empty then this method will try to save the give value by the given key
+       * into to the RME instance storage.
+       * If key is not empty and value is empty then this method will try to get data from the RME instance storage
+       * by the given key.
+       * @param {String} key 
+       * @param {Object} value 
+       */
+
+    }, {
+      key: "storage",
+      value: function storage(key, value) {
+        if (!Util.isEmpty(key) && !Util.isEmpty(value)) RME.getInstance().setRmeState(key, value);else if (!Util.isEmpty(key) && Util.isEmpty(value)) return RME.getInstance().getRmeState(key);
+      }
+      /**
+       * Adds a script file on runtime into the head of the current html document where the method is called on.
+       * Source is required other properties can be omitted.
+       * @param {String} source URL or file name. *Requied
+       * @param {String} id 
+       * @param {String} type 
+       * @param {String} text Content of the script element if any.
+       * @param {boolean} defer If true script is executed when page has finished parsing.
+       * @param {*} crossOrigin 
+       * @param {String} charset 
+       * @param {boolean} async If true script is executed asynchronously when available.
+       */
+
+    }, {
+      key: "script",
+      value: function script(source, id, type, text, defer, crossOrigin, charset, async) {
+        if (!Util.isEmpty(source)) {
+          var sc = new Elem("script").setSource(source);
+          if (!Util.isEmpty(id)) sc.setId(id);
+          if (!Util.isEmpty(type)) sc.setType(type);
+          if (!Util.isEmpty(text)) sc.setText(text);
+          if (!Util.isEmpty(defer)) sc.setAttribute("defer", defer);
+          if (!Util.isEmpty(crossOrigin)) sc.setAttribute("crossOrigin", crossOrigin);
+          if (!Util.isEmpty(charset)) sc.setAttribute("charset", charset);
+          if (!Util.isEmpty(async)) sc.setAttribute("async", async);
+          RME.addScript(sc);
+        }
+      }
+      /**
+       * This is called when ever a new data is saved into the RME instance storage.
+       * Callback function has one paramater newState that is the latest snapshot of the 
+       * current instance storage.
+       * @param {function} listener 
+       */
+
+    }, {
+      key: "onStorageChange",
+      value: function onStorageChange(listener) {
+        if (listener && Util.isFunction(listener)) RME.getInstance().onrmestoragechange = listener;
+      }
+      /**
+       * Function checks if a component with the given name exists.
+       * @param {string} name 
+       * @returns True if the component exist otherwise false
+       */
+
+    }, {
+      key: "hasComponent",
+      value: function hasComponent(name) {
+        return !Util.isEmpty(RME.getInstance().components[name.replace("component:", "")]);
+      }
+      /**
+       * Function receives an object as a parameter that holds three properties router, messages and app. The function will
+       * autoconfigure the Router, the Messages and the App instance to be used as default.
+       * 
+       * The config object represented
+       * {
+       * router: Router reference
+       * messages: Messages reference
+       * app: App instance
+       * }
+       * @param {object} config 
+       */
+
+    }, {
+      key: "use",
+      value: function use(config) {
+        RME.getInstance().configure(config);
+      }
+    }, {
+      key: "addScript",
+      value: function addScript(elem) {
+        var scripts = Tree.getScripts();
+        var lastScript = scripts[scripts.length - 1];
+        lastScript.after(elem);
+      }
+    }, {
+      key: "removeScript",
+      value: function removeScript(sourceOrId) {
+        if (sourceOrId.indexOf("#") === 0) {
+          Tree.getHead().remove(Tree.get(sourceOrId));
+        } else {
+          var scripts = Tree.getScripts();
+
+          for (var s in scripts) {
+            if (scripts.hasOwnProperty(s)) {
+              var src = !Util.isEmpty(scripts[s].getSource()) ? scripts[s].getSource() : "";
+
+              if (src.search(sourceOrId) > -1 && src.search(sourceOrId) === src.length - sourceOrId.length) {
+                Tree.getHead().remove(scripts[s]);
+                break;
+              }
+            }
+          }
+        }
+      }
+    }, {
+      key: "getInstance",
+      value: function getInstance() {
+        if (!this.instance) this.instance = new RME();
+        return this.instance;
+      }
+    }]);
+
+    return RME;
+  }();
+
+  document.addEventListener("readystatechange", function () {
+    if (document.readyState === "complete") RME.getInstance().complete();
+  });
+  return {
+    run: RME.run,
+    ready: RME.ready,
+    component: RME.component,
+    storage: RME.storage,
+    script: RME.script,
+    onStorageChange: RME.onStorageChange,
+    hasComponent: RME.hasComponent,
+    use: RME.use
+  };
+}();
 
 var Messages = function () {
   /**
@@ -4690,296 +4980,6 @@ var Messages = function () {
     load: Messages.load,
     locale: Messages.locale,
     setApp: Messages.setApp
-  };
-}();
-
-var RME = function () {
-  /**
-   * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create RESTfull webpages with ease and speed.
-   * This library is free to use under the MIT License.
-   * 
-   * RME class is a core of the RME library. The RME class offers functionality to start a RME application, control components, external script files and rme storage.
-   */
-  var RME =
-  /*#__PURE__*/
-  function () {
-    function RME() {
-      _classCallCheck(this, RME);
-
-      this.instance = this;
-
-      this.completeRun = function () {};
-
-      this.runner = function () {};
-
-      this.onStorageChange = function (state) {};
-
-      this.components = {};
-      this.rmeState = {};
-      this.router;
-      this.messages;
-      this.defaultApp;
-    }
-
-    _createClass(RME, [{
-      key: "complete",
-      value: function complete() {
-        this.completeRun.call();
-      }
-    }, {
-      key: "start",
-      value: function start() {
-        this.runner.call();
-      }
-    }, {
-      key: "setComplete",
-      value: function setComplete(runnable) {
-        this.completeRun = runnable;
-      }
-    }, {
-      key: "setRunner",
-      value: function setRunner(runnable) {
-        this.runner = runnable;
-        return this.instance;
-      }
-    }, {
-      key: "addComponent",
-      value: function addComponent(runnable, props) {
-        var comp;
-        if (Util.isFunction(runnable)) comp = runnable.call();else if (Util.isObject(runnable)) comp = runnable;
-
-        for (var p in comp) {
-          if (comp.hasOwnProperty(p)) {
-            this.components[p] = {
-              component: comp[p],
-              update: Util.isFunction(props) ? props : undefined
-            };
-          }
-        }
-
-        comp = null;
-      }
-    }, {
-      key: "getComponent",
-      value: function getComponent(name, props) {
-        var comp = this.components[name];
-        if (!comp) throw "Cannot find a component: \"" + name + "\"";
-
-        if (!Util.isEmpty(props) && Util.isFunction(comp.update)) {
-          var state = Util.isEmpty(props.key) ? name : "".concat(name).concat(props.key);
-          props["ref"] = state;
-          props = this.extendProps(props, comp.update.call()(state));
-        }
-
-        if (Util.isEmpty(props)) props = {};
-        if (!Util.isEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate)) props.onBeforeCreate.call(props, props);
-        var ret = comp.component.call(props, props);
-        if (Template.isTemplate(ret)) ret = Template.resolve(ret);
-        if (!Util.isEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate)) props.onAfterCreate.call(props, ret, props);
-        return ret;
-      }
-    }, {
-      key: "extendProps",
-      value: function extendProps(props, newProps) {
-        if (!Util.isEmpty(newProps)) {
-          for (var p in newProps) {
-            if (newProps.hasOwnProperty(p)) {
-              props[p] = newProps[p];
-            }
-          }
-        }
-
-        return props;
-      }
-    }, {
-      key: "setRmeState",
-      value: function setRmeState(key, value) {
-        this.rmeState[key] = value;
-        this.onStorageChange.call(this, this.rmeState);
-      }
-    }, {
-      key: "getRmeState",
-      value: function getRmeState(key) {
-        return this.rmeState[key];
-      }
-    }, {
-      key: "configure",
-      value: function configure(config) {
-        this.router = config.router;
-        this.messages = config.messages;
-        this.defaultApp = config.app;
-        if (!Util.isEmpty(this.router)) this.router.setApp(this.defaultApp);
-        if (!Util.isEmpty(this.messages)) this.messages.setApp(this.defaultApp);
-        if (!Util.isEmpty(this.defaultApp)) this.defaultApp.setRouter(this.router);
-      }
-      /** 
-       * Runs a runnable script immedeately. If multpile run functions are declared they will be invoked by the declaration order.
-       */
-
-    }], [{
-      key: "run",
-      value: function run(runnable) {
-        if (runnable && Util.isFunction(runnable)) RME.getInstance().setRunner(runnable).start();
-      }
-      /**
-       * Waits until body has been loaded and then runs a runnable script. 
-       * If multiple ready functions are declared the latter one is invoked.
-       */
-
-    }, {
-      key: "ready",
-      value: function ready(runnable) {
-        if (runnable && Util.isFunction(runnable)) RME.getInstance().setComplete(runnable);
-      }
-      /**
-       * Creates or retrieves a RME component. 
-       * If the first parameter is a function then this method will try to create a RME component and store it
-       * in the RME instance.
-       * If the first parameter is a string then this method will try to retrieve a RME component from the 
-       * RME instance.
-       * @param {*} runnable Type function or String.
-       * @param {Object} props 
-       */
-
-    }, {
-      key: "component",
-      value: function component(runnable, props) {
-        if (runnable && (Util.isFunction(runnable) || Util.isObject(runnable))) RME.getInstance().addComponent(runnable, props);else if (runnable && Util.isString(runnable)) return RME.getInstance().getComponent(runnable, props);
-      }
-      /**
-       * Saves data to or get data from the RME instance storage.
-       * If key and value parameters are not empty then this method will try to save the give value by the given key
-       * into to the RME instance storage.
-       * If key is not empty and value is empty then this method will try to get data from the RME instance storage
-       * by the given key.
-       * @param {String} key 
-       * @param {Object} value 
-       */
-
-    }, {
-      key: "storage",
-      value: function storage(key, value) {
-        if (!Util.isEmpty(key) && !Util.isEmpty(value)) RME.getInstance().setRmeState(key, value);else if (!Util.isEmpty(key) && Util.isEmpty(value)) return RME.getInstance().getRmeState(key);
-      }
-      /**
-       * Adds a script file on runtime into the head of the current html document where the method is called on.
-       * Source is required other properties can be omitted.
-       * @param {String} source URL or file name. *Requied
-       * @param {String} id 
-       * @param {String} type 
-       * @param {String} text Content of the script element if any.
-       * @param {boolean} defer If true script is executed when page has finished parsing.
-       * @param {*} crossOrigin 
-       * @param {String} charset 
-       * @param {boolean} async If true script is executed asynchronously when available.
-       */
-
-    }, {
-      key: "script",
-      value: function script(source, id, type, text, defer, crossOrigin, charset, async) {
-        if (!Util.isEmpty(source)) {
-          var sc = new Elem("script").setSource(source);
-          if (!Util.isEmpty(id)) sc.setId(id);
-          if (!Util.isEmpty(type)) sc.setType(type);
-          if (!Util.isEmpty(text)) sc.setText(text);
-          if (!Util.isEmpty(defer)) sc.setAttribute("defer", defer);
-          if (!Util.isEmpty(crossOrigin)) sc.setAttribute("crossOrigin", crossOrigin);
-          if (!Util.isEmpty(charset)) sc.setAttribute("charset", charset);
-          if (!Util.isEmpty(async)) sc.setAttribute("async", async);
-          RME.addScript(sc);
-        }
-      }
-      /**
-       * This is called when ever a new data is saved into the RME instance storage.
-       * Callback function has one paramater newState that is the latest snapshot of the 
-       * current instance storage.
-       * @param {function} listener 
-       */
-
-    }, {
-      key: "onStorageChange",
-      value: function onStorageChange(listener) {
-        if (listener && Util.isFunction(listener)) RME.getInstance().onrmestoragechange = listener;
-      }
-      /**
-       * Function checks if a component with the given name exists.
-       * @param {string} name 
-       * @returns True if the component exist otherwise false
-       */
-
-    }, {
-      key: "hasComponent",
-      value: function hasComponent(name) {
-        return !Util.isEmpty(RME.getInstance().components[name.replace("component:", "")]);
-      }
-      /**
-       * Function receives an object as a parameter that holds three properties router, messages and app. The function will
-       * autoconfigure the Router, the Messages and the App instance to be used as default.
-       * 
-       * The config object represented
-       * {
-       * router: Router reference
-       * messages: Messages reference
-       * app: App instance
-       * }
-       * @param {object} config 
-       */
-
-    }, {
-      key: "use",
-      value: function use(config) {
-        RME.getInstance().configure(config);
-      }
-    }, {
-      key: "addScript",
-      value: function addScript(elem) {
-        var scripts = Tree.getScripts();
-        var lastScript = scripts[scripts.length - 1];
-        lastScript.after(elem);
-      }
-    }, {
-      key: "removeScript",
-      value: function removeScript(sourceOrId) {
-        if (sourceOrId.indexOf("#") === 0) {
-          Tree.getHead().remove(Tree.get(sourceOrId));
-        } else {
-          var scripts = Tree.getScripts();
-
-          for (var s in scripts) {
-            if (scripts.hasOwnProperty(s)) {
-              var src = !Util.isEmpty(scripts[s].getSource()) ? scripts[s].getSource() : "";
-
-              if (src.search(sourceOrId) > -1 && src.search(sourceOrId) === src.length - sourceOrId.length) {
-                Tree.getHead().remove(scripts[s]);
-                break;
-              }
-            }
-          }
-        }
-      }
-    }, {
-      key: "getInstance",
-      value: function getInstance() {
-        if (!this.instance) this.instance = new RME();
-        return this.instance;
-      }
-    }]);
-
-    return RME;
-  }();
-
-  document.addEventListener("readystatechange", function () {
-    if (document.readyState === "complete") RME.getInstance().complete();
-  });
-  return {
-    run: RME.run,
-    ready: RME.ready,
-    component: RME.component,
-    storage: RME.storage,
-    script: RME.script,
-    onStorageChange: RME.onStorageChange,
-    hasComponent: RME.hasComponent,
-    use: RME.use
   };
 }();
 
@@ -5541,218 +5541,60 @@ function () {
   return Session;
 }();
 /**
- * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
- * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
- * 
- * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
- * operation functionalities.
+ * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
  */
 
 
-var Tree =
+var Storage =
 /*#__PURE__*/
 function () {
-  function Tree() {
-    _classCallCheck(this, Tree);
+  function Storage() {
+    _classCallCheck(this, Storage);
   }
 
-  _createClass(Tree, null, [{
+  _createClass(Storage, null, [{
+    key: "set",
+
+    /**
+     * Save data into the local storage. 
+     * @param {string} key
+     * @param {*} value
+     */
+    value: function set(key, value) {
+      localStorage.setItem(key, value);
+    }
+    /**
+     * Get the saved data from the local storage.
+     * @param {string} key
+     */
+
+  }, {
     key: "get",
-
-    /**
-     * Uses CSS selector to find elements on the HTML Document Tree. 
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} selector 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    value: function get(selector) {
-      return Elem.wrapElems(document.querySelectorAll(selector));
+    value: function get(key) {
+      return localStorage.getItem(key);
     }
     /**
-     * Uses CSS selector to find the first match element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} selector 
-     * @returns An Elem instance.
+     * Remove data from the local storage.
+     * @param {string} key
      */
 
   }, {
-    key: "getFirst",
-    value: function getFirst(selector) {
-      return Elem.wrap(document.querySelector(selector));
+    key: "remove",
+    value: function remove(key) {
+      localStorage.removeItem(key);
     }
     /**
-     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
-     * @param {string} tag 
-     * @returns An array of Elem instances or a single Elem instance.
+     * Clears the local storage.
      */
 
   }, {
-    key: "getByTag",
-    value: function getByTag(tag) {
-      return Elem.wrapElems(document.getElementsByTagName(tag));
-    }
-    /**
-     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
-     * Found elements will be wrappedn in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} name 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-
-  }, {
-    key: "getByName",
-    value: function getByName(name) {
-      return Elem.wrapElems(document.getElementsByName(name));
-    }
-    /**
-     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} id 
-     * @returns Elem instance.
-     */
-
-  }, {
-    key: "getById",
-    value: function getById(id) {
-      return Elem.wrap(document.getElementById(id));
-    }
-    /**
-     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
-     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} classname 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-
-  }, {
-    key: "getByClass",
-    value: function getByClass(classname) {
-      return Elem.wrapElems(document.getElementsByClassName(classname));
-    }
-    /**
-     * @returns body wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getBody",
-    value: function getBody() {
-      return Elem.wrap(document.body);
-    }
-    /**
-     * @returns head wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getHead",
-    value: function getHead() {
-      return Elem.wrap(document.head);
-    }
-    /**
-     * @returns title of the html document page.
-     */
-
-  }, {
-    key: "getTitle",
-    value: function getTitle() {
-      return document.title;
-    }
-    /**
-     * Set an new title for html document page.
-     * @param {string} title 
-     */
-
-  }, {
-    key: "setTitle",
-    value: function setTitle(title) {
-      document.title = title;
-    }
-    /**
-     * @returns active element wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getActiveElement",
-    value: function getActiveElement() {
-      return Elem.wrap(document.activeElement);
-    }
-    /**
-     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
-     */
-
-  }, {
-    key: "getAnchors",
-    value: function getAnchors() {
-      return Elem.wrapElems(document.anchors);
-    }
-    /**
-     * @returns <html> element.
-     */
-
-  }, {
-    key: "getHtmlElement",
-    value: function getHtmlElement() {
-      return document.documentElement;
-    }
-    /**
-     * @returns <!DOCTYPE> element.
-     */
-
-  }, {
-    key: "getDoctype",
-    value: function getDoctype() {
-      return document.doctype;
-    }
-    /**
-     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
-     */
-
-  }, {
-    key: "getEmbeds",
-    value: function getEmbeds() {
-      return Elem.wrapElems(document.embeds);
-    }
-    /**
-     * @returns an array of image elements (<img>) wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getImages",
-    value: function getImages() {
-      return Elem.wrapElems(document.images);
-    }
-    /**
-     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getLinks",
-    value: function getLinks() {
-      return Elem.wrapElems(document.links);
-    }
-    /**
-     * @returns an array of scripts wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getScripts",
-    value: function getScripts() {
-      return Elem.wrapElems(document.scripts);
-    }
-    /**
-     * @returns an array of form elements wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getForms",
-    value: function getForms() {
-      return Elem.wrapElems(document.forms);
+    key: "clear",
+    value: function clear() {
+      localStorage.clear();
     }
   }]);
 
-  return Tree;
+  return Storage;
 }();
 
 var Template = function () {
@@ -5807,7 +5649,7 @@ var Template = function () {
             if (round === 0) {
               ++round;
               this.root = this.resolveElement(obj, template[obj]);
-              if (Util.isArray(template[obj])) this.resolveArray(template[obj], this.root, round);else if (!this.isComponent(obj) && Util.isObject(template[obj])) this.resolve(template[obj], this.root, round);else if (Util.isFunction(template[obj])) this.resolveFunction(this.root, template[obj]);
+              if (Util.isArray(template[obj])) this.resolveArray(template[obj], this.root, round);else if (!this.isComponent(obj) && Util.isObject(template[obj])) this.resolve(template[obj], this.root, round);else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) this.resolveStringNumber(this.root, template[obj]);else if (Util.isFunction(template[obj])) this.resolveFunction(this.root, template[obj]);
             } else {
               ++round;
 
@@ -5823,6 +5665,8 @@ var Template = function () {
                   this.resolveArray(template[obj], child, round);
                 } else if (!this.isComponent(obj) && Util.isObject(template[obj])) {
                   this.resolve(template[obj], child, round);
+                } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
+                  this.resolveStringNumber(child, template[obj]);
                 } else if (Util.isFunction(template[obj])) {
                   this.resolveFunction(child, template[obj]);
                 }
@@ -5850,6 +5694,10 @@ var Template = function () {
             if (o.hasOwnProperty(key)) {
               if (Util.isObject(o[key])) {
                 this.resolve(o, parent, round);
+              } else if (Util.isString(o[key]) || Util.isNumber(o[key])) {
+                var el = this.resolveElement(key);
+                this.resolveStringNumber(el, o[key]);
+                parent.append(el);
               } else if (Util.isFunction(o[key])) {
                 var el = this.resolveElement(key);
                 this.resolveFunction(el, o[key]);
@@ -5860,6 +5708,17 @@ var Template = function () {
 
           i++;
         }
+      }
+      /**
+       * Function will set String or Number values for the given element.
+       * @param {object} elem 
+       * @param {*} value 
+       */
+
+    }, {
+      key: "resolveStringNumber",
+      value: function resolveStringNumber(elem, value) {
+        if (Util.isString(value) && this.isMessage(value)) this.resolveMessage(elem, value);else elem.setText(value);
       }
       /**
        * Resolves function based tempalte implementation.
@@ -5909,9 +5768,9 @@ var Template = function () {
       value: function resolveElement(tag, obj) {
         var resolved = null;
         var match = [];
-        var el = tag.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join();
+        var el = this.getElementName(tag);
 
-        if (this.isComponent(el)) {
+        if (RME.hasComponent(el)) {
           el = el.replace(/component:/, "");
           resolved = RME.component(el, obj);
         } else if (Util.isEmpty(el)) throw "Template resolver could not find element: \"" + el + "\" from the given tag: \"" + tag + "\"";else resolved = new Elem(el);
@@ -5922,10 +5781,22 @@ var Template = function () {
         match = tag.match(/\.[a-zA-Z-0-9\-]+/g); //find classes
 
         if (!Util.isEmpty(match)) resolved.addClasses(match.join(" ").replace(/\./g, ""));
-        match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_&%@!?£$+¤|\\<\\>\\"]+\]/g); //find attributes
+        match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_&%@!?£$+¤|;\\<\\>\\"]+\]/g); //find attributes
 
         if (!Util.isEmpty(match)) resolved = this.addAttributes(resolved, match);
         return resolved;
+      }
+      /**
+       * Function will try to parse an element name from the given string. If the given string
+       * is no empty a matched string is returned. If the given string is empty nothing is returned
+       * @param {string} str 
+       * @returns The matched string.
+       */
+
+    }, {
+      key: "getElementName",
+      value: function getElementName(str) {
+        if (!Util.isEmpty(str)) return str.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join();
       }
       /**
        * Adds resolved attributes to an element.
@@ -6146,7 +6017,7 @@ var Template = function () {
     }, {
       key: "isComponent",
       value: function isComponent(key) {
-        return RME.hasComponent(key) || key.indexOf("component:") === 0 && RME.hasComponent(key.replace(/component:/, ""));
+        return RME.hasComponent(this.getElementName(key));
       }
       /**
        * Method takes a template as parameter, starts resolving it and 
@@ -6320,60 +6191,218 @@ var Template = function () {
   };
 }();
 /**
- * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
+ * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
+ * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
+ * 
+ * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
+ * operation functionalities.
  */
 
 
-var Storage =
+var Tree =
 /*#__PURE__*/
 function () {
-  function Storage() {
-    _classCallCheck(this, Storage);
+  function Tree() {
+    _classCallCheck(this, Tree);
   }
 
-  _createClass(Storage, null, [{
-    key: "set",
-
-    /**
-     * Save data into the local storage. 
-     * @param {string} key
-     * @param {*} value
-     */
-    value: function set(key, value) {
-      localStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the local storage.
-     * @param {string} key
-     */
-
-  }, {
+  _createClass(Tree, null, [{
     key: "get",
-    value: function get(key) {
-      return localStorage.getItem(key);
+
+    /**
+     * Uses CSS selector to find elements on the HTML Document Tree. 
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} selector 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    value: function get(selector) {
+      return Elem.wrapElems(document.querySelectorAll(selector));
     }
     /**
-     * Remove data from the local storage.
-     * @param {string} key
+     * Uses CSS selector to find the first match element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} selector 
+     * @returns An Elem instance.
      */
 
   }, {
-    key: "remove",
-    value: function remove(key) {
-      localStorage.removeItem(key);
+    key: "getFirst",
+    value: function getFirst(selector) {
+      return Elem.wrap(document.querySelector(selector));
     }
     /**
-     * Clears the local storage.
+     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
+     * @param {string} tag 
+     * @returns An array of Elem instances or a single Elem instance.
      */
 
   }, {
-    key: "clear",
-    value: function clear() {
-      localStorage.clear();
+    key: "getByTag",
+    value: function getByTag(tag) {
+      return Elem.wrapElems(document.getElementsByTagName(tag));
+    }
+    /**
+     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
+     * Found elements will be wrappedn in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} name 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+
+  }, {
+    key: "getByName",
+    value: function getByName(name) {
+      return Elem.wrapElems(document.getElementsByName(name));
+    }
+    /**
+     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} id 
+     * @returns Elem instance.
+     */
+
+  }, {
+    key: "getById",
+    value: function getById(id) {
+      return Elem.wrap(document.getElementById(id));
+    }
+    /**
+     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
+     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} classname 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+
+  }, {
+    key: "getByClass",
+    value: function getByClass(classname) {
+      return Elem.wrapElems(document.getElementsByClassName(classname));
+    }
+    /**
+     * @returns body wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getBody",
+    value: function getBody() {
+      return Elem.wrap(document.body);
+    }
+    /**
+     * @returns head wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getHead",
+    value: function getHead() {
+      return Elem.wrap(document.head);
+    }
+    /**
+     * @returns title of the html document page.
+     */
+
+  }, {
+    key: "getTitle",
+    value: function getTitle() {
+      return document.title;
+    }
+    /**
+     * Set an new title for html document page.
+     * @param {string} title 
+     */
+
+  }, {
+    key: "setTitle",
+    value: function setTitle(title) {
+      document.title = title;
+    }
+    /**
+     * @returns active element wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getActiveElement",
+    value: function getActiveElement() {
+      return Elem.wrap(document.activeElement);
+    }
+    /**
+     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
+     */
+
+  }, {
+    key: "getAnchors",
+    value: function getAnchors() {
+      return Elem.wrapElems(document.anchors);
+    }
+    /**
+     * @returns <html> element.
+     */
+
+  }, {
+    key: "getHtmlElement",
+    value: function getHtmlElement() {
+      return document.documentElement;
+    }
+    /**
+     * @returns <!DOCTYPE> element.
+     */
+
+  }, {
+    key: "getDoctype",
+    value: function getDoctype() {
+      return document.doctype;
+    }
+    /**
+     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
+     */
+
+  }, {
+    key: "getEmbeds",
+    value: function getEmbeds() {
+      return Elem.wrapElems(document.embeds);
+    }
+    /**
+     * @returns an array of image elements (<img>) wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getImages",
+    value: function getImages() {
+      return Elem.wrapElems(document.images);
+    }
+    /**
+     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getLinks",
+    value: function getLinks() {
+      return Elem.wrapElems(document.links);
+    }
+    /**
+     * @returns an array of scripts wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getScripts",
+    value: function getScripts() {
+      return Elem.wrapElems(document.scripts);
+    }
+    /**
+     * @returns an array of form elements wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getForms",
+    value: function getForms() {
+      return Elem.wrapElems(document.forms);
     }
   }]);
 
-  return Storage;
+  return Tree;
 }();
 /**
  * General Utility methods.
