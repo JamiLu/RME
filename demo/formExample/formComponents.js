@@ -1,3 +1,5 @@
+import RME, { App } from '../../src/index';
+
 RME.component({ formExample: () => 
     ({div: {
         h2: () => 'Form Example',

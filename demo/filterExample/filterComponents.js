@@ -1,3 +1,5 @@
+import RME, { App, Template } from '../../src/index';
+
 RME.storage('countryList', [
     {country: 'Finland', capital: 'Helsinki'}, {country: 'Sweden', capital: 'Stockholm'}, {country: 'Norway', capital: 'Oslo'},
     {country: 'Iceland', capital: 'Reykjavik'}, {country: 'England', capital: 'London'}, {country: 'America', capital: 'Washington'}, 

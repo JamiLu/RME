@@ -1,3 +1,4 @@
+import { App } from '../src/index';
 import '../demo/todoExample/todoComponents';
 import '../demo/formExample/formComponents';
 import '../demo/filterExample/filterComponents';

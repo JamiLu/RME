@@ -1,3 +1,5 @@
+import RME, { App, Key } from '../../src/index';
+
 RME.component({ todoExample: () => 
     ({div: {
         h2: () => 'Todo Example',
