@@ -360,7 +360,7 @@ let App = (function() {
                         oldMap[key] = oldMap[key].concat(newMap[key]);
                     else if(Util.isObject(oldMap[key]) && Util.isObject(newMap[key]))
                         this.recursiveMergeState(oldMap[key], newMap[key]);
-                    else if(Util.isEmpty(oldMap[key]))
+                    else
                         oldMap[key] = newMap[key];
                 }
             }
