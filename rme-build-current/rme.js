@@ -953,121 +953,6 @@ class Browser {
 
 
 
-let Cookie = (function() {
-    /**
-     * Cookie interface offers an easy way to get, set or remove cookies in application logic.
-     * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
-     * 
-     * {
-     *    name: "name",
-     *    value: "value",
-     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-     *    cookiePath: "cookiePath absolute dir",
-     *    cookieDomain: "cookieDomain e.g example.com",
-     *    setSecureBoolean: true|false
-     * }
-     * 
-     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-     */
-    class Cookie {
-        /**
-         * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
-         * 
-         * @param {String} name 
-         * @returns cookie object
-         */
-        static get(name) {
-            if(navigator.cookieEnabled) {
-                var retCookie = null;
-                var cookies = document.cookie.split(";");
-                var i = 0;
-                while(i < cookies.length) {
-                    var cookie = cookies[i];
-                    var eq = cookie.search("=");
-                    var cn = cookie.substr(0, eq).trim();
-                    var cv = cookie.substr(eq + 1, cookie.length).trim();
-                    if(cn === name) {
-                        retCookie = new CookieInstance(cn, cv);
-                        break;
-                    }
-                    i++;
-                }
-                return retCookie;
-            }
-        }
-        /**
-         * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
-         * 
-         * @param {string} name
-         * @param {string} value
-         * @param {string} expiresDate
-         * @param {string} cookiePath
-         * @param {string} cookieDomain
-         * @param {boolean} setSecureBoolean
-         */
-        static set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-            if(navigator.cookieEnabled) {
-                document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
-            }
-        }
-        /**
-         * Remove a cookie by name. Method will set the cookie expired and then remove it.
-         * @param {string} name
-         */
-        static remove(name) {
-            var co = Cookie.get(name);
-            if(!Util.isEmpty(co)) {
-                co.setExpired();
-                document.cookie = co.toString();
-            }
-        }
-    }
-
-    /**
-     * Cookie object may hold following values:
-     *
-     * {
-     *    name: "name",
-     *    value: "value",
-     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-     *    cookiePath: "cookiePath absolute dir",
-     *    cookieDomain: "cookieDomain e.g example.com",
-     *    setSecureBoolean: true|false
-     * }
-     * 
-     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-     */
-    class CookieInstance {
-        constructor(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-            this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
-            this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
-            this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
-            this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
-            this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
-            this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
-        }
-
-        setExpired() {
-            this.cookieExpires = new Date(1970,0,1).toString();
-        }
-
-        toString() {
-            return this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity;
-        }
-        static create(name, value, expires, cpath, cdomain, setSecure) {
-                return new Cookie(name, value, expires, cpath, cdomain, setSecure);
-        }
-    }
-
-    return Cookie;
-}());
-
-
-
-
-
 
 
 let Elem = (function() {
@@ -3054,6 +2939,121 @@ class RMEElemTemplater {
     }
 }
 
+
+
+let Cookie = (function() {
+    /**
+     * Cookie interface offers an easy way to get, set or remove cookies in application logic.
+     * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
+     * 
+     * {
+     *    name: "name",
+     *    value: "value",
+     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+     *    cookiePath: "cookiePath absolute dir",
+     *    cookieDomain: "cookieDomain e.g example.com",
+     *    setSecureBoolean: true|false
+     * }
+     * 
+     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+     */
+    class Cookie {
+        /**
+         * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
+         * 
+         * @param {String} name 
+         * @returns cookie object
+         */
+        static get(name) {
+            if(navigator.cookieEnabled) {
+                var retCookie = null;
+                var cookies = document.cookie.split(";");
+                var i = 0;
+                while(i < cookies.length) {
+                    var cookie = cookies[i];
+                    var eq = cookie.search("=");
+                    var cn = cookie.substr(0, eq).trim();
+                    var cv = cookie.substr(eq + 1, cookie.length).trim();
+                    if(cn === name) {
+                        retCookie = new CookieInstance(cn, cv);
+                        break;
+                    }
+                    i++;
+                }
+                return retCookie;
+            }
+        }
+        /**
+         * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
+         * 
+         * @param {string} name
+         * @param {string} value
+         * @param {string} expiresDate
+         * @param {string} cookiePath
+         * @param {string} cookieDomain
+         * @param {boolean} setSecureBoolean
+         */
+        static set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+            if(navigator.cookieEnabled) {
+                document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
+            }
+        }
+        /**
+         * Remove a cookie by name. Method will set the cookie expired and then remove it.
+         * @param {string} name
+         */
+        static remove(name) {
+            var co = Cookie.get(name);
+            if(!Util.isEmpty(co)) {
+                co.setExpired();
+                document.cookie = co.toString();
+            }
+        }
+    }
+
+    /**
+     * Cookie object may hold following values:
+     *
+     * {
+     *    name: "name",
+     *    value: "value",
+     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+     *    cookiePath: "cookiePath absolute dir",
+     *    cookieDomain: "cookieDomain e.g example.com",
+     *    setSecureBoolean: true|false
+     * }
+     * 
+     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+     */
+    class CookieInstance {
+        constructor(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+            this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
+            this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
+            this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
+            this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
+            this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
+            this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
+        }
+
+        setExpired() {
+            this.cookieExpires = new Date(1970,0,1).toString();
+        }
+
+        toString() {
+            return this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity;
+        }
+        static create(name, value, expires, cpath, cdomain, setSecure) {
+                return new Cookie(name, value, expires, cpath, cdomain, setSecure);
+        }
+    }
+
+    return Cookie;
+}());
+
+
+
 /**
  * Before using this class you should also be familiar on how to use fetch since usage of this class
  * will be quite similar to fetch except predefined candy that is added on a class.
@@ -3586,6 +3586,255 @@ Key.DOT = ".";
 
 
 
+let Messages = (function() {
+    /**
+     * Messages class handles internationalization. The class offers public methods that enable easy 
+     * using of translated content.
+     */
+    class Messages {
+        constructor() {
+            this.instance = this;
+            this.messages = [];
+            this.locale = "";
+            this.translated = [];
+            this.load = function() {};
+            this.messagesType;
+            this.app;
+            this.ready = false;
+            this.registerMessages();
+        }
+
+        /**
+         * Initializes the Messages
+         */
+        registerMessages() {
+            document.addEventListener("readystatechange", () => {
+                if(document.readyState === "complete") {
+                    this.ready = true;
+                    this.runTranslated.call(this);
+                }
+            });
+        }
+
+        setLoad(loader) {
+            this.load = loader;
+        }
+
+        setAppInstance(appInstance) {
+            this.app = appInstance;
+        }
+
+        setLocale(locale) {
+            this.locale = locale;
+            return this;
+        }
+
+        setMessages(messages) {
+            if(Util.isArray(messages))
+                this.messagesType = "array";
+            else if(Util.isObject(messages))
+                this.messagesType = "map";
+            else
+                throw "messages must be type array or object";
+            this.messages = messages;
+            this.runTranslated.call(this);
+        }
+
+        getMessage(text, ...params) {
+            if(Util.isEmpty(params[0][0])) {
+                return this.resolveMessage(text);
+            } else {
+                this.getTranslatedElemIfExist(text, params[0][0]);
+                let msg = this.resolveMessage(text);
+                return this.resolveParams(msg, params[0][0]);
+            }
+        }
+
+        /**
+         * Resolves translated message key and returns a resolved message if exist
+         * otherwise returns the given key.
+         * @param {string} text 
+         * @returns A resolved message if exist otherwise the given key.
+         */
+        resolveMessage(text) {
+            if(this.messagesType === "array") {
+                return this.resolveMessagesArray(text);
+            } else if(this.messagesType === "map") {
+                return this.resolveMessagesMap(text);
+            }
+        }
+
+        /**
+         * Resolves a translated message key from the map. Returns a resolved message 
+         * if found otherwise returns the key.
+         * @param {string} text 
+         * @returns A resolved message
+         */
+        resolveMessagesMap(text) {
+            let msg = text;
+            for(let i in this.messages) {
+                if(i === text) {
+                    msg = this.messages[i];
+                    break;
+                }
+            }
+            return msg;
+        }
+
+        /**
+         * Resolves a translated message key from the array. Returns a resolved message
+         * if found otherwise returns the key.
+         * @param {string} text 
+         * @returns A resolved message
+         */
+        resolveMessagesArray(text) {
+            let i = 0;
+            let msg = text;
+            while(i < this.messages.length) {
+                if(!Util.isEmpty(this.messages[i][text])) {
+                    msg = this.messages[i][text];
+                    break;
+                }
+                i++;
+            }
+            return msg;
+        }
+
+        /**
+         * Resolves the message parameters if exist otherwise does nothing.
+         * @param {string} msg 
+         * @param {*} params 
+         * @returns The message with resolved message parameteres if parameters exist.
+         */
+        resolveParams(msg, params) {
+            if(!Util.isEmpty(msg)) {
+                let i = 0;
+                while(i < params.length) {
+                    msg = msg.replace("{"+i+"}", params[i]);
+                    i++;
+                }
+                return msg;
+            }
+        }
+
+        /**
+         * Function gets a Elem object and inserts it into a translated object array if it exists.
+         * @param {string} key 
+         * @param {*} params 
+         */
+        getTranslatedElemIfExist(key, params) {
+            if(Util.isEmpty(this.app)) {
+                let last = params[params.length - 1];
+                if(Util.isObject(last) && last instanceof Elem) {
+                    last = params.pop();
+                    this.translated.push({key: key, params: params, obj: last});
+                }
+            }
+        }
+
+        /**
+         * Function goes through the translated objects array and sets a translated message to the translated elements.
+         */
+        runTranslated() {
+            if(Util.isEmpty(this.app) && this.ready) {
+                Util.setTimeout(() => {
+                    let i = 0;
+                    while(i < this.translated.length) {
+                        this.translated[i].obj.setText.call(this.translated[i].obj, Messages.message(this.translated[i].key, this.translated[i].params));
+                        i++;
+                    }
+                });
+            } else if(this.ready) {
+                this.app.refresh();
+            }
+        }
+
+        /**
+         * Function returns current locale of the Messages
+         * @returns Current locale
+         */
+        static locale() {
+            return Messages.getInstance().locale;
+        }
+
+        /**
+         * Lang function is used to change or set the current locale to be the given locale. After calling this method
+         * the Messages.load function will be automatically invoked.
+         * @param {string} locale String
+         * @param {object} locale Event
+         */
+        static lang(locale) {
+            let loc;
+            if(Util.isObject(locale) && locale instanceof Event) {
+                locale.preventDefault();
+                let el = Elem.wrap(locale.target);
+                loc = el.getHref();
+                if(Util.isEmpty(loc))
+                    loc = el.getValue();
+                if(Util.isEmpty(loc))
+                    loc = el.getText();
+            } else if(Util.isString(locale))
+                loc = locale;
+            else
+                throw "Given parameter must be type string or instance of Event, given value: " + locale;
+            if(!Util.isEmpty(loc))
+                Messages.getInstance().setLocale(loc).load.call(null, 
+                    Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
+        }
+
+        /**
+         * Message function is used to retrieve translated messages. The function also supports message parameters
+         * that can be given as a comma separeted list. 
+         * @param {string} text 
+         * @param {*} params 
+         * @returns A resolved message or the given key if the message is not found.
+         */
+        static message(text, ...params) {
+            return Messages.getInstance().getMessage(text, params);
+        }
+
+        /**
+         * Load function is used to load new messages or change already loaded messages.
+         * Implementation of the function receives two parameters. The one of the parameters is the changed locale and 
+         * the other is setMessages(messagesArrayOrObject) function that is used to change the translated messages.
+         * This function is called automatically when language is changed by calling the Messages.lang() function.
+         * @param {function} loader 
+         */
+        static load(loader) {
+            if(!Util.isFunction(loader))
+                throw "loader must be type function " + Util.getType(loader);
+            Messages.getInstance().setLoad(loader);
+        }
+
+        /**
+         * Set the app instance to be invoked on the Messages update.
+         * @param {object} appInstance 
+         */
+        static setApp(appInstance) {
+            Messages.getInstance().setAppInstance(appInstance);
+            return Messages;
+        }
+
+        static getInstance() {
+            if(!this.instance)
+                this.instance = new Messages();
+            return this.instance;
+        }
+    }
+
+    return {
+        lang: Messages.lang,
+        message: Messages.message,
+        load: Messages.load,
+        locale: Messages.locale,
+        setApp: Messages.setApp
+    };
+}());
+
+
+
+
+
 let RME = (function() {
     /**
      * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create RESTfull webpages with ease and speed.
@@ -3858,253 +4107,6 @@ let RME = (function() {
 }());
 
 
-
-
-
-let Messages = (function() {
-    /**
-     * Messages class handles internationalization. The class offers public methods that enable easy 
-     * using of translated content.
-     */
-    class Messages {
-        constructor() {
-            this.instance = this;
-            this.messages = [];
-            this.locale = "";
-            this.translated = [];
-            this.load = function() {};
-            this.messagesType;
-            this.app;
-            this.ready = false;
-            this.registerMessages();
-        }
-
-        /**
-         * Initializes the Messages
-         */
-        registerMessages() {
-            document.addEventListener("readystatechange", () => {
-                if(document.readyState === "complete") {
-                    this.ready = true;
-                    this.runTranslated.call(this);
-                }
-            });
-        }
-
-        setLoad(loader) {
-            this.load = loader;
-        }
-
-        setAppInstance(appInstance) {
-            this.app = appInstance;
-        }
-
-        setLocale(locale) {
-            this.locale = locale;
-            return this;
-        }
-
-        setMessages(messages) {
-            if(Util.isArray(messages))
-                this.messagesType = "array";
-            else if(Util.isObject(messages))
-                this.messagesType = "map";
-            else
-                throw "messages must be type array or object";
-            this.messages = messages;
-            this.runTranslated.call(this);
-        }
-
-        getMessage(text, ...params) {
-            if(Util.isEmpty(params[0][0])) {
-                return this.resolveMessage(text);
-            } else {
-                this.getTranslatedElemIfExist(text, params[0][0]);
-                let msg = this.resolveMessage(text);
-                return this.resolveParams(msg, params[0][0]);
-            }
-        }
-
-        /**
-         * Resolves translated message key and returns a resolved message if exist
-         * otherwise returns the given key.
-         * @param {string} text 
-         * @returns A resolved message if exist otherwise the given key.
-         */
-        resolveMessage(text) {
-            if(this.messagesType === "array") {
-                return this.resolveMessagesArray(text);
-            } else if(this.messagesType === "map") {
-                return this.resolveMessagesMap(text);
-            }
-        }
-
-        /**
-         * Resolves a translated message key from the map. Returns a resolved message 
-         * if found otherwise returns the key.
-         * @param {string} text 
-         * @returns A resolved message
-         */
-        resolveMessagesMap(text) {
-            let msg = text;
-            for(let i in this.messages) {
-                if(i === text) {
-                    msg = this.messages[i];
-                    break;
-                }
-            }
-            return msg;
-        }
-
-        /**
-         * Resolves a translated message key from the array. Returns a resolved message
-         * if found otherwise returns the key.
-         * @param {string} text 
-         * @returns A resolved message
-         */
-        resolveMessagesArray(text) {
-            let i = 0;
-            let msg = text;
-            while(i < this.messages.length) {
-                if(!Util.isEmpty(this.messages[i][text])) {
-                    msg = this.messages[i][text];
-                    break;
-                }
-                i++;
-            }
-            return msg;
-        }
-
-        /**
-         * Resolves the message parameters if exist otherwise does nothing.
-         * @param {string} msg 
-         * @param {*} params 
-         * @returns The message with resolved message parameteres if parameters exist.
-         */
-        resolveParams(msg, params) {
-            if(!Util.isEmpty(msg)) {
-                let i = 0;
-                while(i < params.length) {
-                    msg = msg.replace("{"+i+"}", params[i]);
-                    i++;
-                }
-                return msg;
-            }
-        }
-
-        /**
-         * Function gets a Elem object and inserts it into a translated object array if it exists.
-         * @param {string} key 
-         * @param {*} params 
-         */
-        getTranslatedElemIfExist(key, params) {
-            if(Util.isEmpty(this.app)) {
-                let last = params[params.length - 1];
-                if(Util.isObject(last) && last instanceof Elem) {
-                    last = params.pop();
-                    this.translated.push({key: key, params: params, obj: last});
-                }
-            }
-        }
-
-        /**
-         * Function goes through the translated objects array and sets a translated message to the translated elements.
-         */
-        runTranslated() {
-            if(Util.isEmpty(this.app) && this.ready) {
-                Util.setTimeout(() => {
-                    let i = 0;
-                    while(i < this.translated.length) {
-                        this.translated[i].obj.setText.call(this.translated[i].obj, Messages.message(this.translated[i].key, this.translated[i].params));
-                        i++;
-                    }
-                });
-            } else if(this.ready) {
-                this.app.refresh();
-            }
-        }
-
-        /**
-         * Function returns current locale of the Messages
-         * @returns Current locale
-         */
-        static locale() {
-            return Messages.getInstance().locale;
-        }
-
-        /**
-         * Lang function is used to change or set the current locale to be the given locale. After calling this method
-         * the Messages.load function will be automatically invoked.
-         * @param {string} locale String
-         * @param {object} locale Event
-         */
-        static lang(locale) {
-            let loc;
-            if(Util.isObject(locale) && locale instanceof Event) {
-                locale.preventDefault();
-                let el = Elem.wrap(locale.target);
-                loc = el.getHref();
-                if(Util.isEmpty(loc))
-                    loc = el.getValue();
-                if(Util.isEmpty(loc))
-                    loc = el.getText();
-            } else if(Util.isString(locale))
-                loc = locale;
-            else
-                throw "Given parameter must be type string or instance of Event, given value: " + locale;
-            if(!Util.isEmpty(loc))
-                Messages.getInstance().setLocale(loc).load.call(null, 
-                    Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
-        }
-
-        /**
-         * Message function is used to retrieve translated messages. The function also supports message parameters
-         * that can be given as a comma separeted list. 
-         * @param {string} text 
-         * @param {*} params 
-         * @returns A resolved message or the given key if the message is not found.
-         */
-        static message(text, ...params) {
-            return Messages.getInstance().getMessage(text, params);
-        }
-
-        /**
-         * Load function is used to load new messages or change already loaded messages.
-         * Implementation of the function receives two parameters. The one of the parameters is the changed locale and 
-         * the other is setMessages(messagesArrayOrObject) function that is used to change the translated messages.
-         * This function is called automatically when language is changed by calling the Messages.lang() function.
-         * @param {function} loader 
-         */
-        static load(loader) {
-            if(!Util.isFunction(loader))
-                throw "loader must be type function " + Util.getType(loader);
-            Messages.getInstance().setLoad(loader);
-        }
-
-        /**
-         * Set the app instance to be invoked on the Messages update.
-         * @param {object} appInstance 
-         */
-        static setApp(appInstance) {
-            Messages.getInstance().setAppInstance(appInstance);
-            return Messages;
-        }
-
-        static getInstance() {
-            if(!this.instance)
-                this.instance = new Messages();
-            return this.instance;
-        }
-    }
-
-    return {
-        lang: Messages.lang,
-        message: Messages.message,
-        load: Messages.load,
-        locale: Messages.locale,
-        setApp: Messages.setApp
-    };
-}());
 
 
 
@@ -4569,8 +4571,6 @@ class Session {
     }
 }
 
-
-
 /**
  * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
  */
@@ -4785,7 +4785,7 @@ let Template = (function() {
             if(!Util.isEmpty(match)) 
                 resolved.addClasses(match.join(" ").replace(/\./g, ""));
 
-            match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_&%@!?£$+¤|;\\<\\>\\"]+\]/g); //find attributes
+            match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_\/\.&%@!?£$+¤|;\\<\\>\\"]+\]/g); //find attributes
             if(!Util.isEmpty(match))
                 resolved = this.addAttributes(resolved, match);
 
@@ -5156,6 +5156,171 @@ let Template = (function() {
     }
 }());
 
+/**
+ * General Utility methods.
+ */
+class Util {
+    /**
+     * Checks is a given value empty.
+     * @param {*} value
+     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
+     */
+    static isEmpty(value) {
+        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
+    }
+
+    /**
+     * Get the type of the given value.
+     * @param {*} value
+     * @returns The type of the given value.
+     */
+    static getType(value) {
+        return typeof value;
+    }
+
+    /**
+     * Checks is a given value is a given type.
+     * @param {*} value
+     * @param {string} type
+     * @returns True if the given value is the given type otherwise false.
+     */
+    static isType(value, type) {
+        return (Util.getType(value) === type);
+    }
+
+    /**
+     * Checks is a given parameter a function.
+     * @param {*} func 
+     * @returns True if the given parameter is fuction otherwise false.
+     */
+    static isFunction(func) {
+        return Util.isType(func, "function");
+    }
+
+    /**
+     * Checks is a given parameter a boolean.
+     * @param {*} boolean
+     * @returns True if the given parameter is boolean otherwise false.
+     */
+    static isBoolean(boolean) {
+        return Util.isType(boolean, "boolean");
+    }
+
+    /**
+     * Checks is a given parameter a string.
+     * @param {*} string
+     * @returns True if the given parameter is string otherwise false.
+     */
+    static isString(string) {
+        return Util.isType(string, "string");
+    }
+
+    /**
+     * Checks is a given parameter a number.
+     * @param {*} number
+     * @returns True if the given parameter is number otherwise false.
+     */
+    static isNumber(number) {
+        return Util.isType(number, "number");
+    }
+
+    /**
+     * Checks is a given parameter a symbol.
+     * @param {*} symbol
+     * @returns True if the given parameter is symbol otherwise false.
+     */
+    static isSymbol(symbol) {
+        return Util.isType(symbol, "symbol");
+    }
+
+    /**
+     * Checks is a given parameter a object.
+     * @param {*} object
+     * @returns True if the given parameter is object otherwise false.
+     */
+    static isObject(object) {
+        return Util.isType(object, "object");
+    }
+
+    /**
+     * Checks is a given parameter an array.
+     * @param {*} array
+     * @returns True if the given parameter is array otherwise false.
+     */
+    static isArray(array) {
+        return Array.isArray(array);
+    }
+
+    /**
+     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The timeout object.
+     */
+    static setTimeout(callback, milliseconds, ...params) {
+        if(!Util.isFunction(callback)) {
+            throw "callback not fuction";
+        }
+        return window.setTimeout(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes a timeout that was created by setTimeout method.
+     * @param {object} timeoutObject
+     */
+    static clearTimeout(timeoutObject) {
+        window.clearTimeout(timeoutObject);
+    }
+
+    /**
+     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The interval object.
+     */
+    static setInterval(callback, milliseconds, ...params) {
+        if(!Util.isFunction(callback)) {
+            throw "callback not fuction";
+        }
+        return window.setInterval(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes an interval that was created by setInterval method.
+     */
+    static clearInterval(intervalObject) {
+        window.clearInterval(intervalObject);
+    }
+
+    /**
+     * Encodes a string to Base64.
+     * @param {string} string
+     * @returns The base64 encoded string.
+     */
+    static encodeBase64String(string) {
+        if(!Util.isString(string)) {
+            throw "the given parameter is not a string: " +string;
+        }
+        return window.btoa(string);
+    }
+
+    /**
+     * Decodes a base 64 encoded string.
+     * @param {string} string
+     * @returns The base64 decoded string.
+     */
+    static decodeBase64String(string) {
+        if(!Util.isString(string)) {
+            throw "the given parameter is not a string: " +string;
+        }
+        return window.atob(string);
+    }
+}
+
+
+
 
 
 /**
@@ -5320,171 +5485,6 @@ class Tree {
      */
     static getForms() {
         return Elem.wrapElems(document.forms);
-    }
-}
-
-
-
-/**
- * General Utility methods.
- */
-class Util {
-    /**
-     * Checks is a given value empty.
-     * @param {*} value
-     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
-     */
-    static isEmpty(value) {
-        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
-    }
-
-    /**
-     * Get the type of the given value.
-     * @param {*} value
-     * @returns The type of the given value.
-     */
-    static getType(value) {
-        return typeof value;
-    }
-
-    /**
-     * Checks is a given value is a given type.
-     * @param {*} value
-     * @param {string} type
-     * @returns True if the given value is the given type otherwise false.
-     */
-    static isType(value, type) {
-        return (Util.getType(value) === type);
-    }
-
-    /**
-     * Checks is a given parameter a function.
-     * @param {*} func 
-     * @returns True if the given parameter is fuction otherwise false.
-     */
-    static isFunction(func) {
-        return Util.isType(func, "function");
-    }
-
-    /**
-     * Checks is a given parameter a boolean.
-     * @param {*} boolean
-     * @returns True if the given parameter is boolean otherwise false.
-     */
-    static isBoolean(boolean) {
-        return Util.isType(boolean, "boolean");
-    }
-
-    /**
-     * Checks is a given parameter a string.
-     * @param {*} string
-     * @returns True if the given parameter is string otherwise false.
-     */
-    static isString(string) {
-        return Util.isType(string, "string");
-    }
-
-    /**
-     * Checks is a given parameter a number.
-     * @param {*} number
-     * @returns True if the given parameter is number otherwise false.
-     */
-    static isNumber(number) {
-        return Util.isType(number, "number");
-    }
-
-    /**
-     * Checks is a given parameter a symbol.
-     * @param {*} symbol
-     * @returns True if the given parameter is symbol otherwise false.
-     */
-    static isSymbol(symbol) {
-        return Util.isType(symbol, "symbol");
-    }
-
-    /**
-     * Checks is a given parameter a object.
-     * @param {*} object
-     * @returns True if the given parameter is object otherwise false.
-     */
-    static isObject(object) {
-        return Util.isType(object, "object");
-    }
-
-    /**
-     * Checks is a given parameter an array.
-     * @param {*} array
-     * @returns True if the given parameter is array otherwise false.
-     */
-    static isArray(array) {
-        return Array.isArray(array);
-    }
-
-    /**
-     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The timeout object.
-     */
-    static setTimeout(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setTimeout(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes a timeout that was created by setTimeout method.
-     * @param {object} timeoutObject
-     */
-    static clearTimeout(timeoutObject) {
-        window.clearTimeout(timeoutObject);
-    }
-
-    /**
-     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The interval object.
-     */
-    static setInterval(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setInterval(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes an interval that was created by setInterval method.
-     */
-    static clearInterval(intervalObject) {
-        window.clearInterval(intervalObject);
-    }
-
-    /**
-     * Encodes a string to Base64.
-     * @param {string} string
-     * @returns The base64 encoded string.
-     */
-    static encodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.btoa(string);
-    }
-
-    /**
-     * Decodes a base 64 encoded string.
-     * @param {string} string
-     * @returns The base64 decoded string.
-     */
-    static decodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.atob(string);
     }
 }
 
