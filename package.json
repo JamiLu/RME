@@ -3,6 +3,9 @@
   "version": "1.2.7",
   "description": "Functional JavaScript library for HTML 5 web sites.",
   "main": "./src/index.js",
+  "keywords": [
+    "RME", "rme", "rme.js", "JSON", "HTML5", "json", "html5", "Functional", "js", "JavaScript"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "demo": "webpack-dev-server --open --config ./webpack/webpack.demo.js",
