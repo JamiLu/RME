@@ -6,8 +6,9 @@ JavaScript.
 
 Links
 -----
- - [http://jlcv.sytes.net/rme/](http://jlcv.sytes.net/rme/) (Online documentation)
- - [http://jlcv.sytes.net/rme/howto](http://jlcv.sytes.net/rme/howto) (Online examples)
+ - [https://jamilu.github.io/RME/](https://jamilu.github.io/RME/) (Online documentation GITHUB)
+ - [http://jlcv.sytes.net/rme/](http://jlcv.sytes.net/rme/) (Online documentation OTHER)
+ - [http://jlcv.sytes.net/rme/howto](http://jlcv.sytes.net/rme/howto) (Online examples OTHER)
 
 Download
 -----
