@@ -6,7 +6,7 @@ JavaScript.
 
 Links
 -----
- - [https://jamilu.github.io/RME/](https://jamilu.github.io/RME/) (Online documentation GITHUB)
+ - [https://jamilu.github.io/RME/](https://jamilu.github.io/RME/) (Online documentation PRIMARY)
  - [http://jlcv.sytes.net/rme/](http://jlcv.sytes.net/rme/) (Online documentation OTHER)
  - [http://jlcv.sytes.net/rme/howto](http://jlcv.sytes.net/rme/howto) (Online examples OTHER)
 

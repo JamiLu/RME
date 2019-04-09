@@ -1,3 +1,4 @@
+import Util from '../util';
 import HttpFetchRequest from './fetchRequest';
 
 let Http = (function() {
