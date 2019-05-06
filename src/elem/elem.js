@@ -201,7 +201,7 @@ let Elem = (function() {
             if(Util.isBoolean(json) && json === true)
                 return JSON.stringify(RMEElemTemplater.getElementProps(this));
             else
-                return Templater.getElementProps(this);
+                return RMEElemTemplater.getElementProps(this);
         }
 
         /**
