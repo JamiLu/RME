@@ -12,9 +12,9 @@ Links
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.2.9/rme.js](https://github.com/JamiLu/RME/releases/download/v1.2.9/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.2.9/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.2.9/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.2.9/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.2.9/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.3.0/rme.js](https://github.com/JamiLu/RME/releases/download/v1.3.0/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.3.0/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.3.0/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.3.0/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.3.0/rme.es5.min.js)
 
 NPM
 ---
@@ -53,7 +53,7 @@ Basics
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.2.9/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.3.0/rme.es5.min.js"></script>`
 
 __Or use NPM__
 
@@ -74,7 +74,7 @@ App.create({
         {filterExample: {}}
     ]
 }).setState({
-    lister: {list: [{li: () => "What groceries should I buy?"}]}
+    lister: {list: [{li: 'What groceries should I buy?'}]}
 });
 ```
 Above you can see that after we have created the application by calling the App.create(...) function we can also call setState(..) function that will set state for the application. In the setState function we give it an object that in the first level tells which component the state is set to and next level will be name of the state property and the third level will be the given state value. After calling setState the Application will rerender itself. 
@@ -85,18 +85,18 @@ Now we can create a component that contains other components and even a stateful
 ```javascript
 RME.component({ todoExample: () => 
     ({div: {
-        h2: () => "Todo Example",
-        "input[type=text][placeholder=Type & Press Enter to Add]": {
+        h2: 'Todo Example',
+        'input[type=text][placeholder=Type & Press Enter to Add]': {
             onKeyDown: (event) => {
                 if(event.key === Key.ENTER) {
                     App.mergeState({lister: {list: {li: {text: event.target.value}}}});
-                    event.target.value = "";
+                    event.target.value = '';
                 }
             }
         },
         button: {
-            text: "Clear list",
-            onClick: () => App.clearState("lister", true)
+            text: 'Clear list',
+            onClick: () => App.clearState('lister', true)
         },
         lister: {}
     }})
@@ -113,13 +113,13 @@ tag so we have to explicitly tell the RME that this form is actually our compone
 ```javascript
 RME.component({ formExample: () => 
     ({div: {
-        h2: () => "Form Example",
-        statefulHeader: {fname: "", lname: ""},
+        h2: 'Form Example',
+        statefulHeader: {fname: '', lname: ''},
         "component:form": {
             input: (event) => {
-                let state = App.getState("statefulHeader");
+                let state = App.getState('statefulHeader');
                 state[event.target.name] = event.target.value
-                App.mergeState("statefulHeader", state);
+                App.mergeState('statefulHeader', state);
             }
         }
     }})
@@ -137,21 +137,17 @@ Here is our form component that has one property input which is actually onInput
 ```javascript
 RME.component({form: props => ({
     div: {
-        "label[for=fname]": {
-            text: "First name"
-        },
+        'label[for=fname]': 'First name',
         input: {
-            id: "fname",
-            name: "fname",
-            type: "text",
-            placeholder: "First name",
+            id: 'fname',
+            name: 'fname',
+            type: 'text',
+            placeholder: 'First name',
             onInput: props.input
         },
         br: {},
-        "label[for=lname]": {
-            text: "Last name"
-        },
-        "input#lname[type=text][name=lname][placeholder=Last name]": {
+        'label[for=lname]': 'Last name',
+        'input#lname[type=text][name=lname][placeholder=Last name]': {
             onInput: props.input
         },
     }})
@@ -160,22 +156,22 @@ RME.component({form: props => ({
 
 Lets hard code dummy data for our next component and save it into the RME instance storage.
 ```javascript
-RME.storage("countryList", [
-    {country: "Finland", capital: "Helsinki"}, {country: "Sweden", capital: "Stockholm"}, {country: "Norway", capital: "Oslo"},
-    {country: "Iceland", capital: "Reykjavik"}, {country: "England", capital: "London"}, {country: "America", capital: "Washington"}, 
-    {country: "Mexico", capital: "Mexico City"}, {country: "Peru", capital: "Lima"}, {country: "Egypt", capital: "Kairo"}, {country: "China", capital: "Beijing"},
-    {country: "Japan", capital: "Tokyo"}, {country: "South Korea", capital: "Seoul"}, {country: "Malaysia", capital: "Kuala Lumpur"}, {country: "Namibia", capital: "Windhoek"}, {country: "South Africa", capital: "Cape Town"}]);
+RME.storage('countryList', [
+    {country: 'Finland', capital: 'Helsinki'}, {country: 'Sweden', capital: 'Stockholm'}, {country: 'Norway', capital: 'Oslo'},
+    {country: 'Iceland', capital: 'Reykjavik'}, {country: 'England', capital: 'London'}, {country: 'America', capital: 'Washington'}, 
+    {country: 'Mexico', capital: 'Mexico City'}, {country: 'Peru', capital: 'Lima'}, {country: 'Egypt', capital: 'Kairo'}, {country: 'China', capital: 'Beijing'},
+    {country: 'Japan', capital: 'Tokyo'}, {country: 'South Korea', capital: 'Seoul'}, {country: 'Malaysia', capital: 'Kuala Lumpur'}, {country: 'Namibia', capital: 'Windhoek'}, {country: 'South Africa', capital: 'Cape Town'}]);
 ```
 
 Now we add one more component. The component has an input that is used to filter the data and a table that shows the filtered data. Default values can be given as properties to components directly and they will be overridden by state properties if they are named equally and the component has state.
 ```javascript
 RME.component({ filterExample: () => 
     ({div: {
-        h2: () => "Filter Example",
-        "input[type=text][placeholder=Type to Filter Country]": {
-            onInput: (event) => App.setState({myTable: {rows: RME.storage("countryList").filter(row => row.country.toLowerCase().search(event.target.value) > -1)}})
+        h2: 'Filter Example',
+        'input[type=text][placeholder=Type to Filter Country]': {
+            onInput: (event) => App.setState({myTable: {rows: RME.storage('countryList').filter(row => row.country.toLowerCase().search(event.target.value) > -1)}})
         },
-        myTable: {rows: RME.storage("countryList")}
+        myTable: {rows: RME.storage('countryList')}
     }})
 });
 ```
