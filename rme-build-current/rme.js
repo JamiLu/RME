@@ -1,9 +1,6 @@
 /** RME BUILD FILE **/
 
 
-
-
-
 let App = (function() {
 
     class App {
@@ -388,8 +385,6 @@ let App = (function() {
 
 
 
-
-
 class RMEElemRenderer {
     constructor(root) {
         this.root = root;
@@ -511,444 +506,6 @@ class RMEElemRenderer {
     }
 
 }
-
-/**
- * Browser class contains all the rest utility functions which JavaScript has to offer from Window, Navigator, Screen, History, Location objects.
- */
-class Browser {
-    /**
-     * Scroll once to a given location (xPos, yPos)
-     * @param {number} xPos
-     * @param {number} yPos
-     */
-    static scrollTo(xPos, yPos) {
-        window.scrollTo(xPos, yPos);
-    }
-
-    /**
-     * Scroll multiple times by given pixel amount (xPx, yPx)
-     * @param {number} xPx
-     * @param {number} yPx
-     */
-    static scrollBy(xPx, yPx) {
-        window.scrollBy(xPx, yPx);
-    }
-
-    /**
-     * Opens a new browser window.
-     * 
-     * Name pamareter can have following values: name or target value (name|_blank|_parent|_self|_top)
-     * 
-     * Specs parameter is defined as comma,separated,list,without,whitespace and it can have following values:
-     * channelmode=yes|no|1|0,
-     * direcotries=yes|no|1|0,
-     * fullscreen=yes|no|1|0,
-     * height=pixels,
-     * left=pixels,
-     * location=yes|no|1|0,
-     * menubar=yes|no|1|0,
-     * resizable=yes|no|1|0,
-     * scrollbars=yes|no|1|0,
-     * status=yes|no|1|0,
-     * titlebar=yes|no|1|0,
-     * toolbar|yes|no|1|0,
-     * top=pixels,
-     * width=pixels min 100
-     * 
-     * Replace parameter defines is a new history entry created or is current replaced with the new one.
-     * If true the current entry is replaced with the new one. If false a new history entry is created.
-     * @param {string} url 
-     * @param {string} name 
-     * @param {string} specs 
-     * @param {boolean} replace 
-     * @returns Reference to the opened window or null if opening the window failes.
-     */
-    static open(url, name, specs, replace) {
-        return window.open(url, name, specs, replace);
-    }
-
-    /**
-     * Closes a given opened window. Same as calling openedWindow.close();
-     * @param {*} openedWindow 
-     */
-    static close(openedWindow) {
-        openedWindow.close();
-    }
-
-    /**
-     * Opens a print webpage dialog.
-     */
-    static print() {
-        window.print();
-    }
-
-    /**
-     * Displays an alert dialog with a given message and an OK button.
-     * @param {string} message
-     */
-    static alert(message) {
-        window.alert(message);
-    }
-
-    /**
-     * Displays a confirm dialog with a given message, OK and Cancel button.
-     * @param {string} message
-     * @returns True if OK was pressed otherwise false.
-     */
-    static confirm(message) {
-        return window.confirm(message);
-    }
-
-    /**
-     * Displays a prompt dialog with a given message, a prefilled default text, OK and Cancel button.
-     * @param {string} message
-     * @param {string} defaultText
-     * @returns If OK was pressed and an input field has text then the text is returned. 
-     * If the input does not have text and OK was pressed then empty string is returned.
-     * If Cancel was pressed then null is returned.
-     */
-    static prompt(message, defaultText) {
-        return window.prompt(message, defaultText);
-    }
-
-    /**
-     * Method is used to make a media query to the viewport/screen object. The media query is done according to a given mediaString.
-     * Syntax of the media string would be (min-width: 300px) but using this method enables user to omit parentheses(). 
-     * Which then leads to syntax min-width: 300px.
-     * 
-     * Method returns a MediaQueryList object which has few neat properties. Matches and media in addition it has 
-     * two functions addListener and removeListener which can be used to query media in realtime. Usage could be something following:
-     * 
-     * var matcher = Browser.mediaMatcher("max-height: 300px");
-     * 
-     * matcher.addlistener(function(matcher) {
-     *  if(matcher.matches)
-     *      Tree.getBody().setStyles({backgroundColor: "red"});
-     *  else
-     *      Tree.getBody().setStyles({backgroundColor: "green"});
-     * });
-     * 
-     * matcher.media returns the media query string.
-     * 
-     * matcher.matches returns the boolean indicating does it does the query string match or not. True if it matches, otherwise false.
-     * 
-     * mathcer.addListener(function(matcher)) is used to track changes on the viewport/screen.
-     * 
-     * matcher.removeListener(listenerFunction) is used to remove a created listener.
-     * @param {string} mediaString 
-     * @returns MediaQueryList object.
-     */
-    static mediaMatcher(mediaString) {
-        if(mediaString.indexOf("(") !== 0)
-            mediaString = "("+mediaString;
-        if(mediaString.indexOf(")") !== mediaString.length -1)
-            mediaString = mediaString+")";
-        return window.matchMedia(mediaString);
-    }
-
-    /**
-     * Loads one page back in the browsers history list.
-     */
-    static pageBack() {
-        history.back();
-    }
-
-    /**
-     * Loads one page forward in the browsers history list.
-     */
-    static pageForward() {
-        history.forward();
-    }
-
-    /**
-     * Loads to specified page in the browsers history list. A parameter can either be a number or string.
-     * If the parameter is number then positive and negative values are allowed as positive values will go forward
-     * and negative values will go backward. 
-     * If the parameter is string then it must be partial or full url of the page in the history list.
-     * @param {string|number} numberOfPagesOrUrl
-     */
-    static pageGo(numberOfPagesOrUrl) {
-        history.go(numberOfPagesOrUrl)
-    }
-
-    /**
-     * Create a new history entry with given parameters without reloading the page. State object will be the state
-     * next history entry will be using. Title is ignored value by the history object at the time but it could be 
-     * the same title what the HTML Document page has at the moment of create the new history entry. New url must 
-     * be of the same origin (e.g. www.example.com) but the rest of url could be anything.
-     * @param {object} stateObject 
-     * @param {string} title 
-     * @param {string} newURL 
-     */
-    static pushState(stateObject, title, newURL) {
-        history.pushState(stateObject, title, newURL);
-    }
-
-    /**
-     * Replace a history entry with given parameters without reloading the page. State object will be the state
-     * next history entry will be using. Title is ignored value by the history object at the time but it could be 
-     * the same title what the HTML Document page has at the moment of create the new history entry. New url must 
-     * be of the same origin (e.g. www.example.com) but the rest of url could be anything.
-     * @param {object} stateObject 
-     * @param {string} title 
-     * @param {string} newURL 
-     */
-    static replaceState(stateObject, title, newURL) {
-        history.replaceState(stateObject, title, newURL);
-    }
-
-    /**
-     * Loads a new page.
-     * @param {string} newURL
-     */
-    static newPage(newURL) {
-        location.assign(newURL);
-    }
-
-    /**
-     * Reloads a current page. If a parameter force is true then the page will be loaded from the server 
-     * otherwise from the browsers cache.
-     * @param {boolean} force
-     */
-    static reloadPage(force) {
-        location.reload(force);
-    }
-
-    /**
-     * Replaces a current page with a new one. If the page is replaced then it wont be possible to go back
-     * to the previous page from the history list.
-     * @param {string} newURL
-     */
-    static replacePage(newURL) {
-        location.replace(newURL);
-    }
-
-    /**
-     * @returns Anchor part of the url e.g. #heading2.
-     */
-    static getAnchorHash() {
-        return location.hash;
-    }
-
-    /**
-     * Sets a new anhorpart of the url e.g. #heading3.
-     * @param {string} hash
-     */
-    static setAnchorHash(hash) {
-        location.hash = hash;
-    }
-
-    /**
-     * @returns Hostname and port in host:port format.
-     */
-    static getHostnamePort() {
-        return location.host;
-    }
-
-    /**
-     * Set a hostname and port in format host:port.
-     * @param {string} hostPort
-     */
-    static setHostnamePort(hostPort) {
-        location.host = hostPort;
-    }
-
-    /**
-     * @returns Hostname e.g. www.google.com.
-     */
-    static getHostname() {
-        return location.hostname;
-    }
-
-    /**
-     * Set a hostname
-     * @param {string} hostname
-     */
-    static setHostname(hostname) {
-        location.hostname = hostname;
-    }
-
-    /**
-     * @returns Entire URL of the webpage.
-     */
-    static getURL() {
-        return location.href;
-    }
-
-    /**
-     * Set location of a current page to point to a new location e.g. http://some.url.test or #someAcnhor on the page.
-     * @param {string} newURL
-     */
-    static setURL(newURL) {
-        location.href = newURL;
-    }
-
-    /**
-     * @returns protocol, hostname and port e.g. https://www.example.com:443
-     */
-    static getOrigin() {
-        return location.origin;
-    }
-
-    /**
-     * @returns Part of the URL after the slash(/) e.g. /photos/
-     */
-    static getPathname() {
-        return location.pathname;
-    }
-
-    /**
-     * Sets a new pathname for this location.
-     * @param {string} pathname 
-     */
-    static setPathname(pathname) {
-        location.pathname = pathname;
-    }
-
-    /**
-     * @returns Port number of the connection between server and client.
-     */
-    static getPort() {
-        return location.port;
-    }
-
-    /**
-     * Sets a new port number for the connection between server and client.
-     * @param {number} portNumber 
-     */
-    static setPort(portNumber) {
-        location.port = portNumber;
-    }
-
-    /**
-     * @returns Protocol part of the URL e.g. http: or https:.
-     */
-    static getProtocol() {
-        return location.protocol;
-    }
-
-    /**
-     * Set a new protocol for this location to use.
-     * @param {string} protocol 
-     */
-    static setProtocol(protocol) {
-        location.protocol = protocol;
-    }
-
-    /**
-     * @returns Part of the URL after the question(?) mark. e.g. ?attr=value&abc=efg.
-     */
-    static getSearchString() {
-        return location.search;
-    }
-
-    /**
-     * Sets a new searchString into the URL
-     * @param {string} searchString 
-     */
-    static setSearchString(searchString) {
-        location.search = searchString;
-    }
-
-    /**
-     * @returns Codename of the browser.
-     */
-    static getCodename() {
-        return navigator.appCodeName;
-    }
-
-    /**
-     * @returns Name of the browser.
-     */
-    static getName() {
-        return navigator.appName;
-    }
-
-    /**
-     * @returns Version of the browser.
-     */
-    static getVersion() {
-        return navigator.appVersion;
-    }
-
-    /**
-     * @returns True if cookies are enabled otherwise false.
-     */
-    static isCookiesEnabled() {
-        return navigator.cookieEnabled;
-    }
-
-    /**
-     * @returns GeoLocation object.
-     */
-    static getGeoLocation() {
-        return navigator.geolocation;
-    }
-
-    /**
-     * @returns Language of the browser.
-     */
-    static getLanguage() {
-        return navigator.language;
-    }
-
-    /**
-     * @returns A platform name of which the browser is compiled on.
-     */
-    static getPlatform() {
-        return navigator.platform;
-    }
-
-    /**
-     * @returns A name of an engine of the browser.
-     */
-    static getProduct() {
-        return navigator.product;
-    }
-
-    /**
-     * @returns A header string sent to a server by the browser.
-     */
-    static getUserAgentHeader() {
-        return navigator.userAgent;
-    }
-
-    /**
-     * @returns Color depth of the current screen.
-     */
-    static getColorDepth() {
-        return screen.colorDepth;
-    }
-
-    /**
-     * @returns Total height of the current screen.
-     */
-    static getFullScreenHeight() {
-        return screen.height;
-    }
-
-    /**
-     * @returns Total width of the current screen.
-     */
-    static getFullScreenWidth() {
-        return screen.width;
-    }
-
-    /**
-     * @returns Height of the current screen excluding OS. taskbar.
-     */
-    static getAvailableScreenHeight() {
-        return screen.availHeight;
-    }
-
-    /**
-     * @returns Width of the current screen exluding OS. taskbar.
-     */
-    static getAvailableScreenWidth() {
-        return screen.availWidth;
-    }
-}
-
 
 
 
@@ -1153,7 +710,7 @@ let Elem = (function() {
             if(Util.isBoolean(json) && json === true)
                 return JSON.stringify(RMEElemTemplater.getElementProps(this));
             else
-                return Templater.getElementProps(this);
+                return RMEElemTemplater.getElementProps(this);
         }
 
         /**
@@ -2608,6 +2165,8 @@ let Elem = (function() {
 
 
 
+
+
 /**
  * RMEElemTemplater class is able to create a Template out of an Elem object.
  */
@@ -3300,6 +2859,8 @@ let Http = (function() {
 
 
 
+
+
 let Cookie = (function() {
     /**
      * Cookie interface offers an easy way to get, set or remove cookies in application logic.
@@ -3414,174 +2975,6 @@ let Cookie = (function() {
 
 
 
-
-/**
- * Key class does not have any methods as it only contains key mappings for keyevent. For example:
- * 
- * onKeyDown(function(event) {
- *  if(event.key === Key.ENTER)
- *    //do something.
- * });
- */
-class Key {}
-/** Enter */
-Key.ENTER = "Enter";
-/** Escape */
-Key.ESC = "Escape";
-/** Tab */
-Key.TAB = "Tab";
-/** F1 */
-Key.F1 = "F1";
-/** F2 */
-Key.F2 = "F2";
-/** F3 */
-Key.F3 = "F3";
-/** F4 */
-Key.F4 = "F4";
-/** F5 */
-Key.F5 = "F5";
-/** F6 */
-Key.F6 = "F6";
-/** F7 */
-Key.F7 = "F7";
-/** F8 */
-Key.F8 = "F8";
-/** F9 */
-Key.F9 = "F9";
-/** F10 */
-Key.F10 = "F10";
-/** F11 */
-Key.F11 = "F11";
-/** F12 */
-Key.F12 = "F12";
-/** a */
-Key.A = "a";
-/** b */
-Key.B = "b";
-/** c */
-Key.C = "c";
-/** d */
-Key.D = "d";
-/** e */
-Key.E = "e";
-/** f */
-Key.F = "f";
-/** g */
-Key.G = "g";
-/** h */
-Key.H = "h";
-/** i */
-Key.I = "i";
-/** j */
-Key.J = "j";
-/** l */
-Key.L = "l";
-/** m */
-Key.M = "m";
-/** n */
-Key.N = "n";
-/** o */
-Key.O = "o";
-/** p */
-Key.P = "p";
-/** q */
-Key.Q = "q";
-/** r */
-Key.R = "r";
-/**s */
-Key.S = "s";
-/** t */
-Key.T = "t";
-/** u */
-Key.U = "u";
-/** v */
-Key.V = "v";
-/** w */
-Key.W = "w";
-/** x */
-Key.X = "x";
-/** y */
-Key.Y = "y";
-/** z */
-Key.Z = "z";
-/** CapsLock */
-Key.CAPS_LOCK = "CapsLock";
-/** NumLock */
-Key.NUM_LOCK = "NumLock";
-/** ScrollLock */
-Key.SCROLL_LOCK = "ScrollLock";
-/** Pause */
-Key.PAUSE = "Pause";
-/** PrintScreen */
-Key.PRINT_SCREEN = "PrintScreen";
-/** PageUp */
-Key.PAGE_UP = "PageUp";
-/** PageDown */
-Key.PAGE_DOWN = "PageDown";
-/** End */
-Key.END = "End";
-/** Home */
-Key.HOME = "Home";
-/** Delete */
-Key.DELETE = "Delete";
-/** Insert */
-Key.INSERT = "Insert";
-/** Alt */
-Key.ALT = "Alt";
-/** Control */
-Key.CTRL = "Control";
-/** ContextMenu */
-Key.CONTEXT_MENU = "ContextMenu";
-/** OS or Metakey */
-Key.OS = "OS"; // META
-/** AltGraph */
-Key.ALTGR = "AltGraph";
-/** Shift */
-Key.SHIFT = "Shift";
-/** Backspace */
-Key.BACKSPACE = "Backspace";
-/** § */
-Key.SECTION = "§";
-/** 1 */
-Key.ONE = "1";
-/** 2 */
-Key.TWO = "2";
-/** 3 */
-Key.THREE = "3";
-/** 4 */
-Key.FOUR = "4";
-/** 5 */
-Key.FIVE = "5";
-/** 6 */
-Key.SIX = "6";
-/** 7 */
-Key.SEVEN = "7";
-/** 8 */
-Key.EIGHT = "8";
-/** 9 */
-Key.NINE = "9";
-/** 0 */
-Key.ZERO = "0";
-/** + */
-Key.PLUS = "+";
-/** + */
-Key.MINUS = "-";
-/** * */
-Key.STAR = "*";
-/** / */
-Key.SLASH = "/";
-/** ArrowUp */
-Key.ARROW_UP = "ArrowUp";
-/** ArrowRight */
-Key.ARROW_RIGHT = "ArrowRight";
-/** ArrowDown */
-Key.ARROW_DOWN = "ArrowDown";
-/** ArrowLeft */
-Key.ARROW_LEFT = "ArrowLeft";
-/** , */
-Key.COMMA = ",";
-/** . */
-Key.DOT = ".";
 
 
 
@@ -3831,6 +3224,176 @@ let Messages = (function() {
         setApp: Messages.setApp
     };
 }());
+
+
+
+/**
+ * Key class does not have any methods as it only contains key mappings for keyevent. For example:
+ * 
+ * onKeyDown(function(event) {
+ *  if(event.key === Key.ENTER)
+ *    //do something.
+ * });
+ */
+class Key {}
+/** Enter */
+Key.ENTER = "Enter";
+/** Escape */
+Key.ESC = "Escape";
+/** Tab */
+Key.TAB = "Tab";
+/** F1 */
+Key.F1 = "F1";
+/** F2 */
+Key.F2 = "F2";
+/** F3 */
+Key.F3 = "F3";
+/** F4 */
+Key.F4 = "F4";
+/** F5 */
+Key.F5 = "F5";
+/** F6 */
+Key.F6 = "F6";
+/** F7 */
+Key.F7 = "F7";
+/** F8 */
+Key.F8 = "F8";
+/** F9 */
+Key.F9 = "F9";
+/** F10 */
+Key.F10 = "F10";
+/** F11 */
+Key.F11 = "F11";
+/** F12 */
+Key.F12 = "F12";
+/** a */
+Key.A = "a";
+/** b */
+Key.B = "b";
+/** c */
+Key.C = "c";
+/** d */
+Key.D = "d";
+/** e */
+Key.E = "e";
+/** f */
+Key.F = "f";
+/** g */
+Key.G = "g";
+/** h */
+Key.H = "h";
+/** i */
+Key.I = "i";
+/** j */
+Key.J = "j";
+/** l */
+Key.L = "l";
+/** m */
+Key.M = "m";
+/** n */
+Key.N = "n";
+/** o */
+Key.O = "o";
+/** p */
+Key.P = "p";
+/** q */
+Key.Q = "q";
+/** r */
+Key.R = "r";
+/**s */
+Key.S = "s";
+/** t */
+Key.T = "t";
+/** u */
+Key.U = "u";
+/** v */
+Key.V = "v";
+/** w */
+Key.W = "w";
+/** x */
+Key.X = "x";
+/** y */
+Key.Y = "y";
+/** z */
+Key.Z = "z";
+/** CapsLock */
+Key.CAPS_LOCK = "CapsLock";
+/** NumLock */
+Key.NUM_LOCK = "NumLock";
+/** ScrollLock */
+Key.SCROLL_LOCK = "ScrollLock";
+/** Pause */
+Key.PAUSE = "Pause";
+/** PrintScreen */
+Key.PRINT_SCREEN = "PrintScreen";
+/** PageUp */
+Key.PAGE_UP = "PageUp";
+/** PageDown */
+Key.PAGE_DOWN = "PageDown";
+/** End */
+Key.END = "End";
+/** Home */
+Key.HOME = "Home";
+/** Delete */
+Key.DELETE = "Delete";
+/** Insert */
+Key.INSERT = "Insert";
+/** Alt */
+Key.ALT = "Alt";
+/** Control */
+Key.CTRL = "Control";
+/** ContextMenu */
+Key.CONTEXT_MENU = "ContextMenu";
+/** OS or Metakey */
+Key.OS = "OS"; // META
+/** AltGraph */
+Key.ALTGR = "AltGraph";
+/** Shift */
+Key.SHIFT = "Shift";
+/** Backspace */
+Key.BACKSPACE = "Backspace";
+/** § */
+Key.SECTION = "§";
+/** 1 */
+Key.ONE = "1";
+/** 2 */
+Key.TWO = "2";
+/** 3 */
+Key.THREE = "3";
+/** 4 */
+Key.FOUR = "4";
+/** 5 */
+Key.FIVE = "5";
+/** 6 */
+Key.SIX = "6";
+/** 7 */
+Key.SEVEN = "7";
+/** 8 */
+Key.EIGHT = "8";
+/** 9 */
+Key.NINE = "9";
+/** 0 */
+Key.ZERO = "0";
+/** + */
+Key.PLUS = "+";
+/** + */
+Key.MINUS = "-";
+/** * */
+Key.STAR = "*";
+/** / */
+Key.SLASH = "/";
+/** ArrowUp */
+Key.ARROW_UP = "ArrowUp";
+/** ArrowRight */
+Key.ARROW_RIGHT = "ArrowRight";
+/** ArrowDown */
+Key.ARROW_DOWN = "ArrowDown";
+/** ArrowLeft */
+Key.ARROW_LEFT = "ArrowLeft";
+/** , */
+Key.COMMA = ",";
+/** . */
+Key.DOT = ".";
 
 
 
@@ -4107,7 +3670,442 @@ let RME = (function() {
     }
 }());
 
+/**
+ * Browser class contains all the rest utility functions which JavaScript has to offer from Window, Navigator, Screen, History, Location objects.
+ */
+class Browser {
+    /**
+     * Scroll once to a given location (xPos, yPos)
+     * @param {number} xPos
+     * @param {number} yPos
+     */
+    static scrollTo(xPos, yPos) {
+        window.scrollTo(xPos, yPos);
+    }
 
+    /**
+     * Scroll multiple times by given pixel amount (xPx, yPx)
+     * @param {number} xPx
+     * @param {number} yPx
+     */
+    static scrollBy(xPx, yPx) {
+        window.scrollBy(xPx, yPx);
+    }
+
+    /**
+     * Opens a new browser window.
+     * 
+     * Name pamareter can have following values: name or target value (name|_blank|_parent|_self|_top)
+     * 
+     * Specs parameter is defined as comma,separated,list,without,whitespace and it can have following values:
+     * channelmode=yes|no|1|0,
+     * direcotries=yes|no|1|0,
+     * fullscreen=yes|no|1|0,
+     * height=pixels,
+     * left=pixels,
+     * location=yes|no|1|0,
+     * menubar=yes|no|1|0,
+     * resizable=yes|no|1|0,
+     * scrollbars=yes|no|1|0,
+     * status=yes|no|1|0,
+     * titlebar=yes|no|1|0,
+     * toolbar|yes|no|1|0,
+     * top=pixels,
+     * width=pixels min 100
+     * 
+     * Replace parameter defines is a new history entry created or is current replaced with the new one.
+     * If true the current entry is replaced with the new one. If false a new history entry is created.
+     * @param {string} url 
+     * @param {string} name 
+     * @param {string} specs 
+     * @param {boolean} replace 
+     * @returns Reference to the opened window or null if opening the window failes.
+     */
+    static open(url, name, specs, replace) {
+        return window.open(url, name, specs, replace);
+    }
+
+    /**
+     * Closes a given opened window. Same as calling openedWindow.close();
+     * @param {*} openedWindow 
+     */
+    static close(openedWindow) {
+        openedWindow.close();
+    }
+
+    /**
+     * Opens a print webpage dialog.
+     */
+    static print() {
+        window.print();
+    }
+
+    /**
+     * Displays an alert dialog with a given message and an OK button.
+     * @param {string} message
+     */
+    static alert(message) {
+        window.alert(message);
+    }
+
+    /**
+     * Displays a confirm dialog with a given message, OK and Cancel button.
+     * @param {string} message
+     * @returns True if OK was pressed otherwise false.
+     */
+    static confirm(message) {
+        return window.confirm(message);
+    }
+
+    /**
+     * Displays a prompt dialog with a given message, a prefilled default text, OK and Cancel button.
+     * @param {string} message
+     * @param {string} defaultText
+     * @returns If OK was pressed and an input field has text then the text is returned. 
+     * If the input does not have text and OK was pressed then empty string is returned.
+     * If Cancel was pressed then null is returned.
+     */
+    static prompt(message, defaultText) {
+        return window.prompt(message, defaultText);
+    }
+
+    /**
+     * Method is used to make a media query to the viewport/screen object. The media query is done according to a given mediaString.
+     * Syntax of the media string would be (min-width: 300px) but using this method enables user to omit parentheses(). 
+     * Which then leads to syntax min-width: 300px.
+     * 
+     * Method returns a MediaQueryList object which has few neat properties. Matches and media in addition it has 
+     * two functions addListener and removeListener which can be used to query media in realtime. Usage could be something following:
+     * 
+     * var matcher = Browser.mediaMatcher("max-height: 300px");
+     * 
+     * matcher.addlistener(function(matcher) {
+     *  if(matcher.matches)
+     *      Tree.getBody().setStyles({backgroundColor: "red"});
+     *  else
+     *      Tree.getBody().setStyles({backgroundColor: "green"});
+     * });
+     * 
+     * matcher.media returns the media query string.
+     * 
+     * matcher.matches returns the boolean indicating does it does the query string match or not. True if it matches, otherwise false.
+     * 
+     * mathcer.addListener(function(matcher)) is used to track changes on the viewport/screen.
+     * 
+     * matcher.removeListener(listenerFunction) is used to remove a created listener.
+     * @param {string} mediaString 
+     * @returns MediaQueryList object.
+     */
+    static mediaMatcher(mediaString) {
+        if(mediaString.indexOf("(") !== 0)
+            mediaString = "("+mediaString;
+        if(mediaString.indexOf(")") !== mediaString.length -1)
+            mediaString = mediaString+")";
+        return window.matchMedia(mediaString);
+    }
+
+    /**
+     * Loads one page back in the browsers history list.
+     */
+    static pageBack() {
+        history.back();
+    }
+
+    /**
+     * Loads one page forward in the browsers history list.
+     */
+    static pageForward() {
+        history.forward();
+    }
+
+    /**
+     * Loads to specified page in the browsers history list. A parameter can either be a number or string.
+     * If the parameter is number then positive and negative values are allowed as positive values will go forward
+     * and negative values will go backward. 
+     * If the parameter is string then it must be partial or full url of the page in the history list.
+     * @param {string|number} numberOfPagesOrUrl
+     */
+    static pageGo(numberOfPagesOrUrl) {
+        history.go(numberOfPagesOrUrl)
+    }
+
+    /**
+     * Create a new history entry with given parameters without reloading the page. State object will be the state
+     * next history entry will be using. Title is ignored value by the history object at the time but it could be 
+     * the same title what the HTML Document page has at the moment of create the new history entry. New url must 
+     * be of the same origin (e.g. www.example.com) but the rest of url could be anything.
+     * @param {object} stateObject 
+     * @param {string} title 
+     * @param {string} newURL 
+     */
+    static pushState(stateObject, title, newURL) {
+        history.pushState(stateObject, title, newURL);
+    }
+
+    /**
+     * Replace a history entry with given parameters without reloading the page. State object will be the state
+     * next history entry will be using. Title is ignored value by the history object at the time but it could be 
+     * the same title what the HTML Document page has at the moment of create the new history entry. New url must 
+     * be of the same origin (e.g. www.example.com) but the rest of url could be anything.
+     * @param {object} stateObject 
+     * @param {string} title 
+     * @param {string} newURL 
+     */
+    static replaceState(stateObject, title, newURL) {
+        history.replaceState(stateObject, title, newURL);
+    }
+
+    /**
+     * Loads a new page.
+     * @param {string} newURL
+     */
+    static newPage(newURL) {
+        location.assign(newURL);
+    }
+
+    /**
+     * Reloads a current page. If a parameter force is true then the page will be loaded from the server 
+     * otherwise from the browsers cache.
+     * @param {boolean} force
+     */
+    static reloadPage(force) {
+        location.reload(force);
+    }
+
+    /**
+     * Replaces a current page with a new one. If the page is replaced then it wont be possible to go back
+     * to the previous page from the history list.
+     * @param {string} newURL
+     */
+    static replacePage(newURL) {
+        location.replace(newURL);
+    }
+
+    /**
+     * @returns Anchor part of the url e.g. #heading2.
+     */
+    static getAnchorHash() {
+        return location.hash;
+    }
+
+    /**
+     * Sets a new anhorpart of the url e.g. #heading3.
+     * @param {string} hash
+     */
+    static setAnchorHash(hash) {
+        location.hash = hash;
+    }
+
+    /**
+     * @returns Hostname and port in host:port format.
+     */
+    static getHostnamePort() {
+        return location.host;
+    }
+
+    /**
+     * Set a hostname and port in format host:port.
+     * @param {string} hostPort
+     */
+    static setHostnamePort(hostPort) {
+        location.host = hostPort;
+    }
+
+    /**
+     * @returns Hostname e.g. www.google.com.
+     */
+    static getHostname() {
+        return location.hostname;
+    }
+
+    /**
+     * Set a hostname
+     * @param {string} hostname
+     */
+    static setHostname(hostname) {
+        location.hostname = hostname;
+    }
+
+    /**
+     * @returns Entire URL of the webpage.
+     */
+    static getURL() {
+        return location.href;
+    }
+
+    /**
+     * Set location of a current page to point to a new location e.g. http://some.url.test or #someAcnhor on the page.
+     * @param {string} newURL
+     */
+    static setURL(newURL) {
+        location.href = newURL;
+    }
+
+    /**
+     * @returns protocol, hostname and port e.g. https://www.example.com:443
+     */
+    static getOrigin() {
+        return location.origin;
+    }
+
+    /**
+     * @returns Part of the URL after the slash(/) e.g. /photos/
+     */
+    static getPathname() {
+        return location.pathname;
+    }
+
+    /**
+     * Sets a new pathname for this location.
+     * @param {string} pathname 
+     */
+    static setPathname(pathname) {
+        location.pathname = pathname;
+    }
+
+    /**
+     * @returns Port number of the connection between server and client.
+     */
+    static getPort() {
+        return location.port;
+    }
+
+    /**
+     * Sets a new port number for the connection between server and client.
+     * @param {number} portNumber 
+     */
+    static setPort(portNumber) {
+        location.port = portNumber;
+    }
+
+    /**
+     * @returns Protocol part of the URL e.g. http: or https:.
+     */
+    static getProtocol() {
+        return location.protocol;
+    }
+
+    /**
+     * Set a new protocol for this location to use.
+     * @param {string} protocol 
+     */
+    static setProtocol(protocol) {
+        location.protocol = protocol;
+    }
+
+    /**
+     * @returns Part of the URL after the question(?) mark. e.g. ?attr=value&abc=efg.
+     */
+    static getSearchString() {
+        return location.search;
+    }
+
+    /**
+     * Sets a new searchString into the URL
+     * @param {string} searchString 
+     */
+    static setSearchString(searchString) {
+        location.search = searchString;
+    }
+
+    /**
+     * @returns Codename of the browser.
+     */
+    static getCodename() {
+        return navigator.appCodeName;
+    }
+
+    /**
+     * @returns Name of the browser.
+     */
+    static getName() {
+        return navigator.appName;
+    }
+
+    /**
+     * @returns Version of the browser.
+     */
+    static getVersion() {
+        return navigator.appVersion;
+    }
+
+    /**
+     * @returns True if cookies are enabled otherwise false.
+     */
+    static isCookiesEnabled() {
+        return navigator.cookieEnabled;
+    }
+
+    /**
+     * @returns GeoLocation object.
+     */
+    static getGeoLocation() {
+        return navigator.geolocation;
+    }
+
+    /**
+     * @returns Language of the browser.
+     */
+    static getLanguage() {
+        return navigator.language;
+    }
+
+    /**
+     * @returns A platform name of which the browser is compiled on.
+     */
+    static getPlatform() {
+        return navigator.platform;
+    }
+
+    /**
+     * @returns A name of an engine of the browser.
+     */
+    static getProduct() {
+        return navigator.product;
+    }
+
+    /**
+     * @returns A header string sent to a server by the browser.
+     */
+    static getUserAgentHeader() {
+        return navigator.userAgent;
+    }
+
+    /**
+     * @returns Color depth of the current screen.
+     */
+    static getColorDepth() {
+        return screen.colorDepth;
+    }
+
+    /**
+     * @returns Total height of the current screen.
+     */
+    static getFullScreenHeight() {
+        return screen.height;
+    }
+
+    /**
+     * @returns Total width of the current screen.
+     */
+    static getFullScreenWidth() {
+        return screen.width;
+    }
+
+    /**
+     * @returns Height of the current screen excluding OS. taskbar.
+     */
+    static getAvailableScreenHeight() {
+        return screen.availHeight;
+    }
+
+    /**
+     * @returns Width of the current screen exluding OS. taskbar.
+     */
+    static getAvailableScreenWidth() {
+        return screen.availWidth;
+    }
+}
 
 /**
  * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
@@ -4142,433 +4140,6 @@ class Session {
         sessionStorage.clear();
     }
 }
-
-
-
-
-
-let Router = (function() {
-    /**
-     * Router class handles and renders route elements that are given by Router.routes() method.
-     * The method takes an array of route objects that are defined as follows: {route: "url", elem: elemObject, hide: true|false|undefined}.
-     * The first element the array of route objects is by default the root route object in which all other route objects 
-     * are rendered into.
-     */
-    class Router {
-        constructor() {
-            this.instance = null;
-            this.root = null;
-            this.origRoot = null;
-            this.routes = [];
-            this.origRoutes = [];
-            this.currentRoute = {};
-            this.prevUrl = location.pathname;
-            this.loadCall = () => this.navigateUrl(location.pathname);
-            this.hashCall = () => this.navigateUrl(location.hash);
-            this.useHistory =  true;
-            this.autoListen = true;
-            this.useHash = false;
-            this.scrolltop = true;
-            this.app;
-            this.registerRouter();
-        }
-
-        /**
-         * Initializes the Router.
-         */
-        registerRouter() {
-            document.addEventListener("readystatechange", () => {
-                if(document.readyState === "complete") {
-                    let check = Util.setInterval(() => {
-                        let hasRoot = !Util.isEmpty(this.root.elem) ? document.querySelector(this.root.elem) : false;
-                        if(hasRoot) {
-                            Util.clearInterval(check);
-                            this.resolveRoutes();
-                        }
-                    }, 50)
-                }
-            });
-        }
-
-        /**
-         * Register listeners according to the useHistory and the autoListen state.
-         */
-        registerListeners() {
-            if(this.useHistory && this.autoListen)
-                window.addEventListener("load", this.loadCall);
-            else if(!this.useHistory && this.autoListen)
-                window.addEventListener("hashchange", this.hashCall);
-            
-            if(!this.autoListen)
-                window.addEventListener("popstate", this.onPopState.bind(this));
-        }
-
-        /**
-         * Clear the registered listeners.
-         */
-        clearListeners() {
-            window.removeEventListener("load", this.loadCall);
-            window.removeEventListener("hashchange", this.hashCall);
-
-            if(!this.autoListen)
-                window.removeEventListener("popstate", this.onPopState);
-        }
-
-        /**
-         * On popstate call is registered if the auto listen is false. It listens the browsers history change and renders accordingly.
-         */
-        onPopState() {
-            if(this.useHistory)
-                this.renderRoute(location.pathname);
-            else 
-                this.renderRoute(location.hash);
-        }
-
-        /**
-         * Set the router to use a history implementation or an anchor hash implementation.
-         * If true then the history implementation is used. Default is true.
-         * @param {boolean} use
-         */
-        setUseHistory(use) {
-            this.useHistory = use;
-        }
-
-        /**
-         * Set the Router to auto listen url change to true or false.
-         * @param {boolean} listen
-         */
-        setAutoListen(listen) {
-            this.autoListen = listen;
-        }
-
-        /**
-         * Set auto scroll up true or false.
-         * @param {boolean} auto 
-         */
-        setAutoScrollUp(auto) {
-            this.scrolltop = auto;
-        }
-
-        /**
-         * Set the app instance that the Router invokes on update.
-         * @param {object} appInstance 
-         */
-        setApp(appInstance) {
-            this.app = appInstance;
-        }
-
-        /**
-         * Resolves the root and the first page.
-         */
-        resolveRoutes() {
-            if(Util.isString(this.root.elem)) {
-                this.root.elem = this.resolveElem(this.root.elem);
-            } else if(Util.isEmpty(this.root)) {
-                this.root = this.routes.shift();
-                this.root.elem = this.resolveElem(this.root.elem);
-                this.origRoot = this.root.elem;
-            }
-            if(this.useHash) {
-                this.renderRoute(location.hash);
-            } else {
-                this.renderRoute(location.pathname);
-            }
-        }
-
-        /**
-         * Set the routes and if a root is not set then the first element will be the root route element.
-         * @param {array} routes
-         */
-        setRoutes(routes) {
-            this.routes = routes;
-        }
-
-        /**
-         * Add a route into the Router. {route: "url", elem: elemObject}
-         * @param {object} route
-         */
-        addRoute(route) {
-            this.routes.push(route);
-        }
-
-        /**
-         * Set a root route object into the Router. {route: "url", elem: elemObject}
-         * @param {object} route
-         */
-        setRoot(route) {
-            this.root = route;
-            this.origRoot = route.elem;
-        }
-
-        /**
-         * Resolve route elements.
-         * @param {array} routes 
-         */
-        resolveRouteElems(routes) {
-            let i = 0;
-            while (i < routes.length) {
-                routes[i].elem = this.resolveElem(routes[i].elem);
-                i++;
-            }
-            return routes;
-        }
-
-        /**
-         * Method resolves element. If elem is string gets a component of the name if exist otherwise creates a new elemen of the name.
-         * If both does not apply then method assumes the elem to be an element and returns it.
-         * @param {*} elem 
-         */
-        resolveElem(elem) {
-            if(Util.isString(elem) && RME.hasComponent(elem)) {
-                return RME.component(elem);
-            } else if(Util.isString(elem)) {
-                return Tree.getFirst(elem);
-            }
-            return elem;
-        }
-
-        /**
-         * Method navigates to the url and renders a route element inside the root route element if found.
-         * @param {string} url
-         */
-        navigateUrl(url) {
-            var route = this.findRoute(url);
-            if(!Util.isEmpty(route) && this.useHistory && !route.hide) {
-                history.pushState(null, null, url);
-            } else if(!Util.isEmpty(route) && !route.hide) {
-                location.href = route.route.indexOf("#") === 0 ? route.route : "#"+route.route;
-            }
-            if(!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
-                if((route.scrolltop === true) || (route.scrolltop === undefined && this.scrolltop))
-                    Browser.scrollTo(0, 0);
-                this.prevUrl = url;
-                this.currentRoute = route;
-                if(Util.isEmpty(this.app))
-                    this.root.elem.render(this.resolveElem(route.elem));
-                else
-                    this.app.refresh();
-            }
-        }
-
-        /**
-         * Method looks for a route by the url. If the router is found then it will be returned otherwise returns null
-         * @param {string} url
-         * @param {boolean} force
-         * @returns The found router or null if not found.
-         */
-        findRoute(url, force) {
-            var i = 0;
-            if(!Util.isEmpty(url) && (this.prevUrl !== url || force)) {
-                while(i < this.routes.length) {
-                    if(this.matches(this.routes[i].route, url))
-                        return this.routes[i];
-                    i++;
-                }
-            }
-            return null;
-        }
-
-        /**
-         * Method will look for a route by the url and if the route is found then it will be rendered 
-         * inside the root route element.
-         * @param {string} url
-         */
-        renderRoute(url) {
-            var route = this.findRoute(url, true);
-            if(!Util.isEmpty(route) && Util.isEmpty(this.app)) {
-                this.root.elem.render(this.resolveElem(route.elem));
-                this.currentRoute = route;
-            } else if(Util.isEmpty(this.app)) {
-                this.root.elem.render();
-            } else if(!Util.isEmpty(route) && !Util.isEmpty(this.app)) {
-                this.app.refresh();
-                this.currentRoute = route;
-            }
-
-            this.prevUrl = location.pathname;
-        }
-
-        /**
-         * Method matches a given url parameters and returns true if the urls matches.
-         * @param {string} url
-         * @param {string} newUrl
-         * @returns True if the given urls matches otherwise false.
-         */
-        matches(url, newUrl) {
-            if(this.useHistory) {
-                url = url.replace(/\*/g, ".*").replace(/\/{2,}/g, "/");
-                var path = newUrl.replace(/\:{1}\/{2}/, "").match(/\/{1}.*/).join();
-                var found = newUrl.match(url);
-                if(!Util.isEmpty(found))
-                    found = found.join();
-                return found === path && new RegExp(url).test(newUrl);
-            } else {
-                url = url.indexOf("#") === 0 ? url : "#"+url;
-                var hash = newUrl.match(/\#{1}.*/).join();
-                var found = newUrl.match(url);
-                if(!Util.isEmpty(found))
-                    found = found.join();
-                return url === found && found === hash;
-            }
-        }
-
-        /**
-         * @returns The current status of the Router in an object.
-         */
-        getCurrentState() {
-            return {root: this.origRoot, current: this.resolveElem(this.currentRoute.elem)}
-        }
-
-        /**
-         * Method will try to find a route according to the given parameter. The supported parameter combinations are url, event or elem & event. 
-         * The first paramter can either be an URL or an Event or an Elem. The second parameter is an Event if the first parameter is an Elem.
-         * If the route is found, then the Router will update a new url to the browser and render the found route element.
-         * @param {string} url
-         * @param {object} url type event
-         * @param {object} url type Elem
-         * @param {object} event
-         */
-        static navigate(url, event) {
-            if(Util.isString(url))
-                Router.getInstance().navigateUrl(url);
-            else if(Util.isObject(url) && url instanceof Event) {
-                if(!Router.getInstance().autoListen || Router.getInstance().useHash)
-                    url.preventDefault();
-                Router.getInstance().navigateUrl(url.target.href);
-            } else if(Util.isObject(url) && url instanceof Elem && !Util.isEmpty(event) && Util.isObject(event) && event instanceof Event) {
-                if(!Router.getInstance().autoListen || Router.getInstance().useHash)
-                    event.preventDefault();
-                Router.getInstance().navigateUrl(url.getHref());
-            }
-        }
-
-        /**
-         * Set a root element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
-         * @param {object} elem
-         * @returns Router
-         */
-        static root(elem) {
-            Router.getInstance().setRoot({elem: elem});
-            return Router;
-        }
-
-        /**
-         * Add a new route element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
-         * @param {string} url
-         * @param {object} elem
-         * @param {boolean} hide
-         */
-        static add(url, elem, hide) {
-            Router.getInstance().addRoute({route: url, elem: elem, hide: hide});
-            return Router;
-        }
-
-        /**
-         * Set an array of routes that the Router uses. If a root is not set then the first item in the given routes array will be the root route element.
-         * @param {array} routes
-         */
-        static routes(routes) {
-            if(!Util.isArray(routes))
-                throw "Could not set routes. Given parameter: \"" + routes + "\" is not an array."
-            Router.getInstance().setRoutes(routes);
-            return Router;
-        }
-
-        /**
-         * Method sets the Router to use an url implementation. The url implementation defaults to HTML standard that pressing a link
-         * will cause the browser reload a new page. After reload the new page is rendered. If you wish to skip reload then you should 
-         * set the parameter manual to true.
-         * @param {boolean} manual
-         * @returns Router
-         */
-        static url(manual) {
-            Router.getInstance().setUseHistory(true);
-            Router.getInstance().registerListeners();
-            if(Util.isBoolean(manual) && manual) {
-                Router.manual();
-            }
-            return Router;
-        }
-
-        /**
-         * Method sets the Router not to automatically follow url changes. If this method is invoked 
-         * the user must explicitly define a method that calls Router.navigate in order to have navigation working
-         * properly when going forward and backward in the history. The method will not 
-         * do anything if the url implementation is not used.
-         * @returns Router
-         */
-        static manual() {
-            if(Router.getInstance().useHistory) {
-                Router.getInstance().clearListeners();
-                Router.getInstance().setAutoListen(false);
-                Router.getInstance().registerListeners();
-            }
-            return Router;
-        }
-
-        /**
-         * Method sets the Router to use a hash implementation. When this implementation is used 
-         * there is no need to manually use Router.navigate function because change
-         * of the hash is automatically followed.
-         * @returns Router
-         */
-        static hash() {
-            Router.getInstance().setUseHistory(false);
-            Router.getInstance().setAutoListen(true);
-            Router.getInstance().registerListeners();
-            Router.getInstance().useHash = true;
-            return Router;
-        }
-
-        /**
-         * Method sets default level behavior for route naviagation. If the given value is true then the Browser auto-scrolls up 
-         * when navigating to a new resource. If set false then the Browser does not auto-scroll up. Default value is true.
-         * @param {boolean} auto 
-         * @returns Router
-         */
-        static scroll(auto) {
-            if(Util.isBoolean(auto)) {
-                Router.getInstance().setAutoScrollUp(auto);
-            }
-            return Router;
-        }
-
-        /**
-         * Set the app instance to be invoked on the Router update.
-         * @param {object} appInstance 
-         * @returns Router
-         */
-        static setApp(appInstance) {
-            if(!Util.isEmpty(appInstance))
-                Router.getInstance().setApp(appInstance);
-            return Router;
-        }
-
-        /**
-         * @returns The current status of the router.
-         */
-        static getCurrentState() {
-            return Router.getInstance().getCurrentState();
-        }
-
-        static getInstance() {
-            if(Util.isEmpty(this.instance))
-                this.instance = new Router();
-            return this.instance;
-        }
-    }
-    return {
-        navigate: Router.navigate,
-        root: Router.root,
-        add: Router.add,
-        routes: Router.routes,
-        url: Router.url,
-        hash: Router.hash,
-        scroll: Router.scroll,
-        getCurrentState: Router.getCurrentState,
-        setApp: Router.setApp,
-    }
-}());
 
 
 
@@ -5488,4 +5059,433 @@ class Util {
         return window.atob(string);
     }
 }
+
+
+
+let Router = (function() {
+    /**
+     * Router class handles and renders route elements that are given by Router.routes() method.
+     * The method takes an array of route objects that are defined as follows: {route: "url", elem: elemObject, hide: true|false|undefined}.
+     * The first element the array of route objects is by default the root route object in which all other route objects 
+     * are rendered into.
+     */
+    class Router {
+        constructor() {
+            this.instance = null;
+            this.root = null;
+            this.origRoot = null;
+            this.routes = [];
+            this.origRoutes = [];
+            this.currentRoute = {};
+            this.prevUrl = location.pathname;
+            this.loadCall = () => this.navigateUrl(location.pathname);
+            this.hashCall = () => this.navigateUrl(location.hash);
+            this.useHistory =  true;
+            this.autoListen = true;
+            this.useHash = false;
+            this.scrolltop = true;
+            this.app;
+            this.registerRouter();
+        }
+
+        /**
+         * Initializes the Router.
+         */
+        registerRouter() {
+            document.addEventListener("readystatechange", () => {
+                if(document.readyState === "complete") {
+                    let check = Util.setInterval(() => {
+                        let hasRoot = !Util.isEmpty(this.root.elem) ? document.querySelector(this.root.elem) : false;
+                        if(hasRoot) {
+                            Util.clearInterval(check);
+                            this.resolveRoutes();
+                        }
+                    }, 50)
+                }
+            });
+        }
+
+        /**
+         * Register listeners according to the useHistory and the autoListen state.
+         */
+        registerListeners() {
+            if(this.useHistory && this.autoListen)
+                window.addEventListener("load", this.loadCall);
+            else if(!this.useHistory && this.autoListen)
+                window.addEventListener("hashchange", this.hashCall);
+            
+            if(!this.autoListen)
+                window.addEventListener("popstate", this.onPopState.bind(this));
+        }
+
+        /**
+         * Clear the registered listeners.
+         */
+        clearListeners() {
+            window.removeEventListener("load", this.loadCall);
+            window.removeEventListener("hashchange", this.hashCall);
+
+            if(!this.autoListen)
+                window.removeEventListener("popstate", this.onPopState);
+        }
+
+        /**
+         * On popstate call is registered if the auto listen is false. It listens the browsers history change and renders accordingly.
+         */
+        onPopState() {
+            if(this.useHistory)
+                this.renderRoute(location.pathname);
+            else 
+                this.renderRoute(location.hash);
+        }
+
+        /**
+         * Set the router to use a history implementation or an anchor hash implementation.
+         * If true then the history implementation is used. Default is true.
+         * @param {boolean} use
+         */
+        setUseHistory(use) {
+            this.useHistory = use;
+        }
+
+        /**
+         * Set the Router to auto listen url change to true or false.
+         * @param {boolean} listen
+         */
+        setAutoListen(listen) {
+            this.autoListen = listen;
+        }
+
+        /**
+         * Set auto scroll up true or false.
+         * @param {boolean} auto 
+         */
+        setAutoScrollUp(auto) {
+            this.scrolltop = auto;
+        }
+
+        /**
+         * Set the app instance that the Router invokes on update.
+         * @param {object} appInstance 
+         */
+        setApp(appInstance) {
+            this.app = appInstance;
+        }
+
+        /**
+         * Resolves the root and the first page.
+         */
+        resolveRoutes() {
+            if(Util.isString(this.root.elem)) {
+                this.root.elem = this.resolveElem(this.root.elem);
+            } else if(Util.isEmpty(this.root)) {
+                this.root = this.routes.shift();
+                this.root.elem = this.resolveElem(this.root.elem);
+                this.origRoot = this.root.elem;
+            }
+            if(this.useHash) {
+                this.renderRoute(location.hash);
+            } else {
+                this.renderRoute(location.pathname);
+            }
+        }
+
+        /**
+         * Set the routes and if a root is not set then the first element will be the root route element.
+         * @param {array} routes
+         */
+        setRoutes(routes) {
+            this.routes = routes;
+        }
+
+        /**
+         * Add a route into the Router. {route: "url", elem: elemObject}
+         * @param {object} route
+         */
+        addRoute(route) {
+            this.routes.push(route);
+        }
+
+        /**
+         * Set a root route object into the Router. {route: "url", elem: elemObject}
+         * @param {object} route
+         */
+        setRoot(route) {
+            this.root = route;
+            this.origRoot = route.elem;
+        }
+
+        /**
+         * Resolve route elements.
+         * @param {array} routes 
+         */
+        resolveRouteElems(routes) {
+            let i = 0;
+            while (i < routes.length) {
+                routes[i].elem = this.resolveElem(routes[i].elem);
+                i++;
+            }
+            return routes;
+        }
+
+        /**
+         * Method resolves element. If elem is string gets a component of the name if exist otherwise creates a new elemen of the name.
+         * If both does not apply then method assumes the elem to be an element and returns it.
+         * @param {*} elem 
+         */
+        resolveElem(elem) {
+            if(Util.isString(elem) && RME.hasComponent(elem)) {
+                return RME.component(elem);
+            } else if(Util.isString(elem)) {
+                return Tree.getFirst(elem);
+            }
+            return elem;
+        }
+
+        /**
+         * Method navigates to the url and renders a route element inside the root route element if found.
+         * @param {string} url
+         */
+        navigateUrl(url) {
+            var route = this.findRoute(url);
+            if(!Util.isEmpty(route) && this.useHistory && !route.hide) {
+                history.pushState(null, null, url);
+            } else if(!Util.isEmpty(route) && !route.hide) {
+                location.href = route.route.indexOf("#") === 0 ? route.route : "#"+route.route;
+            }
+            if(!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
+                if((route.scrolltop === true) || (route.scrolltop === undefined && this.scrolltop))
+                    Browser.scrollTo(0, 0);
+                this.prevUrl = url;
+                this.currentRoute = route;
+                if(Util.isEmpty(this.app))
+                    this.root.elem.render(this.resolveElem(route.elem));
+                else
+                    this.app.refresh();
+            }
+        }
+
+        /**
+         * Method looks for a route by the url. If the router is found then it will be returned otherwise returns null
+         * @param {string} url
+         * @param {boolean} force
+         * @returns The found router or null if not found.
+         */
+        findRoute(url, force) {
+            var i = 0;
+            if(!Util.isEmpty(url) && (this.prevUrl !== url || force)) {
+                while(i < this.routes.length) {
+                    if(this.matches(this.routes[i].route, url))
+                        return this.routes[i];
+                    i++;
+                }
+            }
+            return null;
+        }
+
+        /**
+         * Method will look for a route by the url and if the route is found then it will be rendered 
+         * inside the root route element.
+         * @param {string} url
+         */
+        renderRoute(url) {
+            var route = this.findRoute(url, true);
+            if(!Util.isEmpty(route) && Util.isEmpty(this.app)) {
+                this.root.elem.render(this.resolveElem(route.elem));
+                this.currentRoute = route;
+            } else if(Util.isEmpty(this.app)) {
+                this.root.elem.render();
+            } else if(!Util.isEmpty(route) && !Util.isEmpty(this.app)) {
+                this.app.refresh();
+                this.currentRoute = route;
+            }
+
+            this.prevUrl = location.pathname;
+        }
+
+        /**
+         * Method matches a given url parameters and returns true if the urls matches.
+         * @param {string} url
+         * @param {string} newUrl
+         * @returns True if the given urls matches otherwise false.
+         */
+        matches(url, newUrl) {
+            if(this.useHistory) {
+                url = url.replace(/\*/g, ".*").replace(/\/{2,}/g, "/");
+                var path = newUrl.replace(/\:{1}\/{2}/, "").match(/\/{1}.*/).join();
+                var found = newUrl.match(url);
+                if(!Util.isEmpty(found))
+                    found = found.join();
+                return found === path && new RegExp(url).test(newUrl);
+            } else {
+                url = url.indexOf("#") === 0 ? url : "#"+url;
+                var hash = newUrl.match(/\#{1}.*/).join();
+                var found = newUrl.match(url);
+                if(!Util.isEmpty(found))
+                    found = found.join();
+                return url === found && found === hash;
+            }
+        }
+
+        /**
+         * @returns The current status of the Router in an object.
+         */
+        getCurrentState() {
+            return {root: this.origRoot, current: this.resolveElem(this.currentRoute.elem)}
+        }
+
+        /**
+         * Method will try to find a route according to the given parameter. The supported parameter combinations are url, event or elem & event. 
+         * The first paramter can either be an URL or an Event or an Elem. The second parameter is an Event if the first parameter is an Elem.
+         * If the route is found, then the Router will update a new url to the browser and render the found route element.
+         * @param {string} url
+         * @param {object} url type event
+         * @param {object} url type Elem
+         * @param {object} event
+         */
+        static navigate(url, event) {
+            if(Util.isString(url))
+                Router.getInstance().navigateUrl(url);
+            else if(Util.isObject(url) && url instanceof Event) {
+                if(!Router.getInstance().autoListen || Router.getInstance().useHash)
+                    url.preventDefault();
+                Router.getInstance().navigateUrl(url.target.href);
+            } else if(Util.isObject(url) && url instanceof Elem && !Util.isEmpty(event) && Util.isObject(event) && event instanceof Event) {
+                if(!Router.getInstance().autoListen || Router.getInstance().useHash)
+                    event.preventDefault();
+                Router.getInstance().navigateUrl(url.getHref());
+            }
+        }
+
+        /**
+         * Set a root element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
+         * @param {object} elem
+         * @returns Router
+         */
+        static root(elem) {
+            Router.getInstance().setRoot({elem: elem});
+            return Router;
+        }
+
+        /**
+         * Add a new route element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
+         * @param {string} url
+         * @param {object} elem
+         * @param {boolean} hide
+         */
+        static add(url, elem, hide) {
+            Router.getInstance().addRoute({route: url, elem: elem, hide: hide});
+            return Router;
+        }
+
+        /**
+         * Set an array of routes that the Router uses. If a root is not set then the first item in the given routes array will be the root route element.
+         * @param {array} routes
+         */
+        static routes(routes) {
+            if(!Util.isArray(routes))
+                throw "Could not set routes. Given parameter: \"" + routes + "\" is not an array."
+            Router.getInstance().setRoutes(routes);
+            return Router;
+        }
+
+        /**
+         * Method sets the Router to use an url implementation. The url implementation defaults to HTML standard that pressing a link
+         * will cause the browser reload a new page. After reload the new page is rendered. If you wish to skip reload then you should 
+         * set the parameter manual to true.
+         * @param {boolean} manual
+         * @returns Router
+         */
+        static url(manual) {
+            Router.getInstance().setUseHistory(true);
+            Router.getInstance().registerListeners();
+            if(Util.isBoolean(manual) && manual) {
+                Router.manual();
+            }
+            return Router;
+        }
+
+        /**
+         * Method sets the Router not to automatically follow url changes. If this method is invoked 
+         * the user must explicitly define a method that calls Router.navigate in order to have navigation working
+         * properly when going forward and backward in the history. The method will not 
+         * do anything if the url implementation is not used.
+         * @returns Router
+         */
+        static manual() {
+            if(Router.getInstance().useHistory) {
+                Router.getInstance().clearListeners();
+                Router.getInstance().setAutoListen(false);
+                Router.getInstance().registerListeners();
+            }
+            return Router;
+        }
+
+        /**
+         * Method sets the Router to use a hash implementation. When this implementation is used 
+         * there is no need to manually use Router.navigate function because change
+         * of the hash is automatically followed.
+         * @returns Router
+         */
+        static hash() {
+            Router.getInstance().setUseHistory(false);
+            Router.getInstance().setAutoListen(true);
+            Router.getInstance().registerListeners();
+            Router.getInstance().useHash = true;
+            return Router;
+        }
+
+        /**
+         * Method sets default level behavior for route naviagation. If the given value is true then the Browser auto-scrolls up 
+         * when navigating to a new resource. If set false then the Browser does not auto-scroll up. Default value is true.
+         * @param {boolean} auto 
+         * @returns Router
+         */
+        static scroll(auto) {
+            if(Util.isBoolean(auto)) {
+                Router.getInstance().setAutoScrollUp(auto);
+            }
+            return Router;
+        }
+
+        /**
+         * Set the app instance to be invoked on the Router update.
+         * @param {object} appInstance 
+         * @returns Router
+         */
+        static setApp(appInstance) {
+            if(!Util.isEmpty(appInstance))
+                Router.getInstance().setApp(appInstance);
+            return Router;
+        }
+
+        /**
+         * @returns The current status of the router.
+         */
+        static getCurrentState() {
+            return Router.getInstance().getCurrentState();
+        }
+
+        static getInstance() {
+            if(Util.isEmpty(this.instance))
+                this.instance = new Router();
+            return this.instance;
+        }
+    }
+    return {
+        navigate: Router.navigate,
+        root: Router.root,
+        add: Router.add,
+        routes: Router.routes,
+        url: Router.url,
+        hash: Router.hash,
+        scroll: Router.scroll,
+        getCurrentState: Router.getCurrentState,
+        setApp: Router.setApp,
+    }
+}());
+
+
+
+
 
