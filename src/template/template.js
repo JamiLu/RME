@@ -173,7 +173,7 @@ let Template = (function() {
             if(!Util.isEmpty(match))
                 resolved.setId(match.join().replace(/[a-z0-9]+\#/g, ""));
 
-            match = tag.match(/\.[a-zA-Z-0-9\-]+/g); //find classes
+            match = this.cutAttributesIfFound(tag).match(/\.[a-zA-Z-0-9\-]+/g); //find classes
             if(!Util.isEmpty(match)) 
                 resolved.addClasses(match.join(" ").replace(/\./g, ""));
 
@@ -182,6 +182,16 @@ let Template = (function() {
                 resolved = this.addAttributes(resolved, match);
 
             return resolved;
+        }
+
+        /**
+         * Function will cut off the element tag attributes if found.
+         * @param {string} tag 
+         * @returns Element tag without attributes.
+         */
+        cutAttributesIfFound(tag) {
+            const idx = tag.indexOf('[');
+            return tag.substring(0, idx > 0 ? idx : tag.length);
         }
 
         /**

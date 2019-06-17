@@ -104,7 +104,7 @@ let Cookie = (function() {
             return this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity;
         }
         static create(name, value, expires, cpath, cdomain, setSecure) {
-                return new Cookie(name, value, expires, cpath, cdomain, setSecure);
+                return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
         }
     }
 
