@@ -161,24 +161,26 @@ let Template = (function() {
             let resolved = null;
             var match = [];
             var el = this.getElementName(tag);
-            if(RME.hasComponent(el)) {
+            if (RME.hasComponent(el)) {
                 el = el.replace(/component:/, "");
                 resolved = RME.component(el, obj);
+                if(Util.isEmpty(resolved))
+                    return resolved;
             } else if(Util.isEmpty(el))
-                throw "Template resolver could not find element: \"" + el + "\" from the given tag: \"" + tag + "\"";
+                throw `Template resolver could not find element: ${el} from the given tag: ${tag}`;
             else
                 resolved = new Elem(el);
 
             match = tag.match(/[a-z0-9]+\#[a-zA-Z0-9\-]+/); //find id
-            if(!Util.isEmpty(match))
+            if (!Util.isEmpty(match))
                 resolved.setId(match.join().replace(/[a-z0-9]+\#/g, ""));
 
             match = this.cutAttributesIfFound(tag).match(/\.[a-zA-Z-0-9\-]+/g); //find classes
-            if(!Util.isEmpty(match)) 
+            if (!Util.isEmpty(match)) 
                 resolved.addClasses(match.join(" ").replace(/\./g, ""));
 
             match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_\/\.&%@!?£$+¤|;\\<\\>\\"]+\]/g); //find attributes
-            if(!Util.isEmpty(match))
+            if (!Util.isEmpty(match))
                 resolved = this.addAttributes(resolved, match);
 
             return resolved;

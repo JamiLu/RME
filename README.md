@@ -42,6 +42,8 @@ import RME, {
 } from 'rme.js'
 ```
 
+DEV project commands
+---
 Some run commands that has been defined for this dev project.
 
  - `npm run docs` will open documentation on the browser.
