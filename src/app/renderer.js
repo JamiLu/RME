@@ -18,7 +18,7 @@ class RMEElemRenderer {
      * @returns The merged stage.
      */
     merge(oldStage, newStage) {
-        if(Util.isEmpty(this.root.getChildren())) {
+        if (Util.isEmpty(this.root.getChildren())) {
             this.root.append(newStage);
             this.mergedStage = newStage;
         } else {
@@ -37,15 +37,22 @@ class RMEElemRenderer {
      * @param {number} index 
      */
     render(parent, oldNode, newNode, index) {
-        if(!oldNode && newNode) {
+        if (!oldNode && newNode) {
             parent.append(newNode.duplicate());
-        } else if(oldNode && !newNode) {
+        } else if (oldNode && !newNode) {
             this.tobeRemoved.push({parent: parent, child: this.wrap(parent.dom().children[index])});
-        } else if(this.hasNodeChanged(oldNode, newNode)) {
-            if(this.isValueElem(newNode.getTagName()) && this.comparePropsWithoutValue(oldNode, newNode))
-                oldNode.setValue(newNode.getValue());
-            else
-                this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
+        } else if (this.hasNodeChanged(oldNode, newNode)) {
+            let duplicated = newNode.duplicate();
+            let willFocus = oldNode.dom() === document.activeElement;
+            if (this.isInputableNode(newNode)) {
+                this.wrap(parent.dom().children[index]).replace(duplicated);
+                duplicated.dom().selectionStart = duplicated.getValue().length;
+                duplicated.dom().selectionEnd = duplicated.getValue().length;
+            } else {
+                this.wrap(parent.dom().children[index]).replace(duplicated);
+            }
+            if (willFocus) 
+                duplicated.focus();
         } else {
             let i = 0;
             let oldLength = oldNode ? oldNode.dom().children.length : 0;
@@ -63,6 +70,21 @@ class RMEElemRenderer {
     }
 
     /**
+     * Fuction tests if a given node is inputable. The node is inputable in following cases:
+     *  - The node is a textarea
+     *  - The node is type of text, password, search, tel, url
+     *  - The node has an attribute contentEditable === true
+     * @param {*} node 
+     * @returns True if the node is inputable otherwise false.
+     */
+    isInputableNode(node) {
+        let tag = node.getTagName().toLowerCase();
+        return (tag === 'textarea')
+            || (tag === 'input' && ['text', 'password', 'search', 'tel', 'url'].indexOf(node.dom().type) > -1)
+            || (Util.isBoolean(node.dom().contentEditable) && node.dom().contentEditable === true)
+    }
+
+    /**
      * Function removes all the marked as to be removed elements which did not come in the new stage by starting from the last to the first.
      */
     removeToBeRemoved() {
@@ -74,20 +96,6 @@ class RMEElemRenderer {
             }
             this.tobeRemoved = [];
         }
-    }
-
-    /**
-     * Function takes two Elem objects as parameter and compares them if they are equal or have some properties changed ignoring a value attribute.
-     * @param {object} oldNode 
-     * @param {object} newNode 
-     * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
-     */
-    comparePropsWithoutValue(oldNode, newNode) {
-        let o = oldNode.getProps();
-        let n = newNode.getProps();
-        o.value = "";
-        n.value = "";
-        return JSON.stringify(o) === JSON.stringify(n);
     }
 
     /**
@@ -106,19 +114,8 @@ class RMEElemRenderer {
      * @returns the Wrapped Elem object.
      */
     wrap(node) {
-        if(!Util.isEmpty(node))
+        if (!Util.isEmpty(node))
             return Elem.wrap(node);
-    }
-
-    /**
-     * Function takes an element tag string and compares it to other elements that have a value attribute. If the given tag is a tag of the element that has the tag attribute
-     * true is returned otherwise false will be returned.
-     * @param {string} tag 
-     * @returns True if the give tag is an element that has a value attribute otherwise false is returned.
-     */
-    isValueElem(tag) {
-        tag = tag.toLowerCase();
-        return 	tag  === "button" || tag === "input" || tag === "li" || tag === "option" || tag === "meter" || tag === "progress" || tag === "param";
     }
 
 }

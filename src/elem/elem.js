@@ -361,10 +361,10 @@ let Elem = (function() {
          * Get an attribute of this element.
          * 
          * @param {String} attr 
-         * @returns an attribute object with name and value properties.
+         * @returns a value of the attribute.
          */
         getAttribute(attr) {
-            return this.html.getAttributeNode(attr);
+            return this.html.getAttribute(attr);
         }
 
         /**
@@ -374,7 +374,9 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         removeAttribute(attr) {
-            this.html.removeAttributeNode(this.getAttribute(attr));
+            let attrNode = this.html.getAttributeNode(attr);
+            if (attrNode)
+                this.html.removeAttributeNode(attrNode);
             return this;
         }
 
@@ -385,7 +387,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setName(name) {
-            this.setAttribute("name", name);
+            this.setAttribute('name', name);
             return this;
         }
 
@@ -395,7 +397,7 @@ let Elem = (function() {
          * @returns name string of this element.
          */
         getName() {
-            return this.getAttribute("name").value;
+            return this.getAttribute('name');
         }
 
 
@@ -406,7 +408,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setType(type) {
-            this.setAttribute("type", type);
+            this.setAttribute('type', type);
             return this;
         }
 
@@ -416,7 +418,7 @@ let Elem = (function() {
          * @returns type string of this element.
          */
         getType() {
-            return this.getAttribute("type").value;
+            return this.getAttribute('type');
         }
 
         /**
@@ -426,7 +428,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setSource(source) {
-            this.setAttribute("src", source);
+            this.setAttribute('src', source);
             return this;
         }
 
@@ -436,7 +438,7 @@ let Elem = (function() {
          * @returns source string of this element.
          */
         getSource() {
-            return this.getAttribute("src").value;
+            return this.getAttribute('src');
         }
 
         /**
@@ -446,7 +448,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setHref(href) {
-            this.setAttribute("href", href);
+            this.setAttribute('href', href);
             return this;
         }
 
@@ -456,7 +458,7 @@ let Elem = (function() {
          * @returns href of this element.
          */
         getHref() {
-            return this.getAttribute("href").value;
+            return this.getAttribute('href');
         }
 
         /**
@@ -466,7 +468,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setPlaceholder(placeholder) {
-            this.setAttribute("placeholder", placeholder);
+            this.setAttribute('placeholder', placeholder);
             return this;
         }
 
@@ -476,7 +478,7 @@ let Elem = (function() {
          * @returns placeholder of this element.
          */
         getPlaceholder() {
-            return this.getAttribute("placeholder").value;
+            return this.getAttribute('placeholder');
         }
 
         /**
@@ -486,7 +488,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setSize(size) {
-            this.setAttribute("size", size);
+            this.setAttribute('size', size);
             return this;
         }
 
@@ -496,7 +498,7 @@ let Elem = (function() {
          * @returns size of this element.
          */
         getSize() {
-            return this.getAttribute("size").value;
+            return this.getAttribute('size');
         }
 
         /**
@@ -560,7 +562,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setEditable(boolean) {
-            this.setAttribute("contenteditable", boolean);
+            this.setAttribute('contenteditable', boolean);
             return this;
         }
 
@@ -570,7 +572,7 @@ let Elem = (function() {
          * @returns content editable state of this element.
          */
         getEditable() {
-            return this.getAttribute("contenteditable").value;
+            return this.getAttribute('contenteditable');
         }
 
         /**
@@ -580,7 +582,11 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setDisabled(boolean) {
-            this.html.disabled = boolean;
+            if ((Util.isBoolean(boolean) && boolean === true)
+                || (Util.isString(boolean) && boolean === 'disabled'))
+                this.setAttribute('disabled', 'disabled');
+            else
+                this.removeAttribute('disabled');
             return this;
         }
 
@@ -590,7 +596,7 @@ let Elem = (function() {
          * @returns disabled state of this element.
          */
         getDisabled() {
-            return this.html.disabled;
+            return this.getAttribute('disabled');
         }
 
         /**
@@ -600,7 +606,11 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setChecked(boolean) {
-            this.html.checked = boolean;
+            if ((Util.isBoolean(boolean) && boolean === true)
+                || (Util.isString(boolean) && boolean === 'checked'))
+                this.setAttribute('checked', 'checked');
+            else
+                this.removeAttribute('checked');
             return this;
         }
 
@@ -610,7 +620,7 @@ let Elem = (function() {
          * @returns checked state of this element.
          */
         getChecked() {
-            return this.html.checked;
+            return this.getAttribute('checked');
         }
 
         /**
