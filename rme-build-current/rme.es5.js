@@ -491,7 +491,18 @@ function () {
           child: this.wrap(parent.dom().children[index])
         });
       } else if (this.hasNodeChanged(oldNode, newNode)) {
-        if (this.isValueElem(newNode.getTagName()) && this.comparePropsWithoutValue(oldNode, newNode)) oldNode.setValue(newNode.getValue());else this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
+        var duplicated = newNode.duplicate();
+        var willFocus = oldNode.dom() === document.activeElement;
+
+        if (this.isInputableNode(newNode)) {
+          this.wrap(parent.dom().children[index]).replace(duplicated);
+          duplicated.dom().selectionStart = duplicated.getValue().length;
+          duplicated.dom().selectionEnd = duplicated.getValue().length;
+        } else {
+          this.wrap(parent.dom().children[index]).replace(duplicated);
+        }
+
+        if (willFocus) duplicated.focus();
       } else {
         var i = 0;
         var oldLength = oldNode ? oldNode.dom().children.length : 0;
@@ -502,6 +513,21 @@ function () {
           i++;
         }
       }
+    }
+    /**
+     * Fuction tests if a given node is inputable. The node is inputable in following cases:
+     *  - The node is a textarea
+     *  - The node is type of text, password, search, tel, url
+     *  - The node has an attribute contentEditable === true
+     * @param {*} node 
+     * @returns True if the node is inputable otherwise false.
+     */
+
+  }, {
+    key: "isInputableNode",
+    value: function isInputableNode(node) {
+      var tag = node.getTagName().toLowerCase();
+      return tag === 'textarea' || tag === 'input' && ['text', 'password', 'search', 'tel', 'url'].indexOf(node.dom().type) > -1 || Util.isBoolean(node.dom().contentEditable) && node.dom().contentEditable === true;
     }
     /**
      * Function removes all the marked as to be removed elements which did not come in the new stage by starting from the last to the first.
@@ -520,22 +546,6 @@ function () {
 
         this.tobeRemoved = [];
       }
-    }
-    /**
-     * Function takes two Elem objects as parameter and compares them if they are equal or have some properties changed ignoring a value attribute.
-     * @param {object} oldNode 
-     * @param {object} newNode 
-     * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
-     */
-
-  }, {
-    key: "comparePropsWithoutValue",
-    value: function comparePropsWithoutValue(oldNode, newNode) {
-      var o = oldNode.getProps();
-      var n = newNode.getProps();
-      o.value = "";
-      n.value = "";
-      return JSON.stringify(o) === JSON.stringify(n);
     }
     /**
      * Function takes two Elem objects as parameter and compares them if they are equal or have some properties changed.
@@ -560,22 +570,551 @@ function () {
     value: function wrap(node) {
       if (!Util.isEmpty(node)) return Elem.wrap(node);
     }
-    /**
-     * Function takes an element tag string and compares it to other elements that have a value attribute. If the given tag is a tag of the element that has the tag attribute
-     * true is returned otherwise false will be returned.
-     * @param {string} tag 
-     * @returns True if the give tag is an element that has a value attribute otherwise false is returned.
-     */
-
-  }, {
-    key: "isValueElem",
-    value: function isValueElem(tag) {
-      tag = tag.toLowerCase();
-      return tag === "button" || tag === "input" || tag === "li" || tag === "option" || tag === "meter" || tag === "progress" || tag === "param";
-    }
   }]);
 
   return RMEElemRenderer;
+}();
+/**
+ * Browser class contains all the rest utility functions which JavaScript has to offer from Window, Navigator, Screen, History, Location objects.
+ */
+
+
+var Browser =
+/*#__PURE__*/
+function () {
+  function Browser() {
+    _classCallCheck(this, Browser);
+  }
+
+  _createClass(Browser, null, [{
+    key: "scrollTo",
+
+    /**
+     * Scroll once to a given location (xPos, yPos)
+     * @param {number} xPos
+     * @param {number} yPos
+     */
+    value: function scrollTo(xPos, yPos) {
+      window.scrollTo(xPos, yPos);
+    }
+    /**
+     * Scroll multiple times by given pixel amount (xPx, yPx)
+     * @param {number} xPx
+     * @param {number} yPx
+     */
+
+  }, {
+    key: "scrollBy",
+    value: function scrollBy(xPx, yPx) {
+      window.scrollBy(xPx, yPx);
+    }
+    /**
+     * Opens a new browser window.
+     * 
+     * Name pamareter can have following values: name or target value (name|_blank|_parent|_self|_top)
+     * 
+     * Specs parameter is defined as comma,separated,list,without,whitespace and it can have following values:
+     * channelmode=yes|no|1|0,
+     * direcotries=yes|no|1|0,
+     * fullscreen=yes|no|1|0,
+     * height=pixels,
+     * left=pixels,
+     * location=yes|no|1|0,
+     * menubar=yes|no|1|0,
+     * resizable=yes|no|1|0,
+     * scrollbars=yes|no|1|0,
+     * status=yes|no|1|0,
+     * titlebar=yes|no|1|0,
+     * toolbar|yes|no|1|0,
+     * top=pixels,
+     * width=pixels min 100
+     * 
+     * Replace parameter defines is a new history entry created or is current replaced with the new one.
+     * If true the current entry is replaced with the new one. If false a new history entry is created.
+     * @param {string} url 
+     * @param {string} name 
+     * @param {string} specs 
+     * @param {boolean} replace 
+     * @returns Reference to the opened window or null if opening the window failes.
+     */
+
+  }, {
+    key: "open",
+    value: function open(url, name, specs, replace) {
+      return window.open(url, name, specs, replace);
+    }
+    /**
+     * Closes a given opened window. Same as calling openedWindow.close();
+     * @param {*} openedWindow 
+     */
+
+  }, {
+    key: "close",
+    value: function close(openedWindow) {
+      openedWindow.close();
+    }
+    /**
+     * Opens a print webpage dialog.
+     */
+
+  }, {
+    key: "print",
+    value: function print() {
+      window.print();
+    }
+    /**
+     * Displays an alert dialog with a given message and an OK button.
+     * @param {string} message
+     */
+
+  }, {
+    key: "alert",
+    value: function alert(message) {
+      window.alert(message);
+    }
+    /**
+     * Displays a confirm dialog with a given message, OK and Cancel button.
+     * @param {string} message
+     * @returns True if OK was pressed otherwise false.
+     */
+
+  }, {
+    key: "confirm",
+    value: function confirm(message) {
+      return window.confirm(message);
+    }
+    /**
+     * Displays a prompt dialog with a given message, a prefilled default text, OK and Cancel button.
+     * @param {string} message
+     * @param {string} defaultText
+     * @returns If OK was pressed and an input field has text then the text is returned. 
+     * If the input does not have text and OK was pressed then empty string is returned.
+     * If Cancel was pressed then null is returned.
+     */
+
+  }, {
+    key: "prompt",
+    value: function prompt(message, defaultText) {
+      return window.prompt(message, defaultText);
+    }
+    /**
+     * Method is used to make a media query to the viewport/screen object. The media query is done according to a given mediaString.
+     * Syntax of the media string would be (min-width: 300px) but using this method enables user to omit parentheses(). 
+     * Which then leads to syntax min-width: 300px.
+     * 
+     * Method returns a MediaQueryList object which has few neat properties. Matches and media in addition it has 
+     * two functions addListener and removeListener which can be used to query media in realtime. Usage could be something following:
+     * 
+     * var matcher = Browser.mediaMatcher("max-height: 300px");
+     * 
+     * matcher.addlistener(function(matcher) {
+     *  if(matcher.matches)
+     *      Tree.getBody().setStyles({backgroundColor: "red"});
+     *  else
+     *      Tree.getBody().setStyles({backgroundColor: "green"});
+     * });
+     * 
+     * matcher.media returns the media query string.
+     * 
+     * matcher.matches returns the boolean indicating does it does the query string match or not. True if it matches, otherwise false.
+     * 
+     * mathcer.addListener(function(matcher)) is used to track changes on the viewport/screen.
+     * 
+     * matcher.removeListener(listenerFunction) is used to remove a created listener.
+     * @param {string} mediaString 
+     * @returns MediaQueryList object.
+     */
+
+  }, {
+    key: "mediaMatcher",
+    value: function mediaMatcher(mediaString) {
+      if (mediaString.indexOf("(") !== 0) mediaString = "(" + mediaString;
+      if (mediaString.indexOf(")") !== mediaString.length - 1) mediaString = mediaString + ")";
+      return window.matchMedia(mediaString);
+    }
+    /**
+     * Loads one page back in the browsers history list.
+     */
+
+  }, {
+    key: "pageBack",
+    value: function pageBack() {
+      history.back();
+    }
+    /**
+     * Loads one page forward in the browsers history list.
+     */
+
+  }, {
+    key: "pageForward",
+    value: function pageForward() {
+      history.forward();
+    }
+    /**
+     * Loads to specified page in the browsers history list. A parameter can either be a number or string.
+     * If the parameter is number then positive and negative values are allowed as positive values will go forward
+     * and negative values will go backward. 
+     * If the parameter is string then it must be partial or full url of the page in the history list.
+     * @param {string|number} numberOfPagesOrUrl
+     */
+
+  }, {
+    key: "pageGo",
+    value: function pageGo(numberOfPagesOrUrl) {
+      history.go(numberOfPagesOrUrl);
+    }
+    /**
+     * Create a new history entry with given parameters without reloading the page. State object will be the state
+     * next history entry will be using. Title is ignored value by the history object at the time but it could be 
+     * the same title what the HTML Document page has at the moment of create the new history entry. New url must 
+     * be of the same origin (e.g. www.example.com) but the rest of url could be anything.
+     * @param {object} stateObject 
+     * @param {string} title 
+     * @param {string} newURL 
+     */
+
+  }, {
+    key: "pushState",
+    value: function pushState(stateObject, title, newURL) {
+      history.pushState(stateObject, title, newURL);
+    }
+    /**
+     * Replace a history entry with given parameters without reloading the page. State object will be the state
+     * next history entry will be using. Title is ignored value by the history object at the time but it could be 
+     * the same title what the HTML Document page has at the moment of create the new history entry. New url must 
+     * be of the same origin (e.g. www.example.com) but the rest of url could be anything.
+     * @param {object} stateObject 
+     * @param {string} title 
+     * @param {string} newURL 
+     */
+
+  }, {
+    key: "replaceState",
+    value: function replaceState(stateObject, title, newURL) {
+      history.replaceState(stateObject, title, newURL);
+    }
+    /**
+     * Loads a new page.
+     * @param {string} newURL
+     */
+
+  }, {
+    key: "newPage",
+    value: function newPage(newURL) {
+      location.assign(newURL);
+    }
+    /**
+     * Reloads a current page. If a parameter force is true then the page will be loaded from the server 
+     * otherwise from the browsers cache.
+     * @param {boolean} force
+     */
+
+  }, {
+    key: "reloadPage",
+    value: function reloadPage(force) {
+      location.reload(force);
+    }
+    /**
+     * Replaces a current page with a new one. If the page is replaced then it wont be possible to go back
+     * to the previous page from the history list.
+     * @param {string} newURL
+     */
+
+  }, {
+    key: "replacePage",
+    value: function replacePage(newURL) {
+      location.replace(newURL);
+    }
+    /**
+     * @returns Anchor part of the url e.g. #heading2.
+     */
+
+  }, {
+    key: "getAnchorHash",
+    value: function getAnchorHash() {
+      return location.hash;
+    }
+    /**
+     * Sets a new anhorpart of the url e.g. #heading3.
+     * @param {string} hash
+     */
+
+  }, {
+    key: "setAnchorHash",
+    value: function setAnchorHash(hash) {
+      location.hash = hash;
+    }
+    /**
+     * @returns Hostname and port in host:port format.
+     */
+
+  }, {
+    key: "getHostnamePort",
+    value: function getHostnamePort() {
+      return location.host;
+    }
+    /**
+     * Set a hostname and port in format host:port.
+     * @param {string} hostPort
+     */
+
+  }, {
+    key: "setHostnamePort",
+    value: function setHostnamePort(hostPort) {
+      location.host = hostPort;
+    }
+    /**
+     * @returns Hostname e.g. www.google.com.
+     */
+
+  }, {
+    key: "getHostname",
+    value: function getHostname() {
+      return location.hostname;
+    }
+    /**
+     * Set a hostname
+     * @param {string} hostname
+     */
+
+  }, {
+    key: "setHostname",
+    value: function setHostname(hostname) {
+      location.hostname = hostname;
+    }
+    /**
+     * @returns Entire URL of the webpage.
+     */
+
+  }, {
+    key: "getURL",
+    value: function getURL() {
+      return location.href;
+    }
+    /**
+     * Set location of a current page to point to a new location e.g. http://some.url.test or #someAcnhor on the page.
+     * @param {string} newURL
+     */
+
+  }, {
+    key: "setURL",
+    value: function setURL(newURL) {
+      location.href = newURL;
+    }
+    /**
+     * @returns protocol, hostname and port e.g. https://www.example.com:443
+     */
+
+  }, {
+    key: "getOrigin",
+    value: function getOrigin() {
+      return location.origin;
+    }
+    /**
+     * @returns Part of the URL after the slash(/) e.g. /photos/
+     */
+
+  }, {
+    key: "getPathname",
+    value: function getPathname() {
+      return location.pathname;
+    }
+    /**
+     * Sets a new pathname for this location.
+     * @param {string} pathname 
+     */
+
+  }, {
+    key: "setPathname",
+    value: function setPathname(pathname) {
+      location.pathname = pathname;
+    }
+    /**
+     * @returns Port number of the connection between server and client.
+     */
+
+  }, {
+    key: "getPort",
+    value: function getPort() {
+      return location.port;
+    }
+    /**
+     * Sets a new port number for the connection between server and client.
+     * @param {number} portNumber 
+     */
+
+  }, {
+    key: "setPort",
+    value: function setPort(portNumber) {
+      location.port = portNumber;
+    }
+    /**
+     * @returns Protocol part of the URL e.g. http: or https:.
+     */
+
+  }, {
+    key: "getProtocol",
+    value: function getProtocol() {
+      return location.protocol;
+    }
+    /**
+     * Set a new protocol for this location to use.
+     * @param {string} protocol 
+     */
+
+  }, {
+    key: "setProtocol",
+    value: function setProtocol(protocol) {
+      location.protocol = protocol;
+    }
+    /**
+     * @returns Part of the URL after the question(?) mark. e.g. ?attr=value&abc=efg.
+     */
+
+  }, {
+    key: "getSearchString",
+    value: function getSearchString() {
+      return location.search;
+    }
+    /**
+     * Sets a new searchString into the URL
+     * @param {string} searchString 
+     */
+
+  }, {
+    key: "setSearchString",
+    value: function setSearchString(searchString) {
+      location.search = searchString;
+    }
+    /**
+     * @returns Codename of the browser.
+     */
+
+  }, {
+    key: "getCodename",
+    value: function getCodename() {
+      return navigator.appCodeName;
+    }
+    /**
+     * @returns Name of the browser.
+     */
+
+  }, {
+    key: "getName",
+    value: function getName() {
+      return navigator.appName;
+    }
+    /**
+     * @returns Version of the browser.
+     */
+
+  }, {
+    key: "getVersion",
+    value: function getVersion() {
+      return navigator.appVersion;
+    }
+    /**
+     * @returns True if cookies are enabled otherwise false.
+     */
+
+  }, {
+    key: "isCookiesEnabled",
+    value: function isCookiesEnabled() {
+      return navigator.cookieEnabled;
+    }
+    /**
+     * @returns GeoLocation object.
+     */
+
+  }, {
+    key: "getGeoLocation",
+    value: function getGeoLocation() {
+      return navigator.geolocation;
+    }
+    /**
+     * @returns Language of the browser.
+     */
+
+  }, {
+    key: "getLanguage",
+    value: function getLanguage() {
+      return navigator.language;
+    }
+    /**
+     * @returns A platform name of which the browser is compiled on.
+     */
+
+  }, {
+    key: "getPlatform",
+    value: function getPlatform() {
+      return navigator.platform;
+    }
+    /**
+     * @returns A name of an engine of the browser.
+     */
+
+  }, {
+    key: "getProduct",
+    value: function getProduct() {
+      return navigator.product;
+    }
+    /**
+     * @returns A header string sent to a server by the browser.
+     */
+
+  }, {
+    key: "getUserAgentHeader",
+    value: function getUserAgentHeader() {
+      return navigator.userAgent;
+    }
+    /**
+     * @returns Color depth of the current screen.
+     */
+
+  }, {
+    key: "getColorDepth",
+    value: function getColorDepth() {
+      return screen.colorDepth;
+    }
+    /**
+     * @returns Total height of the current screen.
+     */
+
+  }, {
+    key: "getFullScreenHeight",
+    value: function getFullScreenHeight() {
+      return screen.height;
+    }
+    /**
+     * @returns Total width of the current screen.
+     */
+
+  }, {
+    key: "getFullScreenWidth",
+    value: function getFullScreenWidth() {
+      return screen.width;
+    }
+    /**
+     * @returns Height of the current screen excluding OS. taskbar.
+     */
+
+  }, {
+    key: "getAvailableScreenHeight",
+    value: function getAvailableScreenHeight() {
+      return screen.availHeight;
+    }
+    /**
+     * @returns Width of the current screen exluding OS. taskbar.
+     */
+
+  }, {
+    key: "getAvailableScreenWidth",
+    value: function getAvailableScreenWidth() {
+      return screen.availWidth;
+    }
+  }]);
+
+  return Browser;
 }();
 
 var Elem = function () {
@@ -991,13 +1530,13 @@ var Elem = function () {
        * Get an attribute of this element.
        * 
        * @param {String} attr 
-       * @returns an attribute object with name and value properties.
+       * @returns a value of the attribute.
        */
 
     }, {
       key: "getAttribute",
       value: function getAttribute(attr) {
-        return this.html.getAttributeNode(attr);
+        return this.html.getAttribute(attr);
       }
       /**
        * Removes an attribute of this element.
@@ -1009,7 +1548,8 @@ var Elem = function () {
     }, {
       key: "removeAttribute",
       value: function removeAttribute(attr) {
-        this.html.removeAttributeNode(this.getAttribute(attr));
+        var attrNode = this.html.getAttributeNode(attr);
+        if (attrNode) this.html.removeAttributeNode(attrNode);
         return this;
       }
       /**
@@ -1022,7 +1562,7 @@ var Elem = function () {
     }, {
       key: "setName",
       value: function setName(name) {
-        this.setAttribute("name", name);
+        this.setAttribute('name', name);
         return this;
       }
       /**
@@ -1034,7 +1574,7 @@ var Elem = function () {
     }, {
       key: "getName",
       value: function getName() {
-        return this.getAttribute("name").value;
+        return this.getAttribute('name');
       }
       /**
        * Set a type of this element.
@@ -1046,7 +1586,7 @@ var Elem = function () {
     }, {
       key: "setType",
       value: function setType(type) {
-        this.setAttribute("type", type);
+        this.setAttribute('type', type);
         return this;
       }
       /**
@@ -1058,7 +1598,7 @@ var Elem = function () {
     }, {
       key: "getType",
       value: function getType() {
-        return this.getAttribute("type").value;
+        return this.getAttribute('type');
       }
       /**
        * Set a source of this element.
@@ -1070,7 +1610,7 @@ var Elem = function () {
     }, {
       key: "setSource",
       value: function setSource(source) {
-        this.setAttribute("src", source);
+        this.setAttribute('src', source);
         return this;
       }
       /**
@@ -1082,7 +1622,7 @@ var Elem = function () {
     }, {
       key: "getSource",
       value: function getSource() {
-        return this.getAttribute("src").value;
+        return this.getAttribute('src');
       }
       /**
        * Set a href of this element.
@@ -1094,7 +1634,7 @@ var Elem = function () {
     }, {
       key: "setHref",
       value: function setHref(href) {
-        this.setAttribute("href", href);
+        this.setAttribute('href', href);
         return this;
       }
       /**
@@ -1106,7 +1646,7 @@ var Elem = function () {
     }, {
       key: "getHref",
       value: function getHref() {
-        return this.getAttribute("href").value;
+        return this.getAttribute('href');
       }
       /**
        * Set a placeholder of this element.
@@ -1118,7 +1658,7 @@ var Elem = function () {
     }, {
       key: "setPlaceholder",
       value: function setPlaceholder(placeholder) {
-        this.setAttribute("placeholder", placeholder);
+        this.setAttribute('placeholder', placeholder);
         return this;
       }
       /**
@@ -1130,7 +1670,7 @@ var Elem = function () {
     }, {
       key: "getPlaceholder",
       value: function getPlaceholder() {
-        return this.getAttribute("placeholder").value;
+        return this.getAttribute('placeholder');
       }
       /**
        * Sets size of this element.
@@ -1142,7 +1682,7 @@ var Elem = function () {
     }, {
       key: "setSize",
       value: function setSize(size) {
-        this.setAttribute("size", size);
+        this.setAttribute('size', size);
         return this;
       }
       /**
@@ -1154,7 +1694,7 @@ var Elem = function () {
     }, {
       key: "getSize",
       value: function getSize() {
-        return this.getAttribute("size").value;
+        return this.getAttribute('size');
       }
       /**
        * Set maximum length of an input field.
@@ -1232,7 +1772,7 @@ var Elem = function () {
     }, {
       key: "setEditable",
       value: function setEditable(boolean) {
-        this.setAttribute("contenteditable", boolean);
+        this.setAttribute('contenteditable', boolean);
         return this;
       }
       /**
@@ -1244,7 +1784,7 @@ var Elem = function () {
     }, {
       key: "getEditable",
       value: function getEditable() {
-        return this.getAttribute("contenteditable").value;
+        return this.getAttribute('contenteditable');
       }
       /**
        * Set this element disabled.
@@ -1256,7 +1796,7 @@ var Elem = function () {
     }, {
       key: "setDisabled",
       value: function setDisabled(boolean) {
-        this.html.disabled = boolean;
+        if (Util.isBoolean(boolean) && boolean === true || Util.isString(boolean) && boolean === 'disabled') this.setAttribute('disabled', 'disabled');else this.removeAttribute('disabled');
         return this;
       }
       /**
@@ -1268,7 +1808,7 @@ var Elem = function () {
     }, {
       key: "getDisabled",
       value: function getDisabled() {
-        return this.html.disabled;
+        return this.getAttribute('disabled');
       }
       /**
        * Set this element checked.
@@ -1280,7 +1820,7 @@ var Elem = function () {
     }, {
       key: "setChecked",
       value: function setChecked(boolean) {
-        this.html.checked = boolean;
+        if (Util.isBoolean(boolean) && boolean === true || Util.isString(boolean) && boolean === 'checked') this.setAttribute('checked', 'checked');else this.removeAttribute('checked');
         return this;
       }
       /**
@@ -1292,7 +1832,7 @@ var Elem = function () {
     }, {
       key: "getChecked",
       value: function getChecked() {
-        return this.html.checked;
+        return this.getAttribute('checked');
       }
       /**
        * Add classes to this element.
@@ -2979,6 +3519,153 @@ function () {
 
   return RMEElemTemplater;
 }();
+
+var Cookie = function () {
+  /**
+   * Cookie interface offers an easy way to get, set or remove cookies in application logic.
+   * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
+   * 
+   * {
+   *    name: "name",
+   *    value: "value",
+   *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+   *    cookiePath: "cookiePath absolute dir",
+   *    cookieDomain: "cookieDomain e.g example.com",
+   *    setSecureBoolean: true|false
+   * }
+   * 
+   * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+   * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+   */
+  var Cookie =
+  /*#__PURE__*/
+  function () {
+    function Cookie() {
+      _classCallCheck(this, Cookie);
+    }
+
+    _createClass(Cookie, null, [{
+      key: "get",
+
+      /**
+       * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
+       * 
+       * @param {String} name 
+       * @returns cookie object
+       */
+      value: function get(name) {
+        if (navigator.cookieEnabled) {
+          var retCookie = null;
+          var cookies = document.cookie.split(";");
+          var i = 0;
+
+          while (i < cookies.length) {
+            var cookie = cookies[i];
+            var eq = cookie.search("=");
+            var cn = cookie.substr(0, eq).trim();
+            var cv = cookie.substr(eq + 1, cookie.length).trim();
+
+            if (cn === name) {
+              retCookie = new CookieInstance(cn, cv);
+              break;
+            }
+
+            i++;
+          }
+
+          return retCookie;
+        }
+      }
+      /**
+       * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
+       * 
+       * @param {string} name
+       * @param {string} value
+       * @param {string} expiresDate
+       * @param {string} cookiePath
+       * @param {string} cookieDomain
+       * @param {boolean} setSecureBoolean
+       */
+
+    }, {
+      key: "set",
+      value: function set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+        if (navigator.cookieEnabled) {
+          document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
+        }
+      }
+      /**
+       * Remove a cookie by name. Method will set the cookie expired and then remove it.
+       * @param {string} name
+       */
+
+    }, {
+      key: "remove",
+      value: function remove(name) {
+        var co = Cookie.get(name);
+
+        if (!Util.isEmpty(co)) {
+          co.setExpired();
+          document.cookie = co.toString();
+        }
+      }
+    }]);
+
+    return Cookie;
+  }();
+  /**
+   * Cookie object may hold following values:
+   *
+   * {
+   *    name: "name",
+   *    value: "value",
+   *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+   *    cookiePath: "cookiePath absolute dir",
+   *    cookieDomain: "cookieDomain e.g example.com",
+   *    setSecureBoolean: true|false
+   * }
+   * 
+   * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+   * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+   */
+
+
+  var CookieInstance =
+  /*#__PURE__*/
+  function () {
+    function CookieInstance(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+      _classCallCheck(this, CookieInstance);
+
+      this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
+      this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
+      this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
+      this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
+      this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
+      this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
+    }
+
+    _createClass(CookieInstance, [{
+      key: "setExpired",
+      value: function setExpired() {
+        this.cookieExpires = new Date(1970, 0, 1).toString();
+      }
+    }, {
+      key: "toString",
+      value: function toString() {
+        return this.cookieName + "=" + this.cookieValue + "; expires=" + this.cookieExpires + "; path=" + this.cookiePath + "; domain=" + this.cookieDomain + "; " + this.cookieSecurity;
+      }
+    }], [{
+      key: "create",
+      value: function create(name, value, expires, cpath, cdomain, setSecure) {
+        return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
+      }
+    }]);
+
+    return CookieInstance;
+  }();
+
+  return Cookie;
+}();
 /**
  * Before using this class you should also be familiar on how to use fetch since usage of this class
  * will be quite similar to fetch except predefined candy that is added on a class.
@@ -3450,453 +4137,6 @@ var Http = function () {
   };
 
   return Http;
-}();
-
-var Cookie = function () {
-  /**
-   * Cookie interface offers an easy way to get, set or remove cookies in application logic.
-   * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
-   * 
-   * {
-   *    name: "name",
-   *    value: "value",
-   *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-   *    cookiePath: "cookiePath absolute dir",
-   *    cookieDomain: "cookieDomain e.g example.com",
-   *    setSecureBoolean: true|false
-   * }
-   * 
-   * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-   * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-   */
-  var Cookie =
-  /*#__PURE__*/
-  function () {
-    function Cookie() {
-      _classCallCheck(this, Cookie);
-    }
-
-    _createClass(Cookie, null, [{
-      key: "get",
-
-      /**
-       * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
-       * 
-       * @param {String} name 
-       * @returns cookie object
-       */
-      value: function get(name) {
-        if (navigator.cookieEnabled) {
-          var retCookie = null;
-          var cookies = document.cookie.split(";");
-          var i = 0;
-
-          while (i < cookies.length) {
-            var cookie = cookies[i];
-            var eq = cookie.search("=");
-            var cn = cookie.substr(0, eq).trim();
-            var cv = cookie.substr(eq + 1, cookie.length).trim();
-
-            if (cn === name) {
-              retCookie = new CookieInstance(cn, cv);
-              break;
-            }
-
-            i++;
-          }
-
-          return retCookie;
-        }
-      }
-      /**
-       * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
-       * 
-       * @param {string} name
-       * @param {string} value
-       * @param {string} expiresDate
-       * @param {string} cookiePath
-       * @param {string} cookieDomain
-       * @param {boolean} setSecureBoolean
-       */
-
-    }, {
-      key: "set",
-      value: function set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-        if (navigator.cookieEnabled) {
-          document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
-        }
-      }
-      /**
-       * Remove a cookie by name. Method will set the cookie expired and then remove it.
-       * @param {string} name
-       */
-
-    }, {
-      key: "remove",
-      value: function remove(name) {
-        var co = Cookie.get(name);
-
-        if (!Util.isEmpty(co)) {
-          co.setExpired();
-          document.cookie = co.toString();
-        }
-      }
-    }]);
-
-    return Cookie;
-  }();
-  /**
-   * Cookie object may hold following values:
-   *
-   * {
-   *    name: "name",
-   *    value: "value",
-   *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-   *    cookiePath: "cookiePath absolute dir",
-   *    cookieDomain: "cookieDomain e.g example.com",
-   *    setSecureBoolean: true|false
-   * }
-   * 
-   * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-   * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-   */
-
-
-  var CookieInstance =
-  /*#__PURE__*/
-  function () {
-    function CookieInstance(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-      _classCallCheck(this, CookieInstance);
-
-      this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
-      this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
-      this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
-      this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
-      this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
-      this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
-    }
-
-    _createClass(CookieInstance, [{
-      key: "setExpired",
-      value: function setExpired() {
-        this.cookieExpires = new Date(1970, 0, 1).toString();
-      }
-    }, {
-      key: "toString",
-      value: function toString() {
-        return this.cookieName + "=" + this.cookieValue + "; expires=" + this.cookieExpires + "; path=" + this.cookiePath + "; domain=" + this.cookieDomain + "; " + this.cookieSecurity;
-      }
-    }], [{
-      key: "create",
-      value: function create(name, value, expires, cpath, cdomain, setSecure) {
-        return new Cookie(name, value, expires, cpath, cdomain, setSecure);
-      }
-    }]);
-
-    return CookieInstance;
-  }();
-
-  return Cookie;
-}();
-
-var Messages = function () {
-  /**
-   * Messages class handles internationalization. The class offers public methods that enable easy 
-   * using of translated content.
-   */
-  var Messages =
-  /*#__PURE__*/
-  function () {
-    function Messages() {
-      _classCallCheck(this, Messages);
-
-      this.instance = this;
-      this.messages = [];
-      this.locale = "";
-      this.translated = [];
-
-      this.load = function () {};
-
-      this.messagesType;
-      this.app;
-      this.ready = false;
-      this.registerMessages();
-    }
-    /**
-     * Initializes the Messages
-     */
-
-
-    _createClass(Messages, [{
-      key: "registerMessages",
-      value: function registerMessages() {
-        var _this9 = this;
-
-        document.addEventListener("readystatechange", function () {
-          if (document.readyState === "complete") {
-            _this9.ready = true;
-
-            _this9.runTranslated.call(_this9);
-          }
-        });
-      }
-    }, {
-      key: "setLoad",
-      value: function setLoad(loader) {
-        this.load = loader;
-      }
-    }, {
-      key: "setAppInstance",
-      value: function setAppInstance(appInstance) {
-        this.app = appInstance;
-      }
-    }, {
-      key: "setLocale",
-      value: function setLocale(locale) {
-        this.locale = locale;
-        return this;
-      }
-    }, {
-      key: "setMessages",
-      value: function setMessages(messages) {
-        if (Util.isArray(messages)) this.messagesType = "array";else if (Util.isObject(messages)) this.messagesType = "map";else throw "messages must be type array or object";
-        this.messages = messages;
-        this.runTranslated.call(this);
-      }
-    }, {
-      key: "getMessage",
-      value: function getMessage(text) {
-        for (var _len = arguments.length, params = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-          params[_key - 1] = arguments[_key];
-        }
-
-        if (Util.isEmpty(params[0][0])) {
-          return this.resolveMessage(text);
-        } else {
-          this.getTranslatedElemIfExist(text, params[0][0]);
-          var msg = this.resolveMessage(text);
-          return this.resolveParams(msg, params[0][0]);
-        }
-      }
-      /**
-       * Resolves translated message key and returns a resolved message if exist
-       * otherwise returns the given key.
-       * @param {string} text 
-       * @returns A resolved message if exist otherwise the given key.
-       */
-
-    }, {
-      key: "resolveMessage",
-      value: function resolveMessage(text) {
-        if (this.messagesType === "array") {
-          return this.resolveMessagesArray(text);
-        } else if (this.messagesType === "map") {
-          return this.resolveMessagesMap(text);
-        }
-      }
-      /**
-       * Resolves a translated message key from the map. Returns a resolved message 
-       * if found otherwise returns the key.
-       * @param {string} text 
-       * @returns A resolved message
-       */
-
-    }, {
-      key: "resolveMessagesMap",
-      value: function resolveMessagesMap(text) {
-        var msg = text;
-
-        for (var i in this.messages) {
-          if (i === text) {
-            msg = this.messages[i];
-            break;
-          }
-        }
-
-        return msg;
-      }
-      /**
-       * Resolves a translated message key from the array. Returns a resolved message
-       * if found otherwise returns the key.
-       * @param {string} text 
-       * @returns A resolved message
-       */
-
-    }, {
-      key: "resolveMessagesArray",
-      value: function resolveMessagesArray(text) {
-        var i = 0;
-        var msg = text;
-
-        while (i < this.messages.length) {
-          if (!Util.isEmpty(this.messages[i][text])) {
-            msg = this.messages[i][text];
-            break;
-          }
-
-          i++;
-        }
-
-        return msg;
-      }
-      /**
-       * Resolves the message parameters if exist otherwise does nothing.
-       * @param {string} msg 
-       * @param {*} params 
-       * @returns The message with resolved message parameteres if parameters exist.
-       */
-
-    }, {
-      key: "resolveParams",
-      value: function resolveParams(msg, params) {
-        if (!Util.isEmpty(msg)) {
-          var i = 0;
-
-          while (i < params.length) {
-            msg = msg.replace("{" + i + "}", params[i]);
-            i++;
-          }
-
-          return msg;
-        }
-      }
-      /**
-       * Function gets a Elem object and inserts it into a translated object array if it exists.
-       * @param {string} key 
-       * @param {*} params 
-       */
-
-    }, {
-      key: "getTranslatedElemIfExist",
-      value: function getTranslatedElemIfExist(key, params) {
-        if (Util.isEmpty(this.app)) {
-          var last = params[params.length - 1];
-
-          if (Util.isObject(last) && last instanceof Elem) {
-            last = params.pop();
-            this.translated.push({
-              key: key,
-              params: params,
-              obj: last
-            });
-          }
-        }
-      }
-      /**
-       * Function goes through the translated objects array and sets a translated message to the translated elements.
-       */
-
-    }, {
-      key: "runTranslated",
-      value: function runTranslated() {
-        var _this10 = this;
-
-        if (Util.isEmpty(this.app) && this.ready) {
-          Util.setTimeout(function () {
-            var i = 0;
-
-            while (i < _this10.translated.length) {
-              _this10.translated[i].obj.setText.call(_this10.translated[i].obj, Messages.message(_this10.translated[i].key, _this10.translated[i].params));
-
-              i++;
-            }
-          });
-        } else if (this.ready) {
-          this.app.refresh();
-        }
-      }
-      /**
-       * Function returns current locale of the Messages
-       * @returns Current locale
-       */
-
-    }], [{
-      key: "locale",
-      value: function locale() {
-        return Messages.getInstance().locale;
-      }
-      /**
-       * Lang function is used to change or set the current locale to be the given locale. After calling this method
-       * the Messages.load function will be automatically invoked.
-       * @param {string} locale String
-       * @param {object} locale Event
-       */
-
-    }, {
-      key: "lang",
-      value: function lang(locale) {
-        var loc;
-
-        if (Util.isObject(locale) && locale instanceof Event) {
-          locale.preventDefault();
-          var el = Elem.wrap(locale.target);
-          loc = el.getHref();
-          if (Util.isEmpty(loc)) loc = el.getValue();
-          if (Util.isEmpty(loc)) loc = el.getText();
-        } else if (Util.isString(locale)) loc = locale;else throw "Given parameter must be type string or instance of Event, given value: " + locale;
-
-        if (!Util.isEmpty(loc)) Messages.getInstance().setLocale(loc).load.call(null, Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
-      }
-      /**
-       * Message function is used to retrieve translated messages. The function also supports message parameters
-       * that can be given as a comma separeted list. 
-       * @param {string} text 
-       * @param {*} params 
-       * @returns A resolved message or the given key if the message is not found.
-       */
-
-    }, {
-      key: "message",
-      value: function message(text) {
-        for (var _len2 = arguments.length, params = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-          params[_key2 - 1] = arguments[_key2];
-        }
-
-        return Messages.getInstance().getMessage(text, params);
-      }
-      /**
-       * Load function is used to load new messages or change already loaded messages.
-       * Implementation of the function receives two parameters. The one of the parameters is the changed locale and 
-       * the other is setMessages(messagesArrayOrObject) function that is used to change the translated messages.
-       * This function is called automatically when language is changed by calling the Messages.lang() function.
-       * @param {function} loader 
-       */
-
-    }, {
-      key: "load",
-      value: function load(loader) {
-        if (!Util.isFunction(loader)) throw "loader must be type function " + Util.getType(loader);
-        Messages.getInstance().setLoad(loader);
-      }
-      /**
-       * Set the app instance to be invoked on the Messages update.
-       * @param {object} appInstance 
-       */
-
-    }, {
-      key: "setApp",
-      value: function setApp(appInstance) {
-        Messages.getInstance().setAppInstance(appInstance);
-        return Messages;
-      }
-    }, {
-      key: "getInstance",
-      value: function getInstance() {
-        if (!this.instance) this.instance = new Messages();
-        return this.instance;
-      }
-    }]);
-
-    return Messages;
-  }();
-
-  return {
-    lang: Messages.lang,
-    message: Messages.message,
-    load: Messages.load,
-    locale: Messages.locale,
-    setApp: Messages.setApp
-  };
 }();
 /**
  * Key class does not have any methods as it only contains key mappings for keyevent. For example:
@@ -4440,547 +4680,807 @@ var RME = function () {
     use: RME.use
   };
 }();
-/**
- * Browser class contains all the rest utility functions which JavaScript has to offer from Window, Navigator, Screen, History, Location objects.
- */
 
+var Messages = function () {
+  /**
+   * Messages class handles internationalization. The class offers public methods that enable easy 
+   * using of translated content.
+   */
+  var Messages =
+  /*#__PURE__*/
+  function () {
+    function Messages() {
+      _classCallCheck(this, Messages);
 
-var Browser =
-/*#__PURE__*/
-function () {
-  function Browser() {
-    _classCallCheck(this, Browser);
-  }
+      this.instance = this;
+      this.messages = [];
+      this.locale = "";
+      this.translated = [];
 
-  _createClass(Browser, null, [{
-    key: "scrollTo",
+      this.load = function () {};
 
-    /**
-     * Scroll once to a given location (xPos, yPos)
-     * @param {number} xPos
-     * @param {number} yPos
-     */
-    value: function scrollTo(xPos, yPos) {
-      window.scrollTo(xPos, yPos);
+      this.messagesType;
+      this.app;
+      this.ready = false;
+      this.registerMessages();
     }
     /**
-     * Scroll multiple times by given pixel amount (xPx, yPx)
-     * @param {number} xPx
-     * @param {number} yPx
+     * Initializes the Messages
      */
 
-  }, {
-    key: "scrollBy",
-    value: function scrollBy(xPx, yPx) {
-      window.scrollBy(xPx, yPx);
+
+    _createClass(Messages, [{
+      key: "registerMessages",
+      value: function registerMessages() {
+        var _this9 = this;
+
+        document.addEventListener("readystatechange", function () {
+          if (document.readyState === "complete") {
+            _this9.ready = true;
+
+            _this9.runTranslated.call(_this9);
+          }
+        });
+      }
+    }, {
+      key: "setLoad",
+      value: function setLoad(loader) {
+        this.load = loader;
+      }
+    }, {
+      key: "setAppInstance",
+      value: function setAppInstance(appInstance) {
+        this.app = appInstance;
+      }
+    }, {
+      key: "setLocale",
+      value: function setLocale(locale) {
+        this.locale = locale;
+        return this;
+      }
+    }, {
+      key: "setMessages",
+      value: function setMessages(messages) {
+        if (Util.isArray(messages)) this.messagesType = "array";else if (Util.isObject(messages)) this.messagesType = "map";else throw "messages must be type array or object";
+        this.messages = messages;
+        this.runTranslated.call(this);
+      }
+    }, {
+      key: "getMessage",
+      value: function getMessage(text) {
+        for (var _len = arguments.length, params = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+          params[_key - 1] = arguments[_key];
+        }
+
+        if (Util.isEmpty(params[0][0])) {
+          return this.resolveMessage(text);
+        } else {
+          this.getTranslatedElemIfExist(text, params[0][0]);
+          var msg = this.resolveMessage(text);
+          return this.resolveParams(msg, params[0][0]);
+        }
+      }
+      /**
+       * Resolves translated message key and returns a resolved message if exist
+       * otherwise returns the given key.
+       * @param {string} text 
+       * @returns A resolved message if exist otherwise the given key.
+       */
+
+    }, {
+      key: "resolveMessage",
+      value: function resolveMessage(text) {
+        if (this.messagesType === "array") {
+          return this.resolveMessagesArray(text);
+        } else if (this.messagesType === "map") {
+          return this.resolveMessagesMap(text);
+        }
+      }
+      /**
+       * Resolves a translated message key from the map. Returns a resolved message 
+       * if found otherwise returns the key.
+       * @param {string} text 
+       * @returns A resolved message
+       */
+
+    }, {
+      key: "resolveMessagesMap",
+      value: function resolveMessagesMap(text) {
+        var msg = text;
+
+        for (var i in this.messages) {
+          if (i === text) {
+            msg = this.messages[i];
+            break;
+          }
+        }
+
+        return msg;
+      }
+      /**
+       * Resolves a translated message key from the array. Returns a resolved message
+       * if found otherwise returns the key.
+       * @param {string} text 
+       * @returns A resolved message
+       */
+
+    }, {
+      key: "resolveMessagesArray",
+      value: function resolveMessagesArray(text) {
+        var i = 0;
+        var msg = text;
+
+        while (i < this.messages.length) {
+          if (!Util.isEmpty(this.messages[i][text])) {
+            msg = this.messages[i][text];
+            break;
+          }
+
+          i++;
+        }
+
+        return msg;
+      }
+      /**
+       * Resolves the message parameters if exist otherwise does nothing.
+       * @param {string} msg 
+       * @param {*} params 
+       * @returns The message with resolved message parameteres if parameters exist.
+       */
+
+    }, {
+      key: "resolveParams",
+      value: function resolveParams(msg, params) {
+        if (!Util.isEmpty(msg)) {
+          var i = 0;
+
+          while (i < params.length) {
+            msg = msg.replace("{" + i + "}", params[i]);
+            i++;
+          }
+
+          return msg;
+        }
+      }
+      /**
+       * Function gets a Elem object and inserts it into a translated object array if it exists.
+       * @param {string} key 
+       * @param {*} params 
+       */
+
+    }, {
+      key: "getTranslatedElemIfExist",
+      value: function getTranslatedElemIfExist(key, params) {
+        if (Util.isEmpty(this.app)) {
+          var last = params[params.length - 1];
+
+          if (Util.isObject(last) && last instanceof Elem) {
+            last = params.pop();
+            this.translated.push({
+              key: key,
+              params: params,
+              obj: last
+            });
+          }
+        }
+      }
+      /**
+       * Function goes through the translated objects array and sets a translated message to the translated elements.
+       */
+
+    }, {
+      key: "runTranslated",
+      value: function runTranslated() {
+        var _this10 = this;
+
+        if (Util.isEmpty(this.app) && this.ready) {
+          Util.setTimeout(function () {
+            var i = 0;
+
+            while (i < _this10.translated.length) {
+              _this10.translated[i].obj.setText.call(_this10.translated[i].obj, Messages.message(_this10.translated[i].key, _this10.translated[i].params));
+
+              i++;
+            }
+          });
+        } else if (this.ready) {
+          this.app.refresh();
+        }
+      }
+      /**
+       * Function returns current locale of the Messages
+       * @returns Current locale
+       */
+
+    }], [{
+      key: "locale",
+      value: function locale() {
+        return Messages.getInstance().locale;
+      }
+      /**
+       * Lang function is used to change or set the current locale to be the given locale. After calling this method
+       * the Messages.load function will be automatically invoked.
+       * @param {string} locale String
+       * @param {object} locale Event
+       */
+
+    }, {
+      key: "lang",
+      value: function lang(locale) {
+        var loc;
+
+        if (Util.isObject(locale) && locale instanceof Event) {
+          locale.preventDefault();
+          var el = Elem.wrap(locale.target);
+          loc = el.getHref();
+          if (Util.isEmpty(loc)) loc = el.getValue();
+          if (Util.isEmpty(loc)) loc = el.getText();
+        } else if (Util.isString(locale)) loc = locale;else throw "Given parameter must be type string or instance of Event, given value: " + locale;
+
+        if (!Util.isEmpty(loc)) Messages.getInstance().setLocale(loc).load.call(null, Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
+      }
+      /**
+       * Message function is used to retrieve translated messages. The function also supports message parameters
+       * that can be given as a comma separeted list. 
+       * @param {string} text 
+       * @param {*} params 
+       * @returns A resolved message or the given key if the message is not found.
+       */
+
+    }, {
+      key: "message",
+      value: function message(text) {
+        for (var _len2 = arguments.length, params = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+          params[_key2 - 1] = arguments[_key2];
+        }
+
+        return Messages.getInstance().getMessage(text, params);
+      }
+      /**
+       * Load function is used to load new messages or change already loaded messages.
+       * Implementation of the function receives two parameters. The one of the parameters is the changed locale and 
+       * the other is setMessages(messagesArrayOrObject) function that is used to change the translated messages.
+       * This function is called automatically when language is changed by calling the Messages.lang() function.
+       * @param {function} loader 
+       */
+
+    }, {
+      key: "load",
+      value: function load(loader) {
+        if (!Util.isFunction(loader)) throw "loader must be type function " + Util.getType(loader);
+        Messages.getInstance().setLoad(loader);
+      }
+      /**
+       * Set the app instance to be invoked on the Messages update.
+       * @param {object} appInstance 
+       */
+
+    }, {
+      key: "setApp",
+      value: function setApp(appInstance) {
+        Messages.getInstance().setAppInstance(appInstance);
+        return Messages;
+      }
+    }, {
+      key: "getInstance",
+      value: function getInstance() {
+        if (!this.instance) this.instance = new Messages();
+        return this.instance;
+      }
+    }]);
+
+    return Messages;
+  }();
+
+  return {
+    lang: Messages.lang,
+    message: Messages.message,
+    load: Messages.load,
+    locale: Messages.locale,
+    setApp: Messages.setApp
+  };
+}();
+
+var Router = function () {
+  /**
+   * Router class handles and renders route elements that are given by Router.routes() method.
+   * The method takes an array of route objects that are defined as follows: {route: "url", elem: elemObject, hide: true|false|undefined}.
+   * The first element the array of route objects is by default the root route object in which all other route objects 
+   * are rendered into.
+   */
+  var Router =
+  /*#__PURE__*/
+  function () {
+    function Router() {
+      var _this11 = this;
+
+      _classCallCheck(this, Router);
+
+      this.instance = null;
+      this.root = null;
+      this.origRoot = null;
+      this.routes = [];
+      this.origRoutes = [];
+      this.currentRoute = {};
+      this.prevUrl = location.pathname;
+
+      this.loadCall = function () {
+        return _this11.navigateUrl(location.pathname);
+      };
+
+      this.hashCall = function () {
+        return _this11.navigateUrl(location.hash);
+      };
+
+      this.useHistory = true;
+      this.autoListen = true;
+      this.useHash = false;
+      this.scrolltop = true;
+      this.app;
+      this.registerRouter();
     }
     /**
-     * Opens a new browser window.
-     * 
-     * Name pamareter can have following values: name or target value (name|_blank|_parent|_self|_top)
-     * 
-     * Specs parameter is defined as comma,separated,list,without,whitespace and it can have following values:
-     * channelmode=yes|no|1|0,
-     * direcotries=yes|no|1|0,
-     * fullscreen=yes|no|1|0,
-     * height=pixels,
-     * left=pixels,
-     * location=yes|no|1|0,
-     * menubar=yes|no|1|0,
-     * resizable=yes|no|1|0,
-     * scrollbars=yes|no|1|0,
-     * status=yes|no|1|0,
-     * titlebar=yes|no|1|0,
-     * toolbar|yes|no|1|0,
-     * top=pixels,
-     * width=pixels min 100
-     * 
-     * Replace parameter defines is a new history entry created or is current replaced with the new one.
-     * If true the current entry is replaced with the new one. If false a new history entry is created.
-     * @param {string} url 
-     * @param {string} name 
-     * @param {string} specs 
-     * @param {boolean} replace 
-     * @returns Reference to the opened window or null if opening the window failes.
+     * Initializes the Router.
      */
 
-  }, {
-    key: "open",
-    value: function open(url, name, specs, replace) {
-      return window.open(url, name, specs, replace);
-    }
-    /**
-     * Closes a given opened window. Same as calling openedWindow.close();
-     * @param {*} openedWindow 
-     */
 
-  }, {
-    key: "close",
-    value: function close(openedWindow) {
-      openedWindow.close();
-    }
-    /**
-     * Opens a print webpage dialog.
-     */
+    _createClass(Router, [{
+      key: "registerRouter",
+      value: function registerRouter() {
+        var _this12 = this;
 
-  }, {
-    key: "print",
-    value: function print() {
-      window.print();
-    }
-    /**
-     * Displays an alert dialog with a given message and an OK button.
-     * @param {string} message
-     */
+        document.addEventListener("readystatechange", function () {
+          if (document.readyState === "complete") {
+            var check = Util.setInterval(function () {
+              var hasRoot = !Util.isEmpty(_this12.root.elem) ? document.querySelector(_this12.root.elem) : false;
 
-  }, {
-    key: "alert",
-    value: function alert(message) {
-      window.alert(message);
-    }
-    /**
-     * Displays a confirm dialog with a given message, OK and Cancel button.
-     * @param {string} message
-     * @returns True if OK was pressed otherwise false.
-     */
+              if (hasRoot) {
+                Util.clearInterval(check);
 
-  }, {
-    key: "confirm",
-    value: function confirm(message) {
-      return window.confirm(message);
-    }
-    /**
-     * Displays a prompt dialog with a given message, a prefilled default text, OK and Cancel button.
-     * @param {string} message
-     * @param {string} defaultText
-     * @returns If OK was pressed and an input field has text then the text is returned. 
-     * If the input does not have text and OK was pressed then empty string is returned.
-     * If Cancel was pressed then null is returned.
-     */
+                _this12.resolveRoutes();
+              }
+            }, 50);
+          }
+        });
+      }
+      /**
+       * Register listeners according to the useHistory and the autoListen state.
+       */
 
-  }, {
-    key: "prompt",
-    value: function prompt(message, defaultText) {
-      return window.prompt(message, defaultText);
-    }
-    /**
-     * Method is used to make a media query to the viewport/screen object. The media query is done according to a given mediaString.
-     * Syntax of the media string would be (min-width: 300px) but using this method enables user to omit parentheses(). 
-     * Which then leads to syntax min-width: 300px.
-     * 
-     * Method returns a MediaQueryList object which has few neat properties. Matches and media in addition it has 
-     * two functions addListener and removeListener which can be used to query media in realtime. Usage could be something following:
-     * 
-     * var matcher = Browser.mediaMatcher("max-height: 300px");
-     * 
-     * matcher.addlistener(function(matcher) {
-     *  if(matcher.matches)
-     *      Tree.getBody().setStyles({backgroundColor: "red"});
-     *  else
-     *      Tree.getBody().setStyles({backgroundColor: "green"});
-     * });
-     * 
-     * matcher.media returns the media query string.
-     * 
-     * matcher.matches returns the boolean indicating does it does the query string match or not. True if it matches, otherwise false.
-     * 
-     * mathcer.addListener(function(matcher)) is used to track changes on the viewport/screen.
-     * 
-     * matcher.removeListener(listenerFunction) is used to remove a created listener.
-     * @param {string} mediaString 
-     * @returns MediaQueryList object.
-     */
+    }, {
+      key: "registerListeners",
+      value: function registerListeners() {
+        if (this.useHistory && this.autoListen) window.addEventListener("load", this.loadCall);else if (!this.useHistory && this.autoListen) window.addEventListener("hashchange", this.hashCall);
+        if (!this.autoListen) window.addEventListener("popstate", this.onPopState.bind(this));
+      }
+      /**
+       * Clear the registered listeners.
+       */
 
-  }, {
-    key: "mediaMatcher",
-    value: function mediaMatcher(mediaString) {
-      if (mediaString.indexOf("(") !== 0) mediaString = "(" + mediaString;
-      if (mediaString.indexOf(")") !== mediaString.length - 1) mediaString = mediaString + ")";
-      return window.matchMedia(mediaString);
-    }
-    /**
-     * Loads one page back in the browsers history list.
-     */
+    }, {
+      key: "clearListeners",
+      value: function clearListeners() {
+        window.removeEventListener("load", this.loadCall);
+        window.removeEventListener("hashchange", this.hashCall);
+        if (!this.autoListen) window.removeEventListener("popstate", this.onPopState);
+      }
+      /**
+       * On popstate call is registered if the auto listen is false. It listens the browsers history change and renders accordingly.
+       */
 
-  }, {
-    key: "pageBack",
-    value: function pageBack() {
-      history.back();
-    }
-    /**
-     * Loads one page forward in the browsers history list.
-     */
+    }, {
+      key: "onPopState",
+      value: function onPopState() {
+        if (this.useHistory) this.renderRoute(location.pathname);else this.renderRoute(location.hash);
+      }
+      /**
+       * Set the router to use a history implementation or an anchor hash implementation.
+       * If true then the history implementation is used. Default is true.
+       * @param {boolean} use
+       */
 
-  }, {
-    key: "pageForward",
-    value: function pageForward() {
-      history.forward();
-    }
-    /**
-     * Loads to specified page in the browsers history list. A parameter can either be a number or string.
-     * If the parameter is number then positive and negative values are allowed as positive values will go forward
-     * and negative values will go backward. 
-     * If the parameter is string then it must be partial or full url of the page in the history list.
-     * @param {string|number} numberOfPagesOrUrl
-     */
+    }, {
+      key: "setUseHistory",
+      value: function setUseHistory(use) {
+        this.useHistory = use;
+      }
+      /**
+       * Set the Router to auto listen url change to true or false.
+       * @param {boolean} listen
+       */
 
-  }, {
-    key: "pageGo",
-    value: function pageGo(numberOfPagesOrUrl) {
-      history.go(numberOfPagesOrUrl);
-    }
-    /**
-     * Create a new history entry with given parameters without reloading the page. State object will be the state
-     * next history entry will be using. Title is ignored value by the history object at the time but it could be 
-     * the same title what the HTML Document page has at the moment of create the new history entry. New url must 
-     * be of the same origin (e.g. www.example.com) but the rest of url could be anything.
-     * @param {object} stateObject 
-     * @param {string} title 
-     * @param {string} newURL 
-     */
+    }, {
+      key: "setAutoListen",
+      value: function setAutoListen(listen) {
+        this.autoListen = listen;
+      }
+      /**
+       * Set auto scroll up true or false.
+       * @param {boolean} auto 
+       */
 
-  }, {
-    key: "pushState",
-    value: function pushState(stateObject, title, newURL) {
-      history.pushState(stateObject, title, newURL);
-    }
-    /**
-     * Replace a history entry with given parameters without reloading the page. State object will be the state
-     * next history entry will be using. Title is ignored value by the history object at the time but it could be 
-     * the same title what the HTML Document page has at the moment of create the new history entry. New url must 
-     * be of the same origin (e.g. www.example.com) but the rest of url could be anything.
-     * @param {object} stateObject 
-     * @param {string} title 
-     * @param {string} newURL 
-     */
+    }, {
+      key: "setAutoScrollUp",
+      value: function setAutoScrollUp(auto) {
+        this.scrolltop = auto;
+      }
+      /**
+       * Set the app instance that the Router invokes on update.
+       * @param {object} appInstance 
+       */
 
-  }, {
-    key: "replaceState",
-    value: function replaceState(stateObject, title, newURL) {
-      history.replaceState(stateObject, title, newURL);
-    }
-    /**
-     * Loads a new page.
-     * @param {string} newURL
-     */
+    }, {
+      key: "setApp",
+      value: function setApp(appInstance) {
+        this.app = appInstance;
+      }
+      /**
+       * Resolves the root and the first page.
+       */
 
-  }, {
-    key: "newPage",
-    value: function newPage(newURL) {
-      location.assign(newURL);
-    }
-    /**
-     * Reloads a current page. If a parameter force is true then the page will be loaded from the server 
-     * otherwise from the browsers cache.
-     * @param {boolean} force
-     */
+    }, {
+      key: "resolveRoutes",
+      value: function resolveRoutes() {
+        if (Util.isString(this.root.elem)) {
+          this.root.elem = this.resolveElem(this.root.elem);
+        } else if (Util.isEmpty(this.root)) {
+          this.root = this.routes.shift();
+          this.root.elem = this.resolveElem(this.root.elem);
+          this.origRoot = this.root.elem;
+        }
 
-  }, {
-    key: "reloadPage",
-    value: function reloadPage(force) {
-      location.reload(force);
-    }
-    /**
-     * Replaces a current page with a new one. If the page is replaced then it wont be possible to go back
-     * to the previous page from the history list.
-     * @param {string} newURL
-     */
+        if (this.useHash) {
+          this.renderRoute(location.hash);
+        } else {
+          this.renderRoute(location.pathname);
+        }
+      }
+      /**
+       * Set the routes and if a root is not set then the first element will be the root route element.
+       * @param {array} routes
+       */
 
-  }, {
-    key: "replacePage",
-    value: function replacePage(newURL) {
-      location.replace(newURL);
-    }
-    /**
-     * @returns Anchor part of the url e.g. #heading2.
-     */
+    }, {
+      key: "setRoutes",
+      value: function setRoutes(routes) {
+        this.routes = routes;
+      }
+      /**
+       * Add a route into the Router. {route: "url", elem: elemObject}
+       * @param {object} route
+       */
 
-  }, {
-    key: "getAnchorHash",
-    value: function getAnchorHash() {
-      return location.hash;
-    }
-    /**
-     * Sets a new anhorpart of the url e.g. #heading3.
-     * @param {string} hash
-     */
+    }, {
+      key: "addRoute",
+      value: function addRoute(route) {
+        this.routes.push(route);
+      }
+      /**
+       * Set a root route object into the Router. {route: "url", elem: elemObject}
+       * @param {object} route
+       */
 
-  }, {
-    key: "setAnchorHash",
-    value: function setAnchorHash(hash) {
-      location.hash = hash;
-    }
-    /**
-     * @returns Hostname and port in host:port format.
-     */
+    }, {
+      key: "setRoot",
+      value: function setRoot(route) {
+        this.root = route;
+        this.origRoot = route.elem;
+      }
+      /**
+       * Resolve route elements.
+       * @param {array} routes 
+       */
 
-  }, {
-    key: "getHostnamePort",
-    value: function getHostnamePort() {
-      return location.host;
-    }
-    /**
-     * Set a hostname and port in format host:port.
-     * @param {string} hostPort
-     */
+    }, {
+      key: "resolveRouteElems",
+      value: function resolveRouteElems(routes) {
+        var i = 0;
 
-  }, {
-    key: "setHostnamePort",
-    value: function setHostnamePort(hostPort) {
-      location.host = hostPort;
-    }
-    /**
-     * @returns Hostname e.g. www.google.com.
-     */
+        while (i < routes.length) {
+          routes[i].elem = this.resolveElem(routes[i].elem);
+          i++;
+        }
 
-  }, {
-    key: "getHostname",
-    value: function getHostname() {
-      return location.hostname;
-    }
-    /**
-     * Set a hostname
-     * @param {string} hostname
-     */
+        return routes;
+      }
+      /**
+       * Method resolves element. If elem is string gets a component of the name if exist otherwise creates a new elemen of the name.
+       * If both does not apply then method assumes the elem to be an element and returns it.
+       * @param {*} elem 
+       */
 
-  }, {
-    key: "setHostname",
-    value: function setHostname(hostname) {
-      location.hostname = hostname;
-    }
-    /**
-     * @returns Entire URL of the webpage.
-     */
+    }, {
+      key: "resolveElem",
+      value: function resolveElem(elem) {
+        if (Util.isString(elem) && RME.hasComponent(elem)) {
+          return RME.component(elem);
+        } else if (Util.isString(elem)) {
+          return Tree.getFirst(elem);
+        }
 
-  }, {
-    key: "getURL",
-    value: function getURL() {
-      return location.href;
-    }
-    /**
-     * Set location of a current page to point to a new location e.g. http://some.url.test or #someAcnhor on the page.
-     * @param {string} newURL
-     */
+        return elem;
+      }
+      /**
+       * Method navigates to the url and renders a route element inside the root route element if found.
+       * @param {string} url
+       */
 
-  }, {
-    key: "setURL",
-    value: function setURL(newURL) {
-      location.href = newURL;
-    }
-    /**
-     * @returns protocol, hostname and port e.g. https://www.example.com:443
-     */
+    }, {
+      key: "navigateUrl",
+      value: function navigateUrl(url) {
+        var route = this.findRoute(url);
 
-  }, {
-    key: "getOrigin",
-    value: function getOrigin() {
-      return location.origin;
-    }
-    /**
-     * @returns Part of the URL after the slash(/) e.g. /photos/
-     */
+        if (!Util.isEmpty(route) && this.useHistory && !route.hide) {
+          history.pushState(null, null, url);
+        } else if (!Util.isEmpty(route) && !route.hide) {
+          location.href = route.route.indexOf("#") === 0 ? route.route : "#" + route.route;
+        }
 
-  }, {
-    key: "getPathname",
-    value: function getPathname() {
-      return location.pathname;
-    }
-    /**
-     * Sets a new pathname for this location.
-     * @param {string} pathname 
-     */
+        if (!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
+          if (route.scrolltop === true || route.scrolltop === undefined && this.scrolltop) Browser.scrollTo(0, 0);
+          this.prevUrl = url;
+          this.currentRoute = route;
+          if (Util.isEmpty(this.app)) this.root.elem.render(this.resolveElem(route.elem));else this.app.refresh();
+        }
+      }
+      /**
+       * Method looks for a route by the url. If the router is found then it will be returned otherwise returns null
+       * @param {string} url
+       * @param {boolean} force
+       * @returns The found router or null if not found.
+       */
 
-  }, {
-    key: "setPathname",
-    value: function setPathname(pathname) {
-      location.pathname = pathname;
-    }
-    /**
-     * @returns Port number of the connection between server and client.
-     */
+    }, {
+      key: "findRoute",
+      value: function findRoute(url, force) {
+        var i = 0;
 
-  }, {
-    key: "getPort",
-    value: function getPort() {
-      return location.port;
-    }
-    /**
-     * Sets a new port number for the connection between server and client.
-     * @param {number} portNumber 
-     */
+        if (!Util.isEmpty(url) && (this.prevUrl !== url || force)) {
+          while (i < this.routes.length) {
+            if (this.matches(this.routes[i].route, url)) return this.routes[i];
+            i++;
+          }
+        }
 
-  }, {
-    key: "setPort",
-    value: function setPort(portNumber) {
-      location.port = portNumber;
-    }
-    /**
-     * @returns Protocol part of the URL e.g. http: or https:.
-     */
+        return null;
+      }
+      /**
+       * Method will look for a route by the url and if the route is found then it will be rendered 
+       * inside the root route element.
+       * @param {string} url
+       */
 
-  }, {
-    key: "getProtocol",
-    value: function getProtocol() {
-      return location.protocol;
-    }
-    /**
-     * Set a new protocol for this location to use.
-     * @param {string} protocol 
-     */
+    }, {
+      key: "renderRoute",
+      value: function renderRoute(url) {
+        var route = this.findRoute(url, true);
 
-  }, {
-    key: "setProtocol",
-    value: function setProtocol(protocol) {
-      location.protocol = protocol;
-    }
-    /**
-     * @returns Part of the URL after the question(?) mark. e.g. ?attr=value&abc=efg.
-     */
+        if (!Util.isEmpty(route) && Util.isEmpty(this.app)) {
+          this.root.elem.render(this.resolveElem(route.elem));
+          this.currentRoute = route;
+        } else if (Util.isEmpty(this.app)) {
+          this.root.elem.render();
+        } else if (!Util.isEmpty(route) && !Util.isEmpty(this.app)) {
+          this.app.refresh();
+          this.currentRoute = route;
+        }
 
-  }, {
-    key: "getSearchString",
-    value: function getSearchString() {
-      return location.search;
-    }
-    /**
-     * Sets a new searchString into the URL
-     * @param {string} searchString 
-     */
+        this.prevUrl = location.pathname;
+      }
+      /**
+       * Method matches a given url parameters and returns true if the urls matches.
+       * @param {string} url
+       * @param {string} newUrl
+       * @returns True if the given urls matches otherwise false.
+       */
 
-  }, {
-    key: "setSearchString",
-    value: function setSearchString(searchString) {
-      location.search = searchString;
-    }
-    /**
-     * @returns Codename of the browser.
-     */
+    }, {
+      key: "matches",
+      value: function matches(url, newUrl) {
+        if (this.useHistory) {
+          url = url.replace(/\*/g, ".*").replace(/\/{2,}/g, "/");
+          var path = newUrl.replace(/\:{1}\/{2}/, "").match(/\/{1}.*/).join();
+          var found = newUrl.match(url);
+          if (!Util.isEmpty(found)) found = found.join();
+          return found === path && new RegExp(url).test(newUrl);
+        } else {
+          url = url.indexOf("#") === 0 ? url : "#" + url;
+          var hash = newUrl.match(/\#{1}.*/).join();
+          var found = newUrl.match(url);
+          if (!Util.isEmpty(found)) found = found.join();
+          return url === found && found === hash;
+        }
+      }
+      /**
+       * @returns The current status of the Router in an object.
+       */
 
-  }, {
-    key: "getCodename",
-    value: function getCodename() {
-      return navigator.appCodeName;
-    }
-    /**
-     * @returns Name of the browser.
-     */
+    }, {
+      key: "getCurrentState",
+      value: function getCurrentState() {
+        return {
+          root: this.origRoot,
+          current: this.resolveElem(this.currentRoute.elem)
+        };
+      }
+      /**
+       * Method will try to find a route according to the given parameter. The supported parameter combinations are url, event or elem & event. 
+       * The first paramter can either be an URL or an Event or an Elem. The second parameter is an Event if the first parameter is an Elem.
+       * If the route is found, then the Router will update a new url to the browser and render the found route element.
+       * @param {string} url
+       * @param {object} url type event
+       * @param {object} url type Elem
+       * @param {object} event
+       */
 
-  }, {
-    key: "getName",
-    value: function getName() {
-      return navigator.appName;
-    }
-    /**
-     * @returns Version of the browser.
-     */
+    }], [{
+      key: "navigate",
+      value: function navigate(url, event) {
+        if (Util.isString(url)) Router.getInstance().navigateUrl(url);else if (Util.isObject(url) && url instanceof Event) {
+          if (!Router.getInstance().autoListen || Router.getInstance().useHash) url.preventDefault();
+          Router.getInstance().navigateUrl(url.target.href);
+        } else if (Util.isObject(url) && url instanceof Elem && !Util.isEmpty(event) && Util.isObject(event) && event instanceof Event) {
+          if (!Router.getInstance().autoListen || Router.getInstance().useHash) event.preventDefault();
+          Router.getInstance().navigateUrl(url.getHref());
+        }
+      }
+      /**
+       * Set a root element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
+       * @param {object} elem
+       * @returns Router
+       */
 
-  }, {
-    key: "getVersion",
-    value: function getVersion() {
-      return navigator.appVersion;
-    }
-    /**
-     * @returns True if cookies are enabled otherwise false.
-     */
+    }, {
+      key: "root",
+      value: function root(elem) {
+        Router.getInstance().setRoot({
+          elem: elem
+        });
+        return Router;
+      }
+      /**
+       * Add a new route element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
+       * @param {string} url
+       * @param {object} elem
+       * @param {boolean} hide
+       */
 
-  }, {
-    key: "isCookiesEnabled",
-    value: function isCookiesEnabled() {
-      return navigator.cookieEnabled;
-    }
-    /**
-     * @returns GeoLocation object.
-     */
+    }, {
+      key: "add",
+      value: function add(url, elem, hide) {
+        Router.getInstance().addRoute({
+          route: url,
+          elem: elem,
+          hide: hide
+        });
+        return Router;
+      }
+      /**
+       * Set an array of routes that the Router uses. If a root is not set then the first item in the given routes array will be the root route element.
+       * @param {array} routes
+       */
 
-  }, {
-    key: "getGeoLocation",
-    value: function getGeoLocation() {
-      return navigator.geolocation;
-    }
-    /**
-     * @returns Language of the browser.
-     */
+    }, {
+      key: "routes",
+      value: function routes(_routes) {
+        if (!Util.isArray(_routes)) throw "Could not set routes. Given parameter: \"" + _routes + "\" is not an array.";
+        Router.getInstance().setRoutes(_routes);
+        return Router;
+      }
+      /**
+       * Method sets the Router to use an url implementation. The url implementation defaults to HTML standard that pressing a link
+       * will cause the browser reload a new page. After reload the new page is rendered. If you wish to skip reload then you should 
+       * set the parameter manual to true.
+       * @param {boolean} manual
+       * @returns Router
+       */
 
-  }, {
-    key: "getLanguage",
-    value: function getLanguage() {
-      return navigator.language;
-    }
-    /**
-     * @returns A platform name of which the browser is compiled on.
-     */
+    }, {
+      key: "url",
+      value: function url(manual) {
+        Router.getInstance().setUseHistory(true);
+        Router.getInstance().registerListeners();
 
-  }, {
-    key: "getPlatform",
-    value: function getPlatform() {
-      return navigator.platform;
-    }
-    /**
-     * @returns A name of an engine of the browser.
-     */
+        if (Util.isBoolean(manual) && manual) {
+          Router.manual();
+        }
 
-  }, {
-    key: "getProduct",
-    value: function getProduct() {
-      return navigator.product;
-    }
-    /**
-     * @returns A header string sent to a server by the browser.
-     */
+        return Router;
+      }
+      /**
+       * Method sets the Router not to automatically follow url changes. If this method is invoked 
+       * the user must explicitly define a method that calls Router.navigate in order to have navigation working
+       * properly when going forward and backward in the history. The method will not 
+       * do anything if the url implementation is not used.
+       * @returns Router
+       */
 
-  }, {
-    key: "getUserAgentHeader",
-    value: function getUserAgentHeader() {
-      return navigator.userAgent;
-    }
-    /**
-     * @returns Color depth of the current screen.
-     */
+    }, {
+      key: "manual",
+      value: function manual() {
+        if (Router.getInstance().useHistory) {
+          Router.getInstance().clearListeners();
+          Router.getInstance().setAutoListen(false);
+          Router.getInstance().registerListeners();
+        }
 
-  }, {
-    key: "getColorDepth",
-    value: function getColorDepth() {
-      return screen.colorDepth;
-    }
-    /**
-     * @returns Total height of the current screen.
-     */
+        return Router;
+      }
+      /**
+       * Method sets the Router to use a hash implementation. When this implementation is used 
+       * there is no need to manually use Router.navigate function because change
+       * of the hash is automatically followed.
+       * @returns Router
+       */
 
-  }, {
-    key: "getFullScreenHeight",
-    value: function getFullScreenHeight() {
-      return screen.height;
-    }
-    /**
-     * @returns Total width of the current screen.
-     */
+    }, {
+      key: "hash",
+      value: function hash() {
+        Router.getInstance().setUseHistory(false);
+        Router.getInstance().setAutoListen(true);
+        Router.getInstance().registerListeners();
+        Router.getInstance().useHash = true;
+        return Router;
+      }
+      /**
+       * Method sets default level behavior for route naviagation. If the given value is true then the Browser auto-scrolls up 
+       * when navigating to a new resource. If set false then the Browser does not auto-scroll up. Default value is true.
+       * @param {boolean} auto 
+       * @returns Router
+       */
 
-  }, {
-    key: "getFullScreenWidth",
-    value: function getFullScreenWidth() {
-      return screen.width;
-    }
-    /**
-     * @returns Height of the current screen excluding OS. taskbar.
-     */
+    }, {
+      key: "scroll",
+      value: function scroll(auto) {
+        if (Util.isBoolean(auto)) {
+          Router.getInstance().setAutoScrollUp(auto);
+        }
 
-  }, {
-    key: "getAvailableScreenHeight",
-    value: function getAvailableScreenHeight() {
-      return screen.availHeight;
-    }
-    /**
-     * @returns Width of the current screen exluding OS. taskbar.
-     */
+        return Router;
+      }
+      /**
+       * Set the app instance to be invoked on the Router update.
+       * @param {object} appInstance 
+       * @returns Router
+       */
 
-  }, {
-    key: "getAvailableScreenWidth",
-    value: function getAvailableScreenWidth() {
-      return screen.availWidth;
-    }
-  }]);
+    }, {
+      key: "setApp",
+      value: function setApp(appInstance) {
+        if (!Util.isEmpty(appInstance)) Router.getInstance().setApp(appInstance);
+        return Router;
+      }
+      /**
+       * @returns The current status of the router.
+       */
 
-  return Browser;
+    }, {
+      key: "getCurrentState",
+      value: function getCurrentState() {
+        return Router.getInstance().getCurrentState();
+      }
+    }, {
+      key: "getInstance",
+      value: function getInstance() {
+        if (Util.isEmpty(this.instance)) this.instance = new Router();
+        return this.instance;
+      }
+    }]);
+
+    return Router;
+  }();
+
+  return {
+    navigate: Router.navigate,
+    root: Router.root,
+    add: Router.add,
+    routes: Router.routes,
+    url: Router.url,
+    hash: Router.hash,
+    scroll: Router.scroll,
+    getCurrentState: Router.getCurrentState,
+    setApp: Router.setApp
+  };
 }();
 /**
  * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
@@ -5271,18 +5771,31 @@ var Template = function () {
         if (RME.hasComponent(el)) {
           el = el.replace(/component:/, "");
           resolved = RME.component(el, obj);
-        } else if (Util.isEmpty(el)) throw "Template resolver could not find element: \"" + el + "\" from the given tag: \"" + tag + "\"";else resolved = new Elem(el);
+          if (Util.isEmpty(resolved)) return resolved;
+        } else if (Util.isEmpty(el)) throw "Template resolver could not find element: ".concat(el, " from the given tag: ").concat(tag);else resolved = new Elem(el);
 
         match = tag.match(/[a-z0-9]+\#[a-zA-Z0-9\-]+/); //find id
 
         if (!Util.isEmpty(match)) resolved.setId(match.join().replace(/[a-z0-9]+\#/g, ""));
-        match = tag.match(/\.[a-zA-Z-0-9\-]+/g); //find classes
+        match = this.cutAttributesIfFound(tag).match(/\.[a-zA-Z-0-9\-]+/g); //find classes
 
         if (!Util.isEmpty(match)) resolved.addClasses(match.join(" ").replace(/\./g, ""));
         match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_\/\.&%@!?£$+¤|;\\<\\>\\"]+\]/g); //find attributes
 
         if (!Util.isEmpty(match)) resolved = this.addAttributes(resolved, match);
         return resolved;
+      }
+      /**
+       * Function will cut off the element tag attributes if found.
+       * @param {string} tag 
+       * @returns Element tag without attributes.
+       */
+
+    }, {
+      key: "cutAttributesIfFound",
+      value: function cutAttributesIfFound(tag) {
+        var idx = tag.indexOf('[');
+        return tag.substring(0, idx > 0 ? idx : tag.length);
       }
       /**
        * Function will try to parse an element name from the given string. If the given string
@@ -6119,506 +6632,4 @@ function () {
   }]);
 
   return Util;
-}();
-
-var Router = function () {
-  /**
-   * Router class handles and renders route elements that are given by Router.routes() method.
-   * The method takes an array of route objects that are defined as follows: {route: "url", elem: elemObject, hide: true|false|undefined}.
-   * The first element the array of route objects is by default the root route object in which all other route objects 
-   * are rendered into.
-   */
-  var Router =
-  /*#__PURE__*/
-  function () {
-    function Router() {
-      var _this11 = this;
-
-      _classCallCheck(this, Router);
-
-      this.instance = null;
-      this.root = null;
-      this.origRoot = null;
-      this.routes = [];
-      this.origRoutes = [];
-      this.currentRoute = {};
-      this.prevUrl = location.pathname;
-
-      this.loadCall = function () {
-        return _this11.navigateUrl(location.pathname);
-      };
-
-      this.hashCall = function () {
-        return _this11.navigateUrl(location.hash);
-      };
-
-      this.useHistory = true;
-      this.autoListen = true;
-      this.useHash = false;
-      this.scrolltop = true;
-      this.app;
-      this.registerRouter();
-    }
-    /**
-     * Initializes the Router.
-     */
-
-
-    _createClass(Router, [{
-      key: "registerRouter",
-      value: function registerRouter() {
-        var _this12 = this;
-
-        document.addEventListener("readystatechange", function () {
-          if (document.readyState === "complete") {
-            var check = Util.setInterval(function () {
-              var hasRoot = !Util.isEmpty(_this12.root.elem) ? document.querySelector(_this12.root.elem) : false;
-
-              if (hasRoot) {
-                Util.clearInterval(check);
-
-                _this12.resolveRoutes();
-              }
-            }, 50);
-          }
-        });
-      }
-      /**
-       * Register listeners according to the useHistory and the autoListen state.
-       */
-
-    }, {
-      key: "registerListeners",
-      value: function registerListeners() {
-        if (this.useHistory && this.autoListen) window.addEventListener("load", this.loadCall);else if (!this.useHistory && this.autoListen) window.addEventListener("hashchange", this.hashCall);
-        if (!this.autoListen) window.addEventListener("popstate", this.onPopState.bind(this));
-      }
-      /**
-       * Clear the registered listeners.
-       */
-
-    }, {
-      key: "clearListeners",
-      value: function clearListeners() {
-        window.removeEventListener("load", this.loadCall);
-        window.removeEventListener("hashchange", this.hashCall);
-        if (!this.autoListen) window.removeEventListener("popstate", this.onPopState);
-      }
-      /**
-       * On popstate call is registered if the auto listen is false. It listens the browsers history change and renders accordingly.
-       */
-
-    }, {
-      key: "onPopState",
-      value: function onPopState() {
-        if (this.useHistory) this.renderRoute(location.pathname);else this.renderRoute(location.hash);
-      }
-      /**
-       * Set the router to use a history implementation or an anchor hash implementation.
-       * If true then the history implementation is used. Default is true.
-       * @param {boolean} use
-       */
-
-    }, {
-      key: "setUseHistory",
-      value: function setUseHistory(use) {
-        this.useHistory = use;
-      }
-      /**
-       * Set the Router to auto listen url change to true or false.
-       * @param {boolean} listen
-       */
-
-    }, {
-      key: "setAutoListen",
-      value: function setAutoListen(listen) {
-        this.autoListen = listen;
-      }
-      /**
-       * Set auto scroll up true or false.
-       * @param {boolean} auto 
-       */
-
-    }, {
-      key: "setAutoScrollUp",
-      value: function setAutoScrollUp(auto) {
-        this.scrolltop = auto;
-      }
-      /**
-       * Set the app instance that the Router invokes on update.
-       * @param {object} appInstance 
-       */
-
-    }, {
-      key: "setApp",
-      value: function setApp(appInstance) {
-        this.app = appInstance;
-      }
-      /**
-       * Resolves the root and the first page.
-       */
-
-    }, {
-      key: "resolveRoutes",
-      value: function resolveRoutes() {
-        if (Util.isString(this.root.elem)) {
-          this.root.elem = this.resolveElem(this.root.elem);
-        } else if (Util.isEmpty(this.root)) {
-          this.root = this.routes.shift();
-          this.root.elem = this.resolveElem(this.root.elem);
-          this.origRoot = this.root.elem;
-        }
-
-        if (this.useHash) {
-          this.renderRoute(location.hash);
-        } else {
-          this.renderRoute(location.pathname);
-        }
-      }
-      /**
-       * Set the routes and if a root is not set then the first element will be the root route element.
-       * @param {array} routes
-       */
-
-    }, {
-      key: "setRoutes",
-      value: function setRoutes(routes) {
-        this.routes = routes;
-      }
-      /**
-       * Add a route into the Router. {route: "url", elem: elemObject}
-       * @param {object} route
-       */
-
-    }, {
-      key: "addRoute",
-      value: function addRoute(route) {
-        this.routes.push(route);
-      }
-      /**
-       * Set a root route object into the Router. {route: "url", elem: elemObject}
-       * @param {object} route
-       */
-
-    }, {
-      key: "setRoot",
-      value: function setRoot(route) {
-        this.root = route;
-        this.origRoot = route.elem;
-      }
-      /**
-       * Resolve route elements.
-       * @param {array} routes 
-       */
-
-    }, {
-      key: "resolveRouteElems",
-      value: function resolveRouteElems(routes) {
-        var i = 0;
-
-        while (i < routes.length) {
-          routes[i].elem = this.resolveElem(routes[i].elem);
-          i++;
-        }
-
-        return routes;
-      }
-      /**
-       * Method resolves element. If elem is string gets a component of the name if exist otherwise creates a new elemen of the name.
-       * If both does not apply then method assumes the elem to be an element and returns it.
-       * @param {*} elem 
-       */
-
-    }, {
-      key: "resolveElem",
-      value: function resolveElem(elem) {
-        if (Util.isString(elem) && RME.hasComponent(elem)) {
-          return RME.component(elem);
-        } else if (Util.isString(elem)) {
-          return Tree.getFirst(elem);
-        }
-
-        return elem;
-      }
-      /**
-       * Method navigates to the url and renders a route element inside the root route element if found.
-       * @param {string} url
-       */
-
-    }, {
-      key: "navigateUrl",
-      value: function navigateUrl(url) {
-        var route = this.findRoute(url);
-
-        if (!Util.isEmpty(route) && this.useHistory && !route.hide) {
-          history.pushState(null, null, url);
-        } else if (!Util.isEmpty(route) && !route.hide) {
-          location.href = route.route.indexOf("#") === 0 ? route.route : "#" + route.route;
-        }
-
-        if (!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
-          if (route.scrolltop === true || route.scrolltop === undefined && this.scrolltop) Browser.scrollTo(0, 0);
-          this.prevUrl = url;
-          this.currentRoute = route;
-          if (Util.isEmpty(this.app)) this.root.elem.render(this.resolveElem(route.elem));else this.app.refresh();
-        }
-      }
-      /**
-       * Method looks for a route by the url. If the router is found then it will be returned otherwise returns null
-       * @param {string} url
-       * @param {boolean} force
-       * @returns The found router or null if not found.
-       */
-
-    }, {
-      key: "findRoute",
-      value: function findRoute(url, force) {
-        var i = 0;
-
-        if (!Util.isEmpty(url) && (this.prevUrl !== url || force)) {
-          while (i < this.routes.length) {
-            if (this.matches(this.routes[i].route, url)) return this.routes[i];
-            i++;
-          }
-        }
-
-        return null;
-      }
-      /**
-       * Method will look for a route by the url and if the route is found then it will be rendered 
-       * inside the root route element.
-       * @param {string} url
-       */
-
-    }, {
-      key: "renderRoute",
-      value: function renderRoute(url) {
-        var route = this.findRoute(url, true);
-
-        if (!Util.isEmpty(route) && Util.isEmpty(this.app)) {
-          this.root.elem.render(this.resolveElem(route.elem));
-          this.currentRoute = route;
-        } else if (Util.isEmpty(this.app)) {
-          this.root.elem.render();
-        } else if (!Util.isEmpty(route) && !Util.isEmpty(this.app)) {
-          this.app.refresh();
-          this.currentRoute = route;
-        }
-
-        this.prevUrl = location.pathname;
-      }
-      /**
-       * Method matches a given url parameters and returns true if the urls matches.
-       * @param {string} url
-       * @param {string} newUrl
-       * @returns True if the given urls matches otherwise false.
-       */
-
-    }, {
-      key: "matches",
-      value: function matches(url, newUrl) {
-        if (this.useHistory) {
-          url = url.replace(/\*/g, ".*").replace(/\/{2,}/g, "/");
-          var path = newUrl.replace(/\:{1}\/{2}/, "").match(/\/{1}.*/).join();
-          var found = newUrl.match(url);
-          if (!Util.isEmpty(found)) found = found.join();
-          return found === path && new RegExp(url).test(newUrl);
-        } else {
-          url = url.indexOf("#") === 0 ? url : "#" + url;
-          var hash = newUrl.match(/\#{1}.*/).join();
-          var found = newUrl.match(url);
-          if (!Util.isEmpty(found)) found = found.join();
-          return url === found && found === hash;
-        }
-      }
-      /**
-       * @returns The current status of the Router in an object.
-       */
-
-    }, {
-      key: "getCurrentState",
-      value: function getCurrentState() {
-        return {
-          root: this.origRoot,
-          current: this.resolveElem(this.currentRoute.elem)
-        };
-      }
-      /**
-       * Method will try to find a route according to the given parameter. The supported parameter combinations are url, event or elem & event. 
-       * The first paramter can either be an URL or an Event or an Elem. The second parameter is an Event if the first parameter is an Elem.
-       * If the route is found, then the Router will update a new url to the browser and render the found route element.
-       * @param {string} url
-       * @param {object} url type event
-       * @param {object} url type Elem
-       * @param {object} event
-       */
-
-    }], [{
-      key: "navigate",
-      value: function navigate(url, event) {
-        if (Util.isString(url)) Router.getInstance().navigateUrl(url);else if (Util.isObject(url) && url instanceof Event) {
-          if (!Router.getInstance().autoListen || Router.getInstance().useHash) url.preventDefault();
-          Router.getInstance().navigateUrl(url.target.href);
-        } else if (Util.isObject(url) && url instanceof Elem && !Util.isEmpty(event) && Util.isObject(event) && event instanceof Event) {
-          if (!Router.getInstance().autoListen || Router.getInstance().useHash) event.preventDefault();
-          Router.getInstance().navigateUrl(url.getHref());
-        }
-      }
-      /**
-       * Set a root element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
-       * @param {object} elem
-       * @returns Router
-       */
-
-    }, {
-      key: "root",
-      value: function root(elem) {
-        Router.getInstance().setRoot({
-          elem: elem
-        });
-        return Router;
-      }
-      /**
-       * Add a new route element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
-       * @param {string} url
-       * @param {object} elem
-       * @param {boolean} hide
-       */
-
-    }, {
-      key: "add",
-      value: function add(url, elem, hide) {
-        Router.getInstance().addRoute({
-          route: url,
-          elem: elem,
-          hide: hide
-        });
-        return Router;
-      }
-      /**
-       * Set an array of routes that the Router uses. If a root is not set then the first item in the given routes array will be the root route element.
-       * @param {array} routes
-       */
-
-    }, {
-      key: "routes",
-      value: function routes(_routes) {
-        if (!Util.isArray(_routes)) throw "Could not set routes. Given parameter: \"" + _routes + "\" is not an array.";
-        Router.getInstance().setRoutes(_routes);
-        return Router;
-      }
-      /**
-       * Method sets the Router to use an url implementation. The url implementation defaults to HTML standard that pressing a link
-       * will cause the browser reload a new page. After reload the new page is rendered. If you wish to skip reload then you should 
-       * set the parameter manual to true.
-       * @param {boolean} manual
-       * @returns Router
-       */
-
-    }, {
-      key: "url",
-      value: function url(manual) {
-        Router.getInstance().setUseHistory(true);
-        Router.getInstance().registerListeners();
-
-        if (Util.isBoolean(manual) && manual) {
-          Router.manual();
-        }
-
-        return Router;
-      }
-      /**
-       * Method sets the Router not to automatically follow url changes. If this method is invoked 
-       * the user must explicitly define a method that calls Router.navigate in order to have navigation working
-       * properly when going forward and backward in the history. The method will not 
-       * do anything if the url implementation is not used.
-       * @returns Router
-       */
-
-    }, {
-      key: "manual",
-      value: function manual() {
-        if (Router.getInstance().useHistory) {
-          Router.getInstance().clearListeners();
-          Router.getInstance().setAutoListen(false);
-          Router.getInstance().registerListeners();
-        }
-
-        return Router;
-      }
-      /**
-       * Method sets the Router to use a hash implementation. When this implementation is used 
-       * there is no need to manually use Router.navigate function because change
-       * of the hash is automatically followed.
-       * @returns Router
-       */
-
-    }, {
-      key: "hash",
-      value: function hash() {
-        Router.getInstance().setUseHistory(false);
-        Router.getInstance().setAutoListen(true);
-        Router.getInstance().registerListeners();
-        Router.getInstance().useHash = true;
-        return Router;
-      }
-      /**
-       * Method sets default level behavior for route naviagation. If the given value is true then the Browser auto-scrolls up 
-       * when navigating to a new resource. If set false then the Browser does not auto-scroll up. Default value is true.
-       * @param {boolean} auto 
-       * @returns Router
-       */
-
-    }, {
-      key: "scroll",
-      value: function scroll(auto) {
-        if (Util.isBoolean(auto)) {
-          Router.getInstance().setAutoScrollUp(auto);
-        }
-
-        return Router;
-      }
-      /**
-       * Set the app instance to be invoked on the Router update.
-       * @param {object} appInstance 
-       * @returns Router
-       */
-
-    }, {
-      key: "setApp",
-      value: function setApp(appInstance) {
-        if (!Util.isEmpty(appInstance)) Router.getInstance().setApp(appInstance);
-        return Router;
-      }
-      /**
-       * @returns The current status of the router.
-       */
-
-    }, {
-      key: "getCurrentState",
-      value: function getCurrentState() {
-        return Router.getInstance().getCurrentState();
-      }
-    }, {
-      key: "getInstance",
-      value: function getInstance() {
-        if (Util.isEmpty(this.instance)) this.instance = new Router();
-        return this.instance;
-      }
-    }]);
-
-    return Router;
-  }();
-
-  return {
-    navigate: Router.navigate,
-    root: Router.root,
-    add: Router.add,
-    routes: Router.routes,
-    url: Router.url,
-    hash: Router.hash,
-    scroll: Router.scroll,
-    getCurrentState: Router.getCurrentState,
-    setApp: Router.setApp
-  };
 }();
