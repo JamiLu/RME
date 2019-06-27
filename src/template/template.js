@@ -468,11 +468,13 @@ let Template = (function() {
                 w: ["wbr"],
             }
             let i = 0;
-            let tagArray = tags[tag.substring(0, 1)];
-            while(i < tagArray.length) {
-                if(tagArray[i] === tag)
-                    return true;
-                i++;
+            let tagArray = tags[tag.charAt(0)];
+            if (tagArray) {
+                while (i < tagArray.length) {
+                    if (tagArray[i] === tag)
+                        return true;
+                    i++;
+                }
             }
             return false;
         }
@@ -556,7 +558,8 @@ let Template = (function() {
     }
     return {
         resolve: Template.resolveTemplate,
-        isTemplate: Template.isTemplate
+        isTemplate: Template.isTemplate,
+        isTag: Template.isTag
     }
 }());
 

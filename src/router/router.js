@@ -1,6 +1,7 @@
 import RME from '../rme';
 import Elem from '../elem';
 import Tree from '../tree';
+import Template from '../template';
 import Browser from '../browser';
 import Util from '../util';
 
@@ -176,12 +177,28 @@ let Router = (function() {
          * @param {*} elem 
          */
         resolveElem(elem) {
-            if(Util.isString(elem) && RME.hasComponent(elem)) {
+            if (Util.isString(elem) && RME.hasComponent(elem)) {
                 return RME.component(elem);
-            } else if(Util.isString(elem)) {
+            } else if (Util.isString(elem) && this.isSelector(elem)) {
                 return Tree.getFirst(elem);
+            } else if (elem instanceof Elem) {
+                return elem;
+            } else if (Util.isEmpty(elem)) {
+                return elem;
             }
-            return elem;
+            throw new Error(`Could not resolve a route elem: ${elem}`);
+        }
+
+        /**
+         * Function checks if a tag starts with a dot or hashtag or is a HTML tag.
+         * If described conditions are met then the tag is supposed to be a selector.
+         * @param {string} tag 
+         * @returns True if the tag is a selector otherwise false.
+         */
+        isSelector(tag) {
+            return tag.charAt(0) === '.'
+                || tag.charAt(0) === '#'
+                || Template.isTag(tag);
         }
 
         /**
