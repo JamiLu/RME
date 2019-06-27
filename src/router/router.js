@@ -159,6 +159,7 @@ let Router = (function() {
         }
 
         /**
+         * @deprecated
          * Resolve route elements.
          * @param {array} routes 
          */
@@ -176,9 +177,9 @@ let Router = (function() {
          * If both does not apply then method assumes the elem to be an element and returns it.
          * @param {*} elem 
          */
-        resolveElem(elem) {
+        resolveElem(elem, props) {
             if (Util.isString(elem) && RME.hasComponent(elem)) {
-                return RME.component(elem);
+                return RME.component(elem, props);
             } else if (Util.isString(elem) && this.isSelector(elem)) {
                 return Tree.getFirst(elem);
             } else if (elem instanceof Elem) {
@@ -218,7 +219,7 @@ let Router = (function() {
                 this.prevUrl = url;
                 this.currentRoute = route;
                 if(Util.isEmpty(this.app))
-                    this.root.elem.render(this.resolveElem(route.elem));
+                    this.root.elem.render(this.resolveElem(route.elem, route.compProps));
                 else
                     this.app.refresh();
             }
@@ -250,7 +251,7 @@ let Router = (function() {
         renderRoute(url) {
             var route = this.findRoute(url, true);
             if(!Util.isEmpty(route) && Util.isEmpty(this.app)) {
-                this.root.elem.render(this.resolveElem(route.elem));
+                this.root.elem.render(this.resolveElem(route.elem, route.compProps));
                 this.currentRoute = route;
             } else if(Util.isEmpty(this.app)) {
                 this.root.elem.render();
@@ -290,7 +291,7 @@ let Router = (function() {
          * @returns The current status of the Router in an object.
          */
         getCurrentState() {
-            return {root: this.origRoot, current: this.resolveElem(this.currentRoute.elem)}
+            return {root: this.origRoot, current: this.resolveElem(this.currentRoute.elem, this.currentRoute.compProps)}
         }
 
         /**
