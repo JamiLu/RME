@@ -208,17 +208,17 @@ let Router = (function() {
          */
         navigateUrl(url) {
             var route = this.findRoute(url);
-            if(!Util.isEmpty(route) && this.useHistory && !route.hide) {
+            if (!Util.isEmpty(route) && this.useHistory && !route.hide) {
                 history.pushState(null, null, url);
             } else if(!Util.isEmpty(route) && !route.hide) {
-                location.href = route.route.indexOf("#") === 0 ? route.route : "#"+route.route;
+                location.href = url;
             }
-            if(!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
-                if((route.scrolltop === true) || (route.scrolltop === undefined && this.scrolltop))
+            if (!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
+                if ((route.scrolltop === true) || (route.scrolltop === undefined && this.scrolltop))
                     Browser.scrollTo(0, 0);
                 this.prevUrl = url;
                 this.currentRoute = route;
-                if(Util.isEmpty(this.app))
+                if (Util.isEmpty(this.app))
                     this.root.elem.render(this.resolveElem(route.elem, route.compProps));
                 else
                     this.app.refresh();
@@ -270,20 +270,23 @@ let Router = (function() {
          * @returns True if the given urls matches otherwise false.
          */
         matches(url, newUrl) {
-            if(this.useHistory) {
-                url = url.replace(/\*/g, ".*").replace(/\/{2,}/g, "/");
-                var path = newUrl.replace(/\:{1}\/{2}/, "").match(/\/{1}.*/).join();
-                var found = newUrl.match(url);
-                if(!Util.isEmpty(found))
+            if (this.useHistory) {
+                url = Util.isString(url) ? url.replace(/\*/g, '.*').replace(/\/{2,}/g, '/') : url;
+                var path = newUrl.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
+                var found = path.match(url);
+                if (!Util.isEmpty(found))
                     found = found.join();
                 return found === path && new RegExp(url).test(newUrl);
             } else {
-                url = url.indexOf("#") === 0 ? url : "#"+url;
+                if (Util.isString(url) && url.charAt(0) === '*')
+                    url = '.*';
+                else if (Util.isString(url) && url.charAt(0) !== '#')
+                    url = `#${url}`;
                 var hash = newUrl.match(/\#{1}.*/).join();
-                var found = newUrl.match(url);
-                if(!Util.isEmpty(found))
+                var found = hash.match(url);
+                if (!Util.isEmpty(found))
                     found = found.join();
-                return url === found && found === hash;
+                return found === hash && new RegExp(url).test(newUrl);
             }
         }
 
