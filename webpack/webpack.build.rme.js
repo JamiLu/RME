@@ -24,7 +24,7 @@ ls(rmeDevPath);
 
 const mergeFile = (path, toFile) => {
     FileSystem.readFile(path, UTF8, (err, data) => {
-        let parsedData = data.replace(/^import.*\';$|^export default.*\;$|^export {.*\}$/gms, '');
+        let parsedData = data.replace(/^import.*\';\n$|^export default.*\;$|^export {.*\}$/gms, '');
         FileSystem.appendFile(toFile, parsedData, err => console.log(err ? err : 'file merged '+path));
     });
 }
