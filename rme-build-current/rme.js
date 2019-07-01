@@ -2,8 +2,6 @@
 
 
 
-
-
 let App = (function() {
 
     class App {
@@ -385,8 +383,6 @@ let App = (function() {
         mergeState: App.mergeState,
     }
 }());
-
-
 
 
 
@@ -949,9 +945,6 @@ class Browser {
 
 
 
-
-
-
 let Elem = (function() {
     /**
      * Elem class is a wrapper class for HTMLDocument element JavaScript object. This object constructor 
@@ -1270,6 +1263,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setTabIndex(idx) {
+            this.setAttribute('tabindex', idx);
             this.html.tabIndex = idx;
             return this;
         }
@@ -1280,7 +1274,7 @@ let Elem = (function() {
          * @returns A tab index value of this element.
          */
         getTabIndex() {
-            return this.html.tabIndex;
+            return this.getAttribute('tabindex');
         }
 
         /**
@@ -1456,6 +1450,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setMaxLength(length) {
+            this.setAttribute('maxlength', length);
             this.html.maxLength = length;
             return this;
         }
@@ -1464,7 +1459,7 @@ let Elem = (function() {
          * @returns Max length of this element.
          */
         getMaxLength() {
-            return this.html.maxLength;
+            return this.getAttribute('maxlength');
         }
 
         /**
@@ -1473,6 +1468,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setMinLength(length) {
+            this.setAttribute('minlength', length);
             this.html.minLength = length;
             return this;
         }
@@ -1481,7 +1477,7 @@ let Elem = (function() {
          * @returns Min lenght of this element.
          */
         getMinLength() {
-            return this.html.minLength;
+            return this.getAttribute('minlength');
         }
 
         /**
@@ -1532,10 +1528,13 @@ let Elem = (function() {
          */
         setDisabled(boolean) {
             if ((Util.isBoolean(boolean) && boolean === true)
-                || (Util.isString(boolean) && boolean === 'disabled'))
+                || (Util.isString(boolean) && boolean === 'disabled')) {
                 this.setAttribute('disabled', 'disabled');
-            else
+                this.html.disabled = true;
+            } else{
                 this.removeAttribute('disabled');
+                this.html.disabled = false;
+            }
             return this;
         }
 
@@ -1556,10 +1555,13 @@ let Elem = (function() {
          */
         setChecked(boolean) {
             if ((Util.isBoolean(boolean) && boolean === true)
-                || (Util.isString(boolean) && boolean === 'checked'))
+            || (Util.isString(boolean) && boolean === 'checked')) {
                 this.setAttribute('checked', 'checked');
-            else
+                this.html.checked = true;
+            } else {
                 this.removeAttribute('checked');
+                this.html.checked = false;
+            }
             return this;
         }
 
@@ -2614,7 +2616,6 @@ let Elem = (function() {
 }());
 
 
-
 /**
  * RMEElemTemplater class is able to create a Template out of an Elem object.
  */
@@ -2947,7 +2948,6 @@ class RMEElemTemplater {
 }
 
 
-
 let Cookie = (function() {
     /**
      * Cookie interface offers an easy way to get, set or remove cookies in application logic.
@@ -3061,7 +3061,6 @@ let Cookie = (function() {
 
 
 
-
 /**
  * Before using this class you should also be familiar on how to use fetch since usage of this class
  * will be quite similar to fetch except predefined candy that is added on a class.
@@ -3157,7 +3156,6 @@ class HttpFetchRequest {
         return fetch(config.url, config.init);
     }
 }
-
 
 
 let Http = (function() {
@@ -3420,8 +3418,6 @@ let Http = (function() {
 
 
 
-
-
 /**
  * Key class does not have any methods as it only contains key mappings for keyevent. For example:
  * 
@@ -3589,10 +3585,6 @@ Key.ARROW_LEFT = "ArrowLeft";
 Key.COMMA = ",";
 /** . */
 Key.DOT = ".";
-
-
-
-
 
 
 
@@ -4116,8 +4108,6 @@ let Messages = (function() {
 
 
 
-
-
 let Router = (function() {
     /**
      * Router class handles and renders route elements that are given by Router.routes() method.
@@ -4272,6 +4262,7 @@ let Router = (function() {
         }
 
         /**
+         * @deprecated
          * Resolve route elements.
          * @param {array} routes 
          */
@@ -4289,13 +4280,29 @@ let Router = (function() {
          * If both does not apply then method assumes the elem to be an element and returns it.
          * @param {*} elem 
          */
-        resolveElem(elem) {
-            if(Util.isString(elem) && RME.hasComponent(elem)) {
-                return RME.component(elem);
-            } else if(Util.isString(elem)) {
+        resolveElem(elem, props) {
+            if (Util.isString(elem) && RME.hasComponent(elem)) {
+                return RME.component(elem, props);
+            } else if (Util.isString(elem) && this.isSelector(elem)) {
                 return Tree.getFirst(elem);
+            } else if (elem instanceof Elem) {
+                return elem;
+            } else if (Util.isEmpty(elem)) {
+                return elem;
             }
-            return elem;
+            throw new Error(`Could not resolve a route elem: ${elem}`);
+        }
+
+        /**
+         * Function checks if a tag starts with a dot or hashtag or is a HTML tag.
+         * If described conditions are met then the tag is supposed to be a selector.
+         * @param {string} tag 
+         * @returns True if the tag is a selector otherwise false.
+         */
+        isSelector(tag) {
+            return tag.charAt(0) === '.'
+                || tag.charAt(0) === '#'
+                || Template.isTag(tag);
         }
 
         /**
@@ -4304,18 +4311,18 @@ let Router = (function() {
          */
         navigateUrl(url) {
             var route = this.findRoute(url);
-            if(!Util.isEmpty(route) && this.useHistory && !route.hide) {
+            if (!Util.isEmpty(route) && this.useHistory && !route.hide) {
                 history.pushState(null, null, url);
             } else if(!Util.isEmpty(route) && !route.hide) {
-                location.href = route.route.indexOf("#") === 0 ? route.route : "#"+route.route;
+                location.href = url;
             }
-            if(!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
-                if((route.scrolltop === true) || (route.scrolltop === undefined && this.scrolltop))
+            if (!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
+                if ((route.scrolltop === true) || (route.scrolltop === undefined && this.scrolltop))
                     Browser.scrollTo(0, 0);
                 this.prevUrl = url;
                 this.currentRoute = route;
-                if(Util.isEmpty(this.app))
-                    this.root.elem.render(this.resolveElem(route.elem));
+                if (Util.isEmpty(this.app))
+                    this.root.elem.render(this.resolveElem(route.elem, route.compProps));
                 else
                     this.app.refresh();
             }
@@ -4347,7 +4354,7 @@ let Router = (function() {
         renderRoute(url) {
             var route = this.findRoute(url, true);
             if(!Util.isEmpty(route) && Util.isEmpty(this.app)) {
-                this.root.elem.render(this.resolveElem(route.elem));
+                this.root.elem.render(this.resolveElem(route.elem, route.compProps));
                 this.currentRoute = route;
             } else if(Util.isEmpty(this.app)) {
                 this.root.elem.render();
@@ -4366,20 +4373,23 @@ let Router = (function() {
          * @returns True if the given urls matches otherwise false.
          */
         matches(url, newUrl) {
-            if(this.useHistory) {
-                url = url.replace(/\*/g, ".*").replace(/\/{2,}/g, "/");
-                var path = newUrl.replace(/\:{1}\/{2}/, "").match(/\/{1}.*/).join();
-                var found = newUrl.match(url);
-                if(!Util.isEmpty(found))
+            if (this.useHistory) {
+                url = Util.isString(url) ? url.replace(/\*/g, '.*').replace(/\/{2,}/g, '/') : url;
+                var path = newUrl.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
+                var found = path.match(url);
+                if (!Util.isEmpty(found))
                     found = found.join();
                 return found === path && new RegExp(url).test(newUrl);
             } else {
-                url = url.indexOf("#") === 0 ? url : "#"+url;
+                if (Util.isString(url) && url.charAt(0) === '*')
+                    url = '.*';
+                else if (Util.isString(url) && url.charAt(0) !== '#')
+                    url = `#${url}`;
                 var hash = newUrl.match(/\#{1}.*/).join();
-                var found = newUrl.match(url);
-                if(!Util.isEmpty(found))
+                var found = hash.match(url);
+                if (!Util.isEmpty(found))
                     found = found.join();
-                return url === found && found === hash;
+                return found === hash && new RegExp(url).test(newUrl);
             }
         }
 
@@ -4387,7 +4397,7 @@ let Router = (function() {
          * @returns The current status of the Router in an object.
          */
         getCurrentState() {
-            return {root: this.origRoot, current: this.resolveElem(this.currentRoute.elem)}
+            return {root: this.origRoot, current: this.resolveElem(this.currentRoute.elem, this.currentRoute.compProps)}
         }
 
         /**
@@ -4542,7 +4552,6 @@ let Router = (function() {
 }());
 
 
-
 /**
  * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
  */
@@ -4576,7 +4585,6 @@ class Session {
         sessionStorage.clear();
     }
 }
-
 
 
 /**
@@ -4614,6 +4622,171 @@ class Storage {
 }
 
 
+
+/**
+ * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
+ * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
+ * 
+ * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
+ * operation functionalities.
+ */
+class Tree {
+    /**
+     * Uses CSS selector to find elements on the HTML Document Tree. 
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} selector 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    static get(selector) {
+        return Elem.wrapElems(document.querySelectorAll(selector));
+    }
+
+    /**
+     * Uses CSS selector to find the first match element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} selector 
+     * @returns An Elem instance.
+     */
+    static getFirst(selector) {
+        return Elem.wrap(document.querySelector(selector));
+    }
+
+    /**
+     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
+     * @param {string} tag 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    static getByTag(tag) {
+        return Elem.wrapElems(document.getElementsByTagName(tag));
+    }
+
+    /**
+     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
+     * Found elements will be wrappedn in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} name 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    static getByName(name) {
+        return Elem.wrapElems(document.getElementsByName(name));
+    }
+
+    /**
+     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} id 
+     * @returns Elem instance.
+     */
+    static getById(id) {
+        return Elem.wrap(document.getElementById(id));
+    }
+
+    /**
+     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
+     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} classname 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    static getByClass(classname) {
+        return Elem.wrapElems(document.getElementsByClassName(classname));
+    }
+
+    /**
+     * @returns body wrapped in an Elem instance.
+     */
+    static getBody() {
+        return Elem.wrap(document.body);
+    }
+
+    /**
+     * @returns head wrapped in an Elem instance.
+     */
+    static getHead() {
+        return Elem.wrap(document.head);
+    }
+
+    /**
+     * @returns title of the html document page.
+     */
+    static getTitle() {
+        return document.title;
+    }
+
+    /**
+     * Set an new title for html document page.
+     * @param {string} title 
+     */
+    static setTitle(title) {
+        document.title = title;
+    }
+
+    /**
+     * @returns active element wrapped in an Elem instance.
+     */
+    static getActiveElement() {
+        return Elem.wrap(document.activeElement);
+    }
+
+    /**
+     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
+     */
+    static getAnchors() {
+        return Elem.wrapElems(document.anchors);
+    }
+
+    /**
+     * @returns <html> element.
+     */
+    static getHtmlElement() {
+        return document.documentElement;
+    }
+
+    /**
+     * @returns <!DOCTYPE> element.
+     */
+    static getDoctype() {
+        return document.doctype;
+    }
+
+    /**
+     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
+     */
+    static getEmbeds() {
+        return Elem.wrapElems(document.embeds);
+    }
+
+    /**
+     * @returns an array of image elements (<img>) wrapped in an Elem instance.
+     */
+    static getImages() {
+        return Elem.wrapElems(document.images);
+    }
+
+    /**
+     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
+     */
+    static getLinks() {
+        return Elem.wrapElems(document.links);
+    }
+
+    /**
+     * @returns an array of scripts wrapped in an Elem instance.
+     */
+    static getScripts() {
+        return Elem.wrapElems(document.scripts);
+    }
+
+    /**
+     * @returns an array of form elements wrapped in an Elem instance.
+     */
+    static getForms() {
+        return Elem.wrapElems(document.forms);
+    }
+}
 
 
 
@@ -5082,11 +5255,13 @@ let Template = (function() {
                 w: ["wbr"],
             }
             let i = 0;
-            let tagArray = tags[tag.substring(0, 1)];
-            while(i < tagArray.length) {
-                if(tagArray[i] === tag)
-                    return true;
-                i++;
+            let tagArray = tags[tag.charAt(0)];
+            if (tagArray) {
+                while (i < tagArray.length) {
+                    if (tagArray[i] === tag)
+                        return true;
+                    i++;
+                }
             }
             return false;
         }
@@ -5170,179 +5345,10 @@ let Template = (function() {
     }
     return {
         resolve: Template.resolveTemplate,
-        isTemplate: Template.isTemplate
+        isTemplate: Template.isTemplate,
+        isTag: Template.isTag
     }
 }());
-
-
-
-
-
-/**
- * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
- * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
- * 
- * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
- * operation functionalities.
- */
-class Tree {
-    /**
-     * Uses CSS selector to find elements on the HTML Document Tree. 
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} selector 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    static get(selector) {
-        return Elem.wrapElems(document.querySelectorAll(selector));
-    }
-
-    /**
-     * Uses CSS selector to find the first match element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} selector 
-     * @returns An Elem instance.
-     */
-    static getFirst(selector) {
-        return Elem.wrap(document.querySelector(selector));
-    }
-
-    /**
-     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
-     * @param {string} tag 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    static getByTag(tag) {
-        return Elem.wrapElems(document.getElementsByTagName(tag));
-    }
-
-    /**
-     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
-     * Found elements will be wrappedn in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} name 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    static getByName(name) {
-        return Elem.wrapElems(document.getElementsByName(name));
-    }
-
-    /**
-     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} id 
-     * @returns Elem instance.
-     */
-    static getById(id) {
-        return Elem.wrap(document.getElementById(id));
-    }
-
-    /**
-     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
-     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} classname 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    static getByClass(classname) {
-        return Elem.wrapElems(document.getElementsByClassName(classname));
-    }
-
-    /**
-     * @returns body wrapped in an Elem instance.
-     */
-    static getBody() {
-        return Elem.wrap(document.body);
-    }
-
-    /**
-     * @returns head wrapped in an Elem instance.
-     */
-    static getHead() {
-        return Elem.wrap(document.head);
-    }
-
-    /**
-     * @returns title of the html document page.
-     */
-    static getTitle() {
-        return document.title;
-    }
-
-    /**
-     * Set an new title for html document page.
-     * @param {string} title 
-     */
-    static setTitle(title) {
-        document.title = title;
-    }
-
-    /**
-     * @returns active element wrapped in an Elem instance.
-     */
-    static getActiveElement() {
-        return Elem.wrap(document.activeElement);
-    }
-
-    /**
-     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
-     */
-    static getAnchors() {
-        return Elem.wrapElems(document.anchors);
-    }
-
-    /**
-     * @returns <html> element.
-     */
-    static getHtmlElement() {
-        return document.documentElement;
-    }
-
-    /**
-     * @returns <!DOCTYPE> element.
-     */
-    static getDoctype() {
-        return document.doctype;
-    }
-
-    /**
-     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
-     */
-    static getEmbeds() {
-        return Elem.wrapElems(document.embeds);
-    }
-
-    /**
-     * @returns an array of image elements (<img>) wrapped in an Elem instance.
-     */
-    static getImages() {
-        return Elem.wrapElems(document.images);
-    }
-
-    /**
-     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
-     */
-    static getLinks() {
-        return Elem.wrapElems(document.links);
-    }
-
-    /**
-     * @returns an array of scripts wrapped in an Elem instance.
-     */
-    static getScripts() {
-        return Elem.wrapElems(document.scripts);
-    }
-
-    /**
-     * @returns an array of form elements wrapped in an Elem instance.
-     */
-    static getForms() {
-        return Elem.wrapElems(document.forms);
-    }
-}
-
 
 
 /**

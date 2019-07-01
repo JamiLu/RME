@@ -10,9 +10,9 @@ Links
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.3.1/rme.js](https://github.com/JamiLu/RME/releases/download/v1.3.1/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.3.1/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.3.1/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.3.1/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.3.1/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.3.2/rme.js](https://github.com/JamiLu/RME/releases/download/v1.3.2/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.3.2/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.3.2/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.3.2/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.3.2/rme.es5.min.js)
 
 NPM
 ---
@@ -53,7 +53,7 @@ Basics
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.3.1/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.3.2/rme.es5.min.js"></script>`
 
 __Or use NPM__
 
@@ -87,7 +87,7 @@ RME.component({ todoExample: () =>
     ({div: {
         h2: 'Todo Example',
         'input[type=text][placeholder=Type & Press Enter to Add]': {
-            onKeyDown: (event) => {
+            onKeyDown: event => {
                 if(event.key === Key.ENTER) {
                     App.mergeState({lister: {list: {li: {text: event.target.value}}}});
                     event.target.value = '';
@@ -116,7 +116,7 @@ RME.component({ formExample: () =>
         h2: 'Form Example',
         statefulHeader: {fname: '', lname: ''},
         "component:form": {
-            input: (event) => {
+            input: event => {
                 let state = App.getState('statefulHeader');
                 state[event.target.name] = event.target.value
                 App.mergeState('statefulHeader', state);
@@ -169,7 +169,7 @@ RME.component({ filterExample: () =>
     ({div: {
         h2: 'Filter Example',
         'input[type=text][placeholder=Type to Filter Country]': {
-            onInput: (event) => App.setState({myTable: {rows: RME.storage('countryList').filter(row => row.country.toLowerCase().search(event.target.value) > -1)}})
+            onInput: event => App.setState({myTable: {rows: RME.storage('countryList').filter(row => row.country.toLowerCase().search(event.target.value) > -1)}})
         },
         myTable: {rows: RME.storage('countryList')}
     }})
@@ -245,6 +245,7 @@ Classes & Functions
 * Template
   - resolve(template) **Resolves a given JSON format template and returns a created Elem instance element tree.**
   - isTemplate(object) **Method checks if the given object is an unresolved JSON template and returns true if it is an unresolved JSON template, otherwise false.**
+  - isTag(tag) **Function checks if the given tag is the HTML5 tag and returns true if is otherwise false is returned.**
 * Tree
   - get(cssSelector) **Returns an Array of Elem objects or one Elem object**
   - getFirst(cssSelector) **Returns one Elem object**
