@@ -115,7 +115,7 @@ RME.component({ formExample: () =>
     ({div: {
         h2: 'Form Example',
         statefulHeader: {fname: '', lname: ''},
-        "component:form": {
+        'component:form': {
             input: event => {
                 let state = App.getState('statefulHeader');
                 state[event.target.name] = event.target.value
