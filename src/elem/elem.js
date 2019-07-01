@@ -321,6 +321,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setTabIndex(idx) {
+            this.setAttribute('tabindex', idx);
             this.html.tabIndex = idx;
             return this;
         }
@@ -331,7 +332,7 @@ let Elem = (function() {
          * @returns A tab index value of this element.
          */
         getTabIndex() {
-            return this.html.tabIndex;
+            return this.getAttribute('tabindex');
         }
 
         /**
@@ -507,6 +508,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setMaxLength(length) {
+            this.setAttribute('maxlength', length);
             this.html.maxLength = length;
             return this;
         }
@@ -515,7 +517,7 @@ let Elem = (function() {
          * @returns Max length of this element.
          */
         getMaxLength() {
-            return this.html.maxLength;
+            return this.getAttribute('maxlength');
         }
 
         /**
@@ -524,6 +526,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setMinLength(length) {
+            this.setAttribute('minlength', length);
             this.html.minLength = length;
             return this;
         }
@@ -532,7 +535,7 @@ let Elem = (function() {
          * @returns Min lenght of this element.
          */
         getMinLength() {
-            return this.html.minLength;
+            return this.getAttribute('minlength');
         }
 
         /**
@@ -583,10 +586,13 @@ let Elem = (function() {
          */
         setDisabled(boolean) {
             if ((Util.isBoolean(boolean) && boolean === true)
-                || (Util.isString(boolean) && boolean === 'disabled'))
+                || (Util.isString(boolean) && boolean === 'disabled')) {
                 this.setAttribute('disabled', 'disabled');
-            else
+                this.html.disabled = true;
+            } else{
                 this.removeAttribute('disabled');
+                this.html.disabled = false;
+            }
             return this;
         }
 
@@ -607,10 +613,13 @@ let Elem = (function() {
          */
         setChecked(boolean) {
             if ((Util.isBoolean(boolean) && boolean === true)
-                || (Util.isString(boolean) && boolean === 'checked'))
+            || (Util.isString(boolean) && boolean === 'checked')) {
                 this.setAttribute('checked', 'checked');
-            else
+                this.html.checked = true;
+            } else {
                 this.removeAttribute('checked');
+                this.html.checked = false;
+            }
             return this;
         }
 
