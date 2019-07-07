@@ -99,15 +99,22 @@ let App = (function() {
         }
 
         /**
-         * Function takes two parameters that enable setting state for components. If only one parameter is given then the parameter must be an object
-         * that defines the component name and its values as follows. ({refName: {key: val, key: val}})
-         * If two parameters are given then the first parameter is a component name and the values is component state object as follows. (refName, {key: val, key: val}).
-         * Given states are stored into default application. 
+         * Function takes three parameters that enable setting state for components.
+         * If only one parameter is given then the parameter must be an object or a function. 
+         * The object should define a component name and its values as follows. ({refName: {key: val, key: val}}) and
+         * the function should return a object describing the component respectively.
+         * If two parameters are given then the first parameter is a component name
+         * and the value parameter should describe the component state object as follows. (refName, {key: val, key: val}).
+         * The value parameter may also be a function that returns the component state object respectively.
+         * The last parameter update is a boolean value that only if explicitly set to false then the app is not updated
+         * after setting the state has occured.
+         * This function will store the state into the default application state. 
          * @param {*} refName 
          * @param {*} value 
+         * @param {boolean} update
          */
-        static setState(refName, value) {
-            return App.get().setState(refName, value);
+        static setState(refName, value, update) {
+            return App.get().setState(refName, value, update);
         }
 
         /**
@@ -140,15 +147,18 @@ let App = (function() {
         }
 
         /**
-         * Function takes two parameters. If the first parameter is string then the second parameter must be an object. The first parameter refName 
-         * defines a component and the second parameter is the state of the component as follows: (compName, {key: val, key: val}) If the first parameter is an object then the second parameter
-         * is omitted. In this case the object must contain a component name and a state for the component as follows: ({compName: {val: key, val: key}}).
-         * Given states are stored into default application.
+         * Function takes three parameters. If the first parameter is string then the second parameter must be an object or a function.
+         * The first parameter refName is a component name and the second parameter is the state of the component as follows: (compName, {key: val, key: val})
+         * or if the second parameter is a function then the function should return the changed state of the component in an object respectively.
+         * If the first parameter is an object or a function then the second parameter is omitted. 
+         * In this case the object must contain a component name and the changed state of the component as follows: ({compName: {val: key, val: key}}).
+         * If the first parameter is a function then the function should return the changed state of the component in an object respectively.
+         * The state is stored into the default application state.
          * @param {string} refName 
          * @param {object} value 
          */
-        static mergeState(key, value) {
-            return App.get().mergeState(key, value);
+        static mergeState(key, value, update) {
+            return App.get().mergeState(key, value, update);
         }
 
         static getInstance() {
@@ -192,6 +202,7 @@ let App = (function() {
             this.setState = this.setState.bind(this);
             this.getState = this.getState.bind(this);
             this.refresh = this.refreshApp.bind(this);
+            this.afterRefreshCallQueue = [];
             this.bindReadyListener(root);
         }
     
@@ -228,35 +239,58 @@ let App = (function() {
                             let selector = state.root;
                             let element = state.current;
                             freshStage.getFirst(selector).append(element);
+                            if (!Util.isEmpty(state.onAfter)) this.afterRefreshCallQueue.push(state.onAfter);
                         }
                     }
     
                     if(this.oldStage.toString() !== freshStage.toString()) {
                         this.oldStage = this.renderer.merge(this.oldStage, freshStage);
                     }
+                    this.refreshAppDone();
                 });
             }
         }
+
+        refreshAppDone() {
+            this.afterRefreshCallQueue.forEach(callback => callback());
+            this.afterRefreshCallQueue = [];
+        }
     
         /**
-         * Function takes two parameters that enable setting state for components. If only one parameter is given then the parameter must be an object
-         * that defines the component name and its values as follows. ({refName: {key: val, key: val}})
-         * If two parameters are given then the first parameter is a component name and the values is component state object as follows. (refName, {key: val, key: val}).
-         * Given states are stored into this application instance state. 
+         * Function takes three parameters that enable setting state for components.
+         * If only one parameter is given then the parameter must be an object or a function. 
+         * The object should define a component name and its values as follows. ({refName: {key: val, key: val}}) and
+         * the function should return a object describing the component respectively.
+         * If two parameters are given then the first parameter is a component name
+         * and the value parameter should describe the component state object as follows. (refName, {key: val, key: val}).
+         * The value parameter may also be a function that returns the component state object respectively.
+         * The last parameter update is a boolean value that only if explicitly set to false then the app is not updated
+         * after setting the state has occured.
+         * This function will store the state into this application instance state. 
          * @param {*} refName 
          * @param {*} value 
+         * @param {boolean} update
          */
-        setState(refName, value) {
-            if(Util.isString(refName)) {
+        setState(refName, value, update) {
+            if (Util.isString(refName) && Util.isFunction(value)) {
+                this.state[refName] = value(this.state[refName]);
+            } else if (Util.isString(refName) && Util.isObject(value)) {
                 this.state[refName] = value;
-                this.refreshApp();
-            } else if(Util.isObject(refName)) {
-                for(let p in refName) {
-                    if(refName.hasOwnProperty(p))
-                        this.state[p] = refName[p];
-                }
-                this.refreshApp();
+            } else {
+                let state = {};
+                if (Util.isFunction(refName))
+                    state = refName(this.state);
+                else if (Util.isObject(refName))
+                    state = refName;
+
+                    for (let p in state) {
+                        if (state.hasOwnProperty(p))
+                            this.state[p] = state[p];
+                    }
             }
+
+            if (update !== false)
+                this.refreshApp();
         }
     
         /**
@@ -328,25 +362,38 @@ let App = (function() {
         }
     
         /**
-         * Function takes two parameters. If the first parameter is string then the second parameter must be an object. The first parameter refName 
-         * defines a component and the second parameter is the state of the component as follows: (compName, {key: val, key: val}) If the first parameter is an object then the second parameter
-         * is omitted. In this case the object must contain a component name and a state for the component as follows: ({compName: {val: key, val: key}}).
-         * Given states are stored into this application instance state.
+         * Function takes three parameters. If the first parameter is string then the second parameter must be an object or a function.
+         * The first parameter refName is a component name and the second parameter is the state of the component as follows: (compName, {key: val, key: val})
+         * or if the second parameter is a function then the function should return the changed state of the component in an object respectively.
+         * If the first parameter is an object or a function then the second parameter is omitted. 
+         * In this case the object must contain a component name and the changed state of the component as follows: ({compName: {val: key, val: key}}).
+         * If the first parameter is a function then the function should return the changed state of the component in an object respectively.
+         * The state is stored into this application instance state.
          * @param {string} refName 
          * @param {object} value 
+         * @param {boolean} update
          */
-        mergeState(refName, value) {
+        mergeState(refName, value, update) {
             let newState = {};
-            if(Util.isString(refName)) {
+            if (Util.isString(refName) && Util.isFunction(value)) {
+                newState[refName] = value(this.state[refName]);
+            } else if (Util.isString(refName) && Util.isObject(value)) {
                 newState[refName] = value;
-            } else if(Util.isObject(refName)) {
-                for(let p in refName) {
-                    if(refName.hasOwnProperty(p))
-                        newState[p] = refName[p]
+            } else {
+                let state = {};
+                if (Util.isFunction(refName))
+                    state = refName(this.state);
+                else if (Util.isObject(refName))
+                    state = refName;
+
+                for (let p in state) {
+                    if (state.hasOwnProperty(p))
+                        newState[p] = state[p]
                 }
             }
             this.recursiveMergeState(this.state, newState);
-            this.refreshApp();
+            if (update !== false)
+                this.refreshApp();
         }
     
         recursiveMergeState(oldMap, newMap) {
@@ -944,6 +991,119 @@ class Browser {
 
 
 
+let Cookie = (function() {
+    /**
+     * Cookie interface offers an easy way to get, set or remove cookies in application logic.
+     * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
+     * 
+     * {
+     *    name: "name",
+     *    value: "value",
+     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+     *    cookiePath: "cookiePath absolute dir",
+     *    cookieDomain: "cookieDomain e.g example.com",
+     *    setSecureBoolean: true|false
+     * }
+     * 
+     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+     */
+    class Cookie {
+        /**
+         * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
+         * 
+         * @param {String} name 
+         * @returns cookie object
+         */
+        static get(name) {
+            if(navigator.cookieEnabled) {
+                var retCookie = null;
+                var cookies = document.cookie.split(";");
+                var i = 0;
+                while(i < cookies.length) {
+                    var cookie = cookies[i];
+                    var eq = cookie.search("=");
+                    var cn = cookie.substr(0, eq).trim();
+                    var cv = cookie.substr(eq + 1, cookie.length).trim();
+                    if(cn === name) {
+                        retCookie = new CookieInstance(cn, cv);
+                        break;
+                    }
+                    i++;
+                }
+                return retCookie;
+            }
+        }
+        /**
+         * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
+         * 
+         * @param {string} name
+         * @param {string} value
+         * @param {string} expiresDate
+         * @param {string} cookiePath
+         * @param {string} cookieDomain
+         * @param {boolean} setSecureBoolean
+         */
+        static set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+            if(navigator.cookieEnabled) {
+                document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
+            }
+        }
+        /**
+         * Remove a cookie by name. Method will set the cookie expired and then remove it.
+         * @param {string} name
+         */
+        static remove(name) {
+            var co = Cookie.get(name);
+            if(!Util.isEmpty(co)) {
+                co.setExpired();
+                document.cookie = co.toString();
+            }
+        }
+    }
+
+    /**
+     * Cookie object may hold following values:
+     *
+     * {
+     *    name: "name",
+     *    value: "value",
+     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+     *    cookiePath: "cookiePath absolute dir",
+     *    cookieDomain: "cookieDomain e.g example.com",
+     *    setSecureBoolean: true|false
+     * }
+     * 
+     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+     */
+    class CookieInstance {
+        constructor(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+            this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
+            this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
+            this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
+            this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
+            this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
+            this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
+        }
+
+        setExpired() {
+            this.cookieExpires = new Date(1970,0,1).toString();
+        }
+
+        toString() {
+            return this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity;
+        }
+        static create(name, value, expires, cpath, cdomain, setSecure) {
+                return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
+        }
+    }
+
+    return Cookie;
+}());
+
+
+
 
 let Elem = (function() {
     /**
@@ -1264,7 +1424,6 @@ let Elem = (function() {
          */
         setTabIndex(idx) {
             this.setAttribute('tabindex', idx);
-            this.html.tabIndex = idx;
             return this;
         }
 
@@ -1451,7 +1610,6 @@ let Elem = (function() {
          */
         setMaxLength(length) {
             this.setAttribute('maxlength', length);
-            this.html.maxLength = length;
             return this;
         }
 
@@ -1469,7 +1627,6 @@ let Elem = (function() {
          */
         setMinLength(length) {
             this.setAttribute('minlength', length);
-            this.html.minLength = length;
             return this;
         }
 
@@ -1530,10 +1687,8 @@ let Elem = (function() {
             if ((Util.isBoolean(boolean) && boolean === true)
                 || (Util.isString(boolean) && boolean === 'disabled')) {
                 this.setAttribute('disabled', 'disabled');
-                this.html.disabled = true;
-            } else{
+            } else {
                 this.removeAttribute('disabled');
-                this.html.disabled = false;
             }
             return this;
         }
@@ -1557,10 +1712,8 @@ let Elem = (function() {
             if ((Util.isBoolean(boolean) && boolean === true)
             || (Util.isString(boolean) && boolean === 'checked')) {
                 this.setAttribute('checked', 'checked');
-                this.html.checked = true;
             } else {
                 this.removeAttribute('checked');
-                this.html.checked = false;
             }
             return this;
         }
@@ -2948,119 +3101,6 @@ class RMEElemTemplater {
 }
 
 
-let Cookie = (function() {
-    /**
-     * Cookie interface offers an easy way to get, set or remove cookies in application logic.
-     * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
-     * 
-     * {
-     *    name: "name",
-     *    value: "value",
-     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-     *    cookiePath: "cookiePath absolute dir",
-     *    cookieDomain: "cookieDomain e.g example.com",
-     *    setSecureBoolean: true|false
-     * }
-     * 
-     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-     */
-    class Cookie {
-        /**
-         * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
-         * 
-         * @param {String} name 
-         * @returns cookie object
-         */
-        static get(name) {
-            if(navigator.cookieEnabled) {
-                var retCookie = null;
-                var cookies = document.cookie.split(";");
-                var i = 0;
-                while(i < cookies.length) {
-                    var cookie = cookies[i];
-                    var eq = cookie.search("=");
-                    var cn = cookie.substr(0, eq).trim();
-                    var cv = cookie.substr(eq + 1, cookie.length).trim();
-                    if(cn === name) {
-                        retCookie = new CookieInstance(cn, cv);
-                        break;
-                    }
-                    i++;
-                }
-                return retCookie;
-            }
-        }
-        /**
-         * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
-         * 
-         * @param {string} name
-         * @param {string} value
-         * @param {string} expiresDate
-         * @param {string} cookiePath
-         * @param {string} cookieDomain
-         * @param {boolean} setSecureBoolean
-         */
-        static set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-            if(navigator.cookieEnabled) {
-                document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
-            }
-        }
-        /**
-         * Remove a cookie by name. Method will set the cookie expired and then remove it.
-         * @param {string} name
-         */
-        static remove(name) {
-            var co = Cookie.get(name);
-            if(!Util.isEmpty(co)) {
-                co.setExpired();
-                document.cookie = co.toString();
-            }
-        }
-    }
-
-    /**
-     * Cookie object may hold following values:
-     *
-     * {
-     *    name: "name",
-     *    value: "value",
-     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-     *    cookiePath: "cookiePath absolute dir",
-     *    cookieDomain: "cookieDomain e.g example.com",
-     *    setSecureBoolean: true|false
-     * }
-     * 
-     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-     */
-    class CookieInstance {
-        constructor(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-            this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
-            this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
-            this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
-            this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
-            this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
-            this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
-        }
-
-        setExpired() {
-            this.cookieExpires = new Date(1970,0,1).toString();
-        }
-
-        toString() {
-            return this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity;
-        }
-        static create(name, value, expires, cpath, cdomain, setSecure) {
-                return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
-        }
-    }
-
-    return Cookie;
-}());
-
-
-
 /**
  * Before using this class you should also be familiar on how to use fetch since usage of this class
  * will be quite similar to fetch except predefined candy that is added on a class.
@@ -3588,6 +3628,253 @@ Key.DOT = ".";
 
 
 
+let Messages = (function() {
+    /**
+     * Messages class handles internationalization. The class offers public methods that enable easy 
+     * using of translated content.
+     */
+    class Messages {
+        constructor() {
+            this.instance = this;
+            this.messages = [];
+            this.locale = "";
+            this.translated = [];
+            this.load = function() {};
+            this.messagesType;
+            this.app;
+            this.ready = false;
+            this.registerMessages();
+        }
+
+        /**
+         * Initializes the Messages
+         */
+        registerMessages() {
+            document.addEventListener("readystatechange", () => {
+                if(document.readyState === "complete") {
+                    this.ready = true;
+                    this.runTranslated.call(this);
+                }
+            });
+        }
+
+        setLoad(loader) {
+            this.load = loader;
+        }
+
+        setAppInstance(appInstance) {
+            this.app = appInstance;
+        }
+
+        setLocale(locale) {
+            this.locale = locale;
+            return this;
+        }
+
+        setMessages(messages) {
+            if(Util.isArray(messages))
+                this.messagesType = "array";
+            else if(Util.isObject(messages))
+                this.messagesType = "map";
+            else
+                throw "messages must be type array or object";
+            this.messages = messages;
+            this.runTranslated.call(this);
+        }
+
+        getMessage(text, ...params) {
+            if(Util.isEmpty(params[0][0])) {
+                return this.resolveMessage(text);
+            } else {
+                this.getTranslatedElemIfExist(text, params[0][0]);
+                let msg = this.resolveMessage(text);
+                return this.resolveParams(msg, params[0][0]);
+            }
+        }
+
+        /**
+         * Resolves translated message key and returns a resolved message if exist
+         * otherwise returns the given key.
+         * @param {string} text 
+         * @returns A resolved message if exist otherwise the given key.
+         */
+        resolveMessage(text) {
+            if(this.messagesType === "array") {
+                return this.resolveMessagesArray(text);
+            } else if(this.messagesType === "map") {
+                return this.resolveMessagesMap(text);
+            }
+        }
+
+        /**
+         * Resolves a translated message key from the map. Returns a resolved message 
+         * if found otherwise returns the key.
+         * @param {string} text 
+         * @returns A resolved message
+         */
+        resolveMessagesMap(text) {
+            let msg = text;
+            for(let i in this.messages) {
+                if(i === text) {
+                    msg = this.messages[i];
+                    break;
+                }
+            }
+            return msg;
+        }
+
+        /**
+         * Resolves a translated message key from the array. Returns a resolved message
+         * if found otherwise returns the key.
+         * @param {string} text 
+         * @returns A resolved message
+         */
+        resolveMessagesArray(text) {
+            let i = 0;
+            let msg = text;
+            while(i < this.messages.length) {
+                if(!Util.isEmpty(this.messages[i][text])) {
+                    msg = this.messages[i][text];
+                    break;
+                }
+                i++;
+            }
+            return msg;
+        }
+
+        /**
+         * Resolves the message parameters if exist otherwise does nothing.
+         * @param {string} msg 
+         * @param {*} params 
+         * @returns The message with resolved message parameteres if parameters exist.
+         */
+        resolveParams(msg, params) {
+            if(!Util.isEmpty(msg)) {
+                let i = 0;
+                while(i < params.length) {
+                    msg = msg.replace("{"+i+"}", params[i]);
+                    i++;
+                }
+                return msg;
+            }
+        }
+
+        /**
+         * Function gets a Elem object and inserts it into a translated object array if it exists.
+         * @param {string} key 
+         * @param {*} params 
+         */
+        getTranslatedElemIfExist(key, params) {
+            if(Util.isEmpty(this.app)) {
+                let last = params[params.length - 1];
+                if(Util.isObject(last) && last instanceof Elem) {
+                    last = params.pop();
+                    this.translated.push({key: key, params: params, obj: last});
+                }
+            }
+        }
+
+        /**
+         * Function goes through the translated objects array and sets a translated message to the translated elements.
+         */
+        runTranslated() {
+            if(Util.isEmpty(this.app) && this.ready) {
+                Util.setTimeout(() => {
+                    let i = 0;
+                    while(i < this.translated.length) {
+                        this.translated[i].obj.setText.call(this.translated[i].obj, Messages.message(this.translated[i].key, this.translated[i].params));
+                        i++;
+                    }
+                });
+            } else if(this.ready) {
+                this.app.refresh();
+            }
+        }
+
+        /**
+         * Function returns current locale of the Messages
+         * @returns Current locale
+         */
+        static locale() {
+            return Messages.getInstance().locale;
+        }
+
+        /**
+         * Lang function is used to change or set the current locale to be the given locale. After calling this method
+         * the Messages.load function will be automatically invoked.
+         * @param {string} locale String
+         * @param {object} locale Event
+         */
+        static lang(locale) {
+            let loc;
+            if(Util.isObject(locale) && locale instanceof Event) {
+                locale.preventDefault();
+                let el = Elem.wrap(locale.target);
+                loc = el.getHref();
+                if(Util.isEmpty(loc))
+                    loc = el.getValue();
+                if(Util.isEmpty(loc))
+                    loc = el.getText();
+            } else if(Util.isString(locale))
+                loc = locale;
+            else
+                throw "Given parameter must be type string or instance of Event, given value: " + locale;
+            if(!Util.isEmpty(loc))
+                Messages.getInstance().setLocale(loc).load.call(null, 
+                    Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
+        }
+
+        /**
+         * Message function is used to retrieve translated messages. The function also supports message parameters
+         * that can be given as a comma separeted list. 
+         * @param {string} text 
+         * @param {*} params 
+         * @returns A resolved message or the given key if the message is not found.
+         */
+        static message(text, ...params) {
+            return Messages.getInstance().getMessage(text, params);
+        }
+
+        /**
+         * Load function is used to load new messages or change already loaded messages.
+         * Implementation of the function receives two parameters. The one of the parameters is the changed locale and 
+         * the other is setMessages(messagesArrayOrObject) function that is used to change the translated messages.
+         * This function is called automatically when language is changed by calling the Messages.lang() function.
+         * @param {function} loader 
+         */
+        static load(loader) {
+            if(!Util.isFunction(loader))
+                throw "loader must be type function " + Util.getType(loader);
+            Messages.getInstance().setLoad(loader);
+        }
+
+        /**
+         * Set the app instance to be invoked on the Messages update.
+         * @param {object} appInstance 
+         */
+        static setApp(appInstance) {
+            Messages.getInstance().setAppInstance(appInstance);
+            return Messages;
+        }
+
+        static getInstance() {
+            if(!this.instance)
+                this.instance = new Messages();
+            return this.instance;
+        }
+    }
+
+    return {
+        lang: Messages.lang,
+        message: Messages.message,
+        load: Messages.load,
+        locale: Messages.locale,
+        setApp: Messages.setApp
+    };
+}());
+
+
+
 let RME = (function() {
     /**
      * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create RESTfull webpages with ease and speed.
@@ -3861,253 +4148,6 @@ let RME = (function() {
 
 
 
-let Messages = (function() {
-    /**
-     * Messages class handles internationalization. The class offers public methods that enable easy 
-     * using of translated content.
-     */
-    class Messages {
-        constructor() {
-            this.instance = this;
-            this.messages = [];
-            this.locale = "";
-            this.translated = [];
-            this.load = function() {};
-            this.messagesType;
-            this.app;
-            this.ready = false;
-            this.registerMessages();
-        }
-
-        /**
-         * Initializes the Messages
-         */
-        registerMessages() {
-            document.addEventListener("readystatechange", () => {
-                if(document.readyState === "complete") {
-                    this.ready = true;
-                    this.runTranslated.call(this);
-                }
-            });
-        }
-
-        setLoad(loader) {
-            this.load = loader;
-        }
-
-        setAppInstance(appInstance) {
-            this.app = appInstance;
-        }
-
-        setLocale(locale) {
-            this.locale = locale;
-            return this;
-        }
-
-        setMessages(messages) {
-            if(Util.isArray(messages))
-                this.messagesType = "array";
-            else if(Util.isObject(messages))
-                this.messagesType = "map";
-            else
-                throw "messages must be type array or object";
-            this.messages = messages;
-            this.runTranslated.call(this);
-        }
-
-        getMessage(text, ...params) {
-            if(Util.isEmpty(params[0][0])) {
-                return this.resolveMessage(text);
-            } else {
-                this.getTranslatedElemIfExist(text, params[0][0]);
-                let msg = this.resolveMessage(text);
-                return this.resolveParams(msg, params[0][0]);
-            }
-        }
-
-        /**
-         * Resolves translated message key and returns a resolved message if exist
-         * otherwise returns the given key.
-         * @param {string} text 
-         * @returns A resolved message if exist otherwise the given key.
-         */
-        resolveMessage(text) {
-            if(this.messagesType === "array") {
-                return this.resolveMessagesArray(text);
-            } else if(this.messagesType === "map") {
-                return this.resolveMessagesMap(text);
-            }
-        }
-
-        /**
-         * Resolves a translated message key from the map. Returns a resolved message 
-         * if found otherwise returns the key.
-         * @param {string} text 
-         * @returns A resolved message
-         */
-        resolveMessagesMap(text) {
-            let msg = text;
-            for(let i in this.messages) {
-                if(i === text) {
-                    msg = this.messages[i];
-                    break;
-                }
-            }
-            return msg;
-        }
-
-        /**
-         * Resolves a translated message key from the array. Returns a resolved message
-         * if found otherwise returns the key.
-         * @param {string} text 
-         * @returns A resolved message
-         */
-        resolveMessagesArray(text) {
-            let i = 0;
-            let msg = text;
-            while(i < this.messages.length) {
-                if(!Util.isEmpty(this.messages[i][text])) {
-                    msg = this.messages[i][text];
-                    break;
-                }
-                i++;
-            }
-            return msg;
-        }
-
-        /**
-         * Resolves the message parameters if exist otherwise does nothing.
-         * @param {string} msg 
-         * @param {*} params 
-         * @returns The message with resolved message parameteres if parameters exist.
-         */
-        resolveParams(msg, params) {
-            if(!Util.isEmpty(msg)) {
-                let i = 0;
-                while(i < params.length) {
-                    msg = msg.replace("{"+i+"}", params[i]);
-                    i++;
-                }
-                return msg;
-            }
-        }
-
-        /**
-         * Function gets a Elem object and inserts it into a translated object array if it exists.
-         * @param {string} key 
-         * @param {*} params 
-         */
-        getTranslatedElemIfExist(key, params) {
-            if(Util.isEmpty(this.app)) {
-                let last = params[params.length - 1];
-                if(Util.isObject(last) && last instanceof Elem) {
-                    last = params.pop();
-                    this.translated.push({key: key, params: params, obj: last});
-                }
-            }
-        }
-
-        /**
-         * Function goes through the translated objects array and sets a translated message to the translated elements.
-         */
-        runTranslated() {
-            if(Util.isEmpty(this.app) && this.ready) {
-                Util.setTimeout(() => {
-                    let i = 0;
-                    while(i < this.translated.length) {
-                        this.translated[i].obj.setText.call(this.translated[i].obj, Messages.message(this.translated[i].key, this.translated[i].params));
-                        i++;
-                    }
-                });
-            } else if(this.ready) {
-                this.app.refresh();
-            }
-        }
-
-        /**
-         * Function returns current locale of the Messages
-         * @returns Current locale
-         */
-        static locale() {
-            return Messages.getInstance().locale;
-        }
-
-        /**
-         * Lang function is used to change or set the current locale to be the given locale. After calling this method
-         * the Messages.load function will be automatically invoked.
-         * @param {string} locale String
-         * @param {object} locale Event
-         */
-        static lang(locale) {
-            let loc;
-            if(Util.isObject(locale) && locale instanceof Event) {
-                locale.preventDefault();
-                let el = Elem.wrap(locale.target);
-                loc = el.getHref();
-                if(Util.isEmpty(loc))
-                    loc = el.getValue();
-                if(Util.isEmpty(loc))
-                    loc = el.getText();
-            } else if(Util.isString(locale))
-                loc = locale;
-            else
-                throw "Given parameter must be type string or instance of Event, given value: " + locale;
-            if(!Util.isEmpty(loc))
-                Messages.getInstance().setLocale(loc).load.call(null, 
-                    Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
-        }
-
-        /**
-         * Message function is used to retrieve translated messages. The function also supports message parameters
-         * that can be given as a comma separeted list. 
-         * @param {string} text 
-         * @param {*} params 
-         * @returns A resolved message or the given key if the message is not found.
-         */
-        static message(text, ...params) {
-            return Messages.getInstance().getMessage(text, params);
-        }
-
-        /**
-         * Load function is used to load new messages or change already loaded messages.
-         * Implementation of the function receives two parameters. The one of the parameters is the changed locale and 
-         * the other is setMessages(messagesArrayOrObject) function that is used to change the translated messages.
-         * This function is called automatically when language is changed by calling the Messages.lang() function.
-         * @param {function} loader 
-         */
-        static load(loader) {
-            if(!Util.isFunction(loader))
-                throw "loader must be type function " + Util.getType(loader);
-            Messages.getInstance().setLoad(loader);
-        }
-
-        /**
-         * Set the app instance to be invoked on the Messages update.
-         * @param {object} appInstance 
-         */
-        static setApp(appInstance) {
-            Messages.getInstance().setAppInstance(appInstance);
-            return Messages;
-        }
-
-        static getInstance() {
-            if(!this.instance)
-                this.instance = new Messages();
-            return this.instance;
-        }
-    }
-
-    return {
-        lang: Messages.lang,
-        message: Messages.message,
-        load: Messages.load,
-        locale: Messages.locale,
-        setApp: Messages.setApp
-    };
-}());
-
-
-
 let Router = (function() {
     /**
      * Router class handles and renders route elements that are given by Router.routes() method.
@@ -4319,12 +4359,16 @@ let Router = (function() {
             if (!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
                 if ((route.scrolltop === true) || (route.scrolltop === undefined && this.scrolltop))
                     Browser.scrollTo(0, 0);
-                this.prevUrl = url;
+                this.prevUrl = this.getUrlPath(url);
                 this.currentRoute = route;
-                if (Util.isEmpty(this.app))
+                if (Util.isEmpty(this.app)) {
+                    if (!Util.isEmpty(route.onBefore)) route.onBefore();
                     this.root.elem.render(this.resolveElem(route.elem, route.compProps));
-                else
+                    if (!Util.isEmpty(route.onAfter)) route.onAfter();
+                } else {
+                    if (!Util.isEmpty(route.onBefore)) route.onBefore();
                     this.app.refresh();
+                }
             }
         }
 
@@ -4336,7 +4380,7 @@ let Router = (function() {
          */
         findRoute(url, force) {
             var i = 0;
-            if(!Util.isEmpty(url) && (this.prevUrl !== url || force)) {
+            if(!Util.isEmpty(url) && (this.prevUrl !== this.getUrlPath(url) || force)) {
                 while(i < this.routes.length) {
                     if(this.matches(this.routes[i].route, url))
                         return this.routes[i];
@@ -4354,11 +4398,14 @@ let Router = (function() {
         renderRoute(url) {
             var route = this.findRoute(url, true);
             if(!Util.isEmpty(route) && Util.isEmpty(this.app)) {
+                if (!Util.isEmpty(route.onBefore)) route.onBefore();
                 this.root.elem.render(this.resolveElem(route.elem, route.compProps));
                 this.currentRoute = route;
+                if (!Util.isEmpty(route.onAfter)) route.onAfter();
             } else if(Util.isEmpty(this.app)) {
                 this.root.elem.render();
             } else if(!Util.isEmpty(route) && !Util.isEmpty(this.app)) {
+                if (!Util.isEmpty(route.onBefore)) route.onBefore();
                 this.app.refresh();
                 this.currentRoute = route;
             }
@@ -4375,8 +4422,8 @@ let Router = (function() {
         matches(url, newUrl) {
             if (this.useHistory) {
                 url = Util.isString(url) ? url.replace(/\*/g, '.*').replace(/\/{2,}/g, '/') : url;
-                var path = newUrl.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
-                var found = path.match(url);
+                let path = this.getUrlPath(newUrl);
+                let found = path.match(url);
                 if (!Util.isEmpty(found))
                     found = found.join();
                 return found === path && new RegExp(url).test(newUrl);
@@ -4385,8 +4432,8 @@ let Router = (function() {
                     url = '.*';
                 else if (Util.isString(url) && url.charAt(0) !== '#')
                     url = `#${url}`;
-                var hash = newUrl.match(/\#{1}.*/).join();
-                var found = hash.match(url);
+                let hash = newUrl.match(/\#{1}.*/).join();
+                let found = hash.match(url);
                 if (!Util.isEmpty(found))
                     found = found.join();
                 return found === hash && new RegExp(url).test(newUrl);
@@ -4394,10 +4441,25 @@ let Router = (function() {
         }
 
         /**
+         * Cut the protocol and domain of the url off if exist.
+         * For example https://www.example.com/example -> /example
+         * @param {string} url 
+         * @returns The path of the url.
+         */
+        getUrlPath(url) {
+            return url.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
+        }
+
+        /**
          * @returns The current status of the Router in an object.
          */
         getCurrentState() {
-            return {root: this.origRoot, current: this.resolveElem(this.currentRoute.elem, this.currentRoute.compProps)}
+            // console.log(this.prevUrl, this.currentRoute);
+            return {
+                root: this.origRoot,
+                current: this.resolveElem(this.currentRoute.elem, this.currentRoute.compProps),
+                onAfter: this.currentRoute.onAfter
+            }
         }
 
         /**
@@ -4618,173 +4680,6 @@ class Storage {
      */
     static clear() {
         localStorage.clear();
-    }
-}
-
-
-
-/**
- * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
- * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
- * 
- * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
- * operation functionalities.
- */
-class Tree {
-    /**
-     * Uses CSS selector to find elements on the HTML Document Tree. 
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} selector 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    static get(selector) {
-        return Elem.wrapElems(document.querySelectorAll(selector));
-    }
-
-    /**
-     * Uses CSS selector to find the first match element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} selector 
-     * @returns An Elem instance.
-     */
-    static getFirst(selector) {
-        return Elem.wrap(document.querySelector(selector));
-    }
-
-    /**
-     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
-     * @param {string} tag 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    static getByTag(tag) {
-        return Elem.wrapElems(document.getElementsByTagName(tag));
-    }
-
-    /**
-     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
-     * Found elements will be wrappedn in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} name 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    static getByName(name) {
-        return Elem.wrapElems(document.getElementsByName(name));
-    }
-
-    /**
-     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} id 
-     * @returns Elem instance.
-     */
-    static getById(id) {
-        return Elem.wrap(document.getElementById(id));
-    }
-
-    /**
-     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
-     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} classname 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    static getByClass(classname) {
-        return Elem.wrapElems(document.getElementsByClassName(classname));
-    }
-
-    /**
-     * @returns body wrapped in an Elem instance.
-     */
-    static getBody() {
-        return Elem.wrap(document.body);
-    }
-
-    /**
-     * @returns head wrapped in an Elem instance.
-     */
-    static getHead() {
-        return Elem.wrap(document.head);
-    }
-
-    /**
-     * @returns title of the html document page.
-     */
-    static getTitle() {
-        return document.title;
-    }
-
-    /**
-     * Set an new title for html document page.
-     * @param {string} title 
-     */
-    static setTitle(title) {
-        document.title = title;
-    }
-
-    /**
-     * @returns active element wrapped in an Elem instance.
-     */
-    static getActiveElement() {
-        return Elem.wrap(document.activeElement);
-    }
-
-    /**
-     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
-     */
-    static getAnchors() {
-        return Elem.wrapElems(document.anchors);
-    }
-
-    /**
-     * @returns <html> element.
-     */
-    static getHtmlElement() {
-        return document.documentElement;
-    }
-
-    /**
-     * @returns <!DOCTYPE> element.
-     */
-    static getDoctype() {
-        return document.doctype;
-    }
-
-    /**
-     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
-     */
-    static getEmbeds() {
-        return Elem.wrapElems(document.embeds);
-    }
-
-    /**
-     * @returns an array of image elements (<img>) wrapped in an Elem instance.
-     */
-    static getImages() {
-        return Elem.wrapElems(document.images);
-    }
-
-    /**
-     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
-     */
-    static getLinks() {
-        return Elem.wrapElems(document.links);
-    }
-
-    /**
-     * @returns an array of scripts wrapped in an Elem instance.
-     */
-    static getScripts() {
-        return Elem.wrapElems(document.scripts);
-    }
-
-    /**
-     * @returns an array of form elements wrapped in an Elem instance.
-     */
-    static getForms() {
-        return Elem.wrapElems(document.forms);
     }
 }
 
@@ -5511,6 +5406,173 @@ class Util {
             throw "the given parameter is not a string: " +string;
         }
         return window.atob(string);
+    }
+}
+
+
+
+/**
+ * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
+ * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
+ * 
+ * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
+ * operation functionalities.
+ */
+class Tree {
+    /**
+     * Uses CSS selector to find elements on the HTML Document Tree. 
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} selector 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    static get(selector) {
+        return Elem.wrapElems(document.querySelectorAll(selector));
+    }
+
+    /**
+     * Uses CSS selector to find the first match element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} selector 
+     * @returns An Elem instance.
+     */
+    static getFirst(selector) {
+        return Elem.wrap(document.querySelector(selector));
+    }
+
+    /**
+     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
+     * @param {string} tag 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    static getByTag(tag) {
+        return Elem.wrapElems(document.getElementsByTagName(tag));
+    }
+
+    /**
+     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
+     * Found elements will be wrappedn in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} name 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    static getByName(name) {
+        return Elem.wrapElems(document.getElementsByName(name));
+    }
+
+    /**
+     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} id 
+     * @returns Elem instance.
+     */
+    static getById(id) {
+        return Elem.wrap(document.getElementById(id));
+    }
+
+    /**
+     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
+     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} classname 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    static getByClass(classname) {
+        return Elem.wrapElems(document.getElementsByClassName(classname));
+    }
+
+    /**
+     * @returns body wrapped in an Elem instance.
+     */
+    static getBody() {
+        return Elem.wrap(document.body);
+    }
+
+    /**
+     * @returns head wrapped in an Elem instance.
+     */
+    static getHead() {
+        return Elem.wrap(document.head);
+    }
+
+    /**
+     * @returns title of the html document page.
+     */
+    static getTitle() {
+        return document.title;
+    }
+
+    /**
+     * Set an new title for html document page.
+     * @param {string} title 
+     */
+    static setTitle(title) {
+        document.title = title;
+    }
+
+    /**
+     * @returns active element wrapped in an Elem instance.
+     */
+    static getActiveElement() {
+        return Elem.wrap(document.activeElement);
+    }
+
+    /**
+     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
+     */
+    static getAnchors() {
+        return Elem.wrapElems(document.anchors);
+    }
+
+    /**
+     * @returns <html> element.
+     */
+    static getHtmlElement() {
+        return document.documentElement;
+    }
+
+    /**
+     * @returns <!DOCTYPE> element.
+     */
+    static getDoctype() {
+        return document.doctype;
+    }
+
+    /**
+     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
+     */
+    static getEmbeds() {
+        return Elem.wrapElems(document.embeds);
+    }
+
+    /**
+     * @returns an array of image elements (<img>) wrapped in an Elem instance.
+     */
+    static getImages() {
+        return Elem.wrapElems(document.images);
+    }
+
+    /**
+     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
+     */
+    static getLinks() {
+        return Elem.wrapElems(document.links);
+    }
+
+    /**
+     * @returns an array of scripts wrapped in an Elem instance.
+     */
+    static getScripts() {
+        return Elem.wrapElems(document.scripts);
+    }
+
+    /**
+     * @returns an array of form elements wrapped in an Elem instance.
+     */
+    static getForms() {
+        return Elem.wrapElems(document.forms);
     }
 }
 

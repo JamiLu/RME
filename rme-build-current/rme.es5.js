@@ -116,18 +116,25 @@ var App = function () {
         }
       }
       /**
-       * Function takes two parameters that enable setting state for components. If only one parameter is given then the parameter must be an object
-       * that defines the component name and its values as follows. ({refName: {key: val, key: val}})
-       * If two parameters are given then the first parameter is a component name and the values is component state object as follows. (refName, {key: val, key: val}).
-       * Given states are stored into default application. 
+       * Function takes three parameters that enable setting state for components.
+       * If only one parameter is given then the parameter must be an object or a function. 
+       * The object should define a component name and its values as follows. ({refName: {key: val, key: val}}) and
+       * the function should return a object describing the component respectively.
+       * If two parameters are given then the first parameter is a component name
+       * and the value parameter should describe the component state object as follows. (refName, {key: val, key: val}).
+       * The value parameter may also be a function that returns the component state object respectively.
+       * The last parameter update is a boolean value that only if explicitly set to false then the app is not updated
+       * after setting the state has occured.
+       * This function will store the state into the default application state. 
        * @param {*} refName 
        * @param {*} value 
+       * @param {boolean} update
        */
 
     }, {
       key: "setState",
-      value: function setState(refName, value) {
-        return App.get().setState(refName, value);
+      value: function setState(refName, value, update) {
+        return App.get().setState(refName, value, update);
       }
       /**
        * Function takes one optional parameter. If refName is given then only a state of a component referred by the refName is given. 
@@ -165,18 +172,21 @@ var App = function () {
         return App.get().clearState(refName, update);
       }
       /**
-       * Function takes two parameters. If the first parameter is string then the second parameter must be an object. The first parameter refName 
-       * defines a component and the second parameter is the state of the component as follows: (compName, {key: val, key: val}) If the first parameter is an object then the second parameter
-       * is omitted. In this case the object must contain a component name and a state for the component as follows: ({compName: {val: key, val: key}}).
-       * Given states are stored into default application.
+       * Function takes three parameters. If the first parameter is string then the second parameter must be an object or a function.
+       * The first parameter refName is a component name and the second parameter is the state of the component as follows: (compName, {key: val, key: val})
+       * or if the second parameter is a function then the function should return the changed state of the component in an object respectively.
+       * If the first parameter is an object or a function then the second parameter is omitted. 
+       * In this case the object must contain a component name and the changed state of the component as follows: ({compName: {val: key, val: key}}).
+       * If the first parameter is a function then the function should return the changed state of the component in an object respectively.
+       * The state is stored into the default application state.
        * @param {string} refName 
        * @param {object} value 
        */
 
     }, {
       key: "mergeState",
-      value: function mergeState(key, value) {
-        return App.get().mergeState(key, value);
+      value: function mergeState(key, value, update) {
+        return App.get().mergeState(key, value, update);
       }
     }, {
       key: "getInstance",
@@ -237,6 +247,7 @@ var App = function () {
       this.setState = this.setState.bind(this);
       this.getState = this.getState.bind(this);
       this.refresh = this.refreshApp.bind(this);
+      this.afterRefreshCallQueue = [];
       this.bindReadyListener(root);
     }
 
@@ -283,37 +294,59 @@ var App = function () {
                 var selector = state.root;
                 var element = state.current;
                 freshStage.getFirst(selector).append(element);
+                if (!Util.isEmpty(state.onAfter)) _this2.afterRefreshCallQueue.push(state.onAfter);
               }
             }
 
             if (_this2.oldStage.toString() !== freshStage.toString()) {
               _this2.oldStage = _this2.renderer.merge(_this2.oldStage, freshStage);
             }
+
+            _this2.refreshAppDone();
           });
         }
       }
+    }, {
+      key: "refreshAppDone",
+      value: function refreshAppDone() {
+        this.afterRefreshCallQueue.forEach(function (callback) {
+          return callback();
+        });
+        this.afterRefreshCallQueue = [];
+      }
       /**
-       * Function takes two parameters that enable setting state for components. If only one parameter is given then the parameter must be an object
-       * that defines the component name and its values as follows. ({refName: {key: val, key: val}})
-       * If two parameters are given then the first parameter is a component name and the values is component state object as follows. (refName, {key: val, key: val}).
-       * Given states are stored into this application instance state. 
+       * Function takes three parameters that enable setting state for components.
+       * If only one parameter is given then the parameter must be an object or a function. 
+       * The object should define a component name and its values as follows. ({refName: {key: val, key: val}}) and
+       * the function should return a object describing the component respectively.
+       * If two parameters are given then the first parameter is a component name
+       * and the value parameter should describe the component state object as follows. (refName, {key: val, key: val}).
+       * The value parameter may also be a function that returns the component state object respectively.
+       * The last parameter update is a boolean value that only if explicitly set to false then the app is not updated
+       * after setting the state has occured.
+       * This function will store the state into this application instance state. 
        * @param {*} refName 
        * @param {*} value 
+       * @param {boolean} update
        */
 
     }, {
       key: "setState",
-      value: function setState(refName, value) {
-        if (Util.isString(refName)) {
+      value: function setState(refName, value, update) {
+        if (Util.isString(refName) && Util.isFunction(value)) {
+          this.state[refName] = value(this.state[refName]);
+        } else if (Util.isString(refName) && Util.isObject(value)) {
           this.state[refName] = value;
-          this.refreshApp();
-        } else if (Util.isObject(refName)) {
-          for (var p in refName) {
-            if (refName.hasOwnProperty(p)) this.state[p] = refName[p];
-          }
+        } else {
+          var state = {};
+          if (Util.isFunction(refName)) state = refName(this.state);else if (Util.isObject(refName)) state = refName;
 
-          this.refreshApp();
+          for (var p in state) {
+            if (state.hasOwnProperty(p)) this.state[p] = state[p];
+          }
         }
+
+        if (update !== false) this.refreshApp();
       }
       /**
        * Function takes one optional parameter. If refName is given then only a state of a component referred by the refName is given. 
@@ -380,29 +413,38 @@ var App = function () {
         }
       }
       /**
-       * Function takes two parameters. If the first parameter is string then the second parameter must be an object. The first parameter refName 
-       * defines a component and the second parameter is the state of the component as follows: (compName, {key: val, key: val}) If the first parameter is an object then the second parameter
-       * is omitted. In this case the object must contain a component name and a state for the component as follows: ({compName: {val: key, val: key}}).
-       * Given states are stored into this application instance state.
+       * Function takes three parameters. If the first parameter is string then the second parameter must be an object or a function.
+       * The first parameter refName is a component name and the second parameter is the state of the component as follows: (compName, {key: val, key: val})
+       * or if the second parameter is a function then the function should return the changed state of the component in an object respectively.
+       * If the first parameter is an object or a function then the second parameter is omitted. 
+       * In this case the object must contain a component name and the changed state of the component as follows: ({compName: {val: key, val: key}}).
+       * If the first parameter is a function then the function should return the changed state of the component in an object respectively.
+       * The state is stored into this application instance state.
        * @param {string} refName 
        * @param {object} value 
+       * @param {boolean} update
        */
 
     }, {
       key: "mergeState",
-      value: function mergeState(refName, value) {
+      value: function mergeState(refName, value, update) {
         var newState = {};
 
-        if (Util.isString(refName)) {
+        if (Util.isString(refName) && Util.isFunction(value)) {
+          newState[refName] = value(this.state[refName]);
+        } else if (Util.isString(refName) && Util.isObject(value)) {
           newState[refName] = value;
-        } else if (Util.isObject(refName)) {
-          for (var p in refName) {
-            if (refName.hasOwnProperty(p)) newState[p] = refName[p];
+        } else {
+          var state = {};
+          if (Util.isFunction(refName)) state = refName(this.state);else if (Util.isObject(refName)) state = refName;
+
+          for (var p in state) {
+            if (state.hasOwnProperty(p)) newState[p] = state[p];
           }
         }
 
         this.recursiveMergeState(this.state, newState);
-        this.refreshApp();
+        if (update !== false) this.refreshApp();
       }
     }, {
       key: "recursiveMergeState",
@@ -1117,6 +1159,153 @@ function () {
   return Browser;
 }();
 
+var Cookie = function () {
+  /**
+   * Cookie interface offers an easy way to get, set or remove cookies in application logic.
+   * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
+   * 
+   * {
+   *    name: "name",
+   *    value: "value",
+   *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+   *    cookiePath: "cookiePath absolute dir",
+   *    cookieDomain: "cookieDomain e.g example.com",
+   *    setSecureBoolean: true|false
+   * }
+   * 
+   * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+   * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+   */
+  var Cookie =
+  /*#__PURE__*/
+  function () {
+    function Cookie() {
+      _classCallCheck(this, Cookie);
+    }
+
+    _createClass(Cookie, null, [{
+      key: "get",
+
+      /**
+       * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
+       * 
+       * @param {String} name 
+       * @returns cookie object
+       */
+      value: function get(name) {
+        if (navigator.cookieEnabled) {
+          var retCookie = null;
+          var cookies = document.cookie.split(";");
+          var i = 0;
+
+          while (i < cookies.length) {
+            var cookie = cookies[i];
+            var eq = cookie.search("=");
+            var cn = cookie.substr(0, eq).trim();
+            var cv = cookie.substr(eq + 1, cookie.length).trim();
+
+            if (cn === name) {
+              retCookie = new CookieInstance(cn, cv);
+              break;
+            }
+
+            i++;
+          }
+
+          return retCookie;
+        }
+      }
+      /**
+       * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
+       * 
+       * @param {string} name
+       * @param {string} value
+       * @param {string} expiresDate
+       * @param {string} cookiePath
+       * @param {string} cookieDomain
+       * @param {boolean} setSecureBoolean
+       */
+
+    }, {
+      key: "set",
+      value: function set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+        if (navigator.cookieEnabled) {
+          document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
+        }
+      }
+      /**
+       * Remove a cookie by name. Method will set the cookie expired and then remove it.
+       * @param {string} name
+       */
+
+    }, {
+      key: "remove",
+      value: function remove(name) {
+        var co = Cookie.get(name);
+
+        if (!Util.isEmpty(co)) {
+          co.setExpired();
+          document.cookie = co.toString();
+        }
+      }
+    }]);
+
+    return Cookie;
+  }();
+  /**
+   * Cookie object may hold following values:
+   *
+   * {
+   *    name: "name",
+   *    value: "value",
+   *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+   *    cookiePath: "cookiePath absolute dir",
+   *    cookieDomain: "cookieDomain e.g example.com",
+   *    setSecureBoolean: true|false
+   * }
+   * 
+   * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+   * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+   */
+
+
+  var CookieInstance =
+  /*#__PURE__*/
+  function () {
+    function CookieInstance(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+      _classCallCheck(this, CookieInstance);
+
+      this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
+      this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
+      this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
+      this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
+      this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
+      this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
+    }
+
+    _createClass(CookieInstance, [{
+      key: "setExpired",
+      value: function setExpired() {
+        this.cookieExpires = new Date(1970, 0, 1).toString();
+      }
+    }, {
+      key: "toString",
+      value: function toString() {
+        return this.cookieName + "=" + this.cookieValue + "; expires=" + this.cookieExpires + "; path=" + this.cookiePath + "; domain=" + this.cookieDomain + "; " + this.cookieSecurity;
+      }
+    }], [{
+      key: "create",
+      value: function create(name, value, expires, cpath, cdomain, setSecure) {
+        return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
+      }
+    }]);
+
+    return CookieInstance;
+  }();
+
+  return Cookie;
+}();
+
 var Elem = function () {
   /**
    * Elem class is a wrapper class for HTMLDocument element JavaScript object. This object constructor 
@@ -1486,7 +1675,6 @@ var Elem = function () {
       key: "setTabIndex",
       value: function setTabIndex(idx) {
         this.setAttribute('tabindex', idx);
-        this.html.tabIndex = idx;
         return this;
       }
       /**
@@ -1707,7 +1895,6 @@ var Elem = function () {
       key: "setMaxLength",
       value: function setMaxLength(length) {
         this.setAttribute('maxlength', length);
-        this.html.maxLength = length;
         return this;
       }
       /**
@@ -1729,7 +1916,6 @@ var Elem = function () {
       key: "setMinLength",
       value: function setMinLength(length) {
         this.setAttribute('minlength', length);
-        this.html.minLength = length;
         return this;
       }
       /**
@@ -1801,10 +1987,8 @@ var Elem = function () {
       value: function setDisabled(boolean) {
         if (Util.isBoolean(boolean) && boolean === true || Util.isString(boolean) && boolean === 'disabled') {
           this.setAttribute('disabled', 'disabled');
-          this.html.disabled = true;
         } else {
           this.removeAttribute('disabled');
-          this.html.disabled = false;
         }
 
         return this;
@@ -1832,10 +2016,8 @@ var Elem = function () {
       value: function setChecked(boolean) {
         if (Util.isBoolean(boolean) && boolean === true || Util.isString(boolean) && boolean === 'checked') {
           this.setAttribute('checked', 'checked');
-          this.html.checked = true;
         } else {
           this.removeAttribute('checked');
-          this.html.checked = false;
         }
 
         return this;
@@ -3536,153 +3718,6 @@ function () {
 
   return RMEElemTemplater;
 }();
-
-var Cookie = function () {
-  /**
-   * Cookie interface offers an easy way to get, set or remove cookies in application logic.
-   * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
-   * 
-   * {
-   *    name: "name",
-   *    value: "value",
-   *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-   *    cookiePath: "cookiePath absolute dir",
-   *    cookieDomain: "cookieDomain e.g example.com",
-   *    setSecureBoolean: true|false
-   * }
-   * 
-   * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-   * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-   */
-  var Cookie =
-  /*#__PURE__*/
-  function () {
-    function Cookie() {
-      _classCallCheck(this, Cookie);
-    }
-
-    _createClass(Cookie, null, [{
-      key: "get",
-
-      /**
-       * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
-       * 
-       * @param {String} name 
-       * @returns cookie object
-       */
-      value: function get(name) {
-        if (navigator.cookieEnabled) {
-          var retCookie = null;
-          var cookies = document.cookie.split(";");
-          var i = 0;
-
-          while (i < cookies.length) {
-            var cookie = cookies[i];
-            var eq = cookie.search("=");
-            var cn = cookie.substr(0, eq).trim();
-            var cv = cookie.substr(eq + 1, cookie.length).trim();
-
-            if (cn === name) {
-              retCookie = new CookieInstance(cn, cv);
-              break;
-            }
-
-            i++;
-          }
-
-          return retCookie;
-        }
-      }
-      /**
-       * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
-       * 
-       * @param {string} name
-       * @param {string} value
-       * @param {string} expiresDate
-       * @param {string} cookiePath
-       * @param {string} cookieDomain
-       * @param {boolean} setSecureBoolean
-       */
-
-    }, {
-      key: "set",
-      value: function set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-        if (navigator.cookieEnabled) {
-          document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
-        }
-      }
-      /**
-       * Remove a cookie by name. Method will set the cookie expired and then remove it.
-       * @param {string} name
-       */
-
-    }, {
-      key: "remove",
-      value: function remove(name) {
-        var co = Cookie.get(name);
-
-        if (!Util.isEmpty(co)) {
-          co.setExpired();
-          document.cookie = co.toString();
-        }
-      }
-    }]);
-
-    return Cookie;
-  }();
-  /**
-   * Cookie object may hold following values:
-   *
-   * {
-   *    name: "name",
-   *    value: "value",
-   *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-   *    cookiePath: "cookiePath absolute dir",
-   *    cookieDomain: "cookieDomain e.g example.com",
-   *    setSecureBoolean: true|false
-   * }
-   * 
-   * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-   * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-   */
-
-
-  var CookieInstance =
-  /*#__PURE__*/
-  function () {
-    function CookieInstance(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-      _classCallCheck(this, CookieInstance);
-
-      this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
-      this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
-      this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
-      this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
-      this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
-      this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
-    }
-
-    _createClass(CookieInstance, [{
-      key: "setExpired",
-      value: function setExpired() {
-        this.cookieExpires = new Date(1970, 0, 1).toString();
-      }
-    }, {
-      key: "toString",
-      value: function toString() {
-        return this.cookieName + "=" + this.cookieValue + "; expires=" + this.cookieExpires + "; path=" + this.cookiePath + "; domain=" + this.cookieDomain + "; " + this.cookieSecurity;
-      }
-    }], [{
-      key: "create",
-      value: function create(name, value, expires, cpath, cdomain, setSecure) {
-        return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
-      }
-    }]);
-
-    return CookieInstance;
-  }();
-
-  return Cookie;
-}();
 /**
  * Before using this class you should also be familiar on how to use fetch since usage of this class
  * will be quite similar to fetch except predefined candy that is added on a class.
@@ -4408,296 +4443,6 @@ Key.COMMA = ",";
 
 Key.DOT = ".";
 
-var RME = function () {
-  /**
-   * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create RESTfull webpages with ease and speed.
-   * This library is free to use under the MIT License.
-   * 
-   * RME class is a core of the RME library. The RME class offers functionality to start a RME application, control components, external script files and rme storage.
-   */
-  var RME =
-  /*#__PURE__*/
-  function () {
-    function RME() {
-      _classCallCheck(this, RME);
-
-      this.instance = this;
-
-      this.completeRun = function () {};
-
-      this.runner = function () {};
-
-      this.onStorageChange = function (state) {};
-
-      this.components = {};
-      this.rmeState = {};
-      this.router;
-      this.messages;
-      this.defaultApp;
-    }
-
-    _createClass(RME, [{
-      key: "complete",
-      value: function complete() {
-        this.completeRun.call();
-      }
-    }, {
-      key: "start",
-      value: function start() {
-        this.runner.call();
-      }
-    }, {
-      key: "setComplete",
-      value: function setComplete(runnable) {
-        this.completeRun = runnable;
-      }
-    }, {
-      key: "setRunner",
-      value: function setRunner(runnable) {
-        this.runner = runnable;
-        return this.instance;
-      }
-    }, {
-      key: "addComponent",
-      value: function addComponent(runnable, props) {
-        var comp;
-        if (Util.isFunction(runnable)) comp = runnable.call();else if (Util.isObject(runnable)) comp = runnable;
-
-        for (var p in comp) {
-          if (comp.hasOwnProperty(p)) {
-            this.components[p] = {
-              component: comp[p],
-              update: Util.isFunction(props) ? props : undefined
-            };
-          }
-        }
-
-        comp = null;
-      }
-    }, {
-      key: "getComponent",
-      value: function getComponent(name, props) {
-        var comp = this.components[name];
-        if (!comp) throw "Cannot find a component: \"" + name + "\"";
-
-        if (!Util.isEmpty(props) && Util.isFunction(comp.update)) {
-          var state = Util.isEmpty(props.key) ? name : "".concat(name).concat(props.key);
-          props["ref"] = state;
-          props = this.extendProps(props, comp.update.call()(state));
-        }
-
-        if (Util.isEmpty(props)) props = {};
-        if (!Util.isEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate)) props.onBeforeCreate.call(props, props);
-        var ret = comp.component.call(props, props);
-        if (Template.isTemplate(ret)) ret = Template.resolve(ret);
-        if (!Util.isEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate)) props.onAfterCreate.call(props, ret, props);
-        return ret;
-      }
-    }, {
-      key: "extendProps",
-      value: function extendProps(props, newProps) {
-        if (!Util.isEmpty(newProps)) {
-          for (var p in newProps) {
-            if (newProps.hasOwnProperty(p)) {
-              props[p] = newProps[p];
-            }
-          }
-        }
-
-        return props;
-      }
-    }, {
-      key: "setRmeState",
-      value: function setRmeState(key, value) {
-        this.rmeState[key] = value;
-        this.onStorageChange.call(this, this.rmeState);
-      }
-    }, {
-      key: "getRmeState",
-      value: function getRmeState(key) {
-        return this.rmeState[key];
-      }
-    }, {
-      key: "configure",
-      value: function configure(config) {
-        this.router = config.router;
-        this.messages = config.messages;
-        this.defaultApp = config.app;
-        if (!Util.isEmpty(this.router)) this.router.setApp(this.defaultApp);
-        if (!Util.isEmpty(this.messages)) this.messages.setApp(this.defaultApp);
-        if (!Util.isEmpty(this.defaultApp)) this.defaultApp.setRouter(this.router);
-      }
-      /** 
-       * Runs a runnable script immedeately. If multpile run functions are declared they will be invoked by the declaration order.
-       */
-
-    }], [{
-      key: "run",
-      value: function run(runnable) {
-        if (runnable && Util.isFunction(runnable)) RME.getInstance().setRunner(runnable).start();
-      }
-      /**
-       * Waits until body has been loaded and then runs a runnable script. 
-       * If multiple ready functions are declared the latter one is invoked.
-       */
-
-    }, {
-      key: "ready",
-      value: function ready(runnable) {
-        if (runnable && Util.isFunction(runnable)) RME.getInstance().setComplete(runnable);
-      }
-      /**
-       * Creates or retrieves a RME component. 
-       * If the first parameter is a function then this method will try to create a RME component and store it
-       * in the RME instance.
-       * If the first parameter is a string then this method will try to retrieve a RME component from the 
-       * RME instance.
-       * @param {*} runnable Type function or String.
-       * @param {Object} props 
-       */
-
-    }, {
-      key: "component",
-      value: function component(runnable, props) {
-        if (runnable && (Util.isFunction(runnable) || Util.isObject(runnable))) RME.getInstance().addComponent(runnable, props);else if (runnable && Util.isString(runnable)) return RME.getInstance().getComponent(runnable, props);
-      }
-      /**
-       * Saves data to or get data from the RME instance storage.
-       * If key and value parameters are not empty then this method will try to save the give value by the given key
-       * into to the RME instance storage.
-       * If key is not empty and value is empty then this method will try to get data from the RME instance storage
-       * by the given key.
-       * @param {String} key 
-       * @param {Object} value 
-       */
-
-    }, {
-      key: "storage",
-      value: function storage(key, value) {
-        if (!Util.isEmpty(key) && !Util.isEmpty(value)) RME.getInstance().setRmeState(key, value);else if (!Util.isEmpty(key) && Util.isEmpty(value)) return RME.getInstance().getRmeState(key);
-      }
-      /**
-       * Adds a script file on runtime into the head of the current html document where the method is called on.
-       * Source is required other properties can be omitted.
-       * @param {String} source URL or file name. *Requied
-       * @param {String} id 
-       * @param {String} type 
-       * @param {String} text Content of the script element if any.
-       * @param {boolean} defer If true script is executed when page has finished parsing.
-       * @param {*} crossOrigin 
-       * @param {String} charset 
-       * @param {boolean} async If true script is executed asynchronously when available.
-       */
-
-    }, {
-      key: "script",
-      value: function script(source, id, type, text, defer, crossOrigin, charset, async) {
-        if (!Util.isEmpty(source)) {
-          var sc = new Elem("script").setSource(source);
-          if (!Util.isEmpty(id)) sc.setId(id);
-          if (!Util.isEmpty(type)) sc.setType(type);
-          if (!Util.isEmpty(text)) sc.setText(text);
-          if (!Util.isEmpty(defer)) sc.setAttribute("defer", defer);
-          if (!Util.isEmpty(crossOrigin)) sc.setAttribute("crossOrigin", crossOrigin);
-          if (!Util.isEmpty(charset)) sc.setAttribute("charset", charset);
-          if (!Util.isEmpty(async)) sc.setAttribute("async", async);
-          RME.addScript(sc);
-        }
-      }
-      /**
-       * This is called when ever a new data is saved into the RME instance storage.
-       * Callback function has one paramater newState that is the latest snapshot of the 
-       * current instance storage.
-       * @param {function} listener 
-       */
-
-    }, {
-      key: "onStorageChange",
-      value: function onStorageChange(listener) {
-        if (listener && Util.isFunction(listener)) RME.getInstance().onrmestoragechange = listener;
-      }
-      /**
-       * Function checks if a component with the given name exists.
-       * @param {string} name 
-       * @returns True if the component exist otherwise false
-       */
-
-    }, {
-      key: "hasComponent",
-      value: function hasComponent(name) {
-        return !Util.isEmpty(RME.getInstance().components[name.replace("component:", "")]);
-      }
-      /**
-       * Function receives an object as a parameter that holds three properties router, messages and app. The function will
-       * autoconfigure the Router, the Messages and the App instance to be used as default.
-       * 
-       * The config object represented
-       * {
-       * router: Router reference
-       * messages: Messages reference
-       * app: App instance
-       * }
-       * @param {object} config 
-       */
-
-    }, {
-      key: "use",
-      value: function use(config) {
-        RME.getInstance().configure(config);
-      }
-    }, {
-      key: "addScript",
-      value: function addScript(elem) {
-        var scripts = Tree.getScripts();
-        var lastScript = scripts[scripts.length - 1];
-        lastScript.after(elem);
-      }
-    }, {
-      key: "removeScript",
-      value: function removeScript(sourceOrId) {
-        if (sourceOrId.indexOf("#") === 0) {
-          Tree.getHead().remove(Tree.get(sourceOrId));
-        } else {
-          var scripts = Tree.getScripts();
-
-          for (var s in scripts) {
-            if (scripts.hasOwnProperty(s)) {
-              var src = !Util.isEmpty(scripts[s].getSource()) ? scripts[s].getSource() : "";
-
-              if (src.search(sourceOrId) > -1 && src.search(sourceOrId) === src.length - sourceOrId.length) {
-                Tree.getHead().remove(scripts[s]);
-                break;
-              }
-            }
-          }
-        }
-      }
-    }, {
-      key: "getInstance",
-      value: function getInstance() {
-        if (!this.instance) this.instance = new RME();
-        return this.instance;
-      }
-    }]);
-
-    return RME;
-  }();
-
-  document.addEventListener("readystatechange", function () {
-    if (document.readyState === "complete") RME.getInstance().complete();
-  });
-  return {
-    run: RME.run,
-    ready: RME.ready,
-    component: RME.component,
-    storage: RME.storage,
-    script: RME.script,
-    onStorageChange: RME.onStorageChange,
-    hasComponent: RME.hasComponent,
-    use: RME.use
-  };
-}();
-
 var Messages = function () {
   /**
    * Messages class handles internationalization. The class offers public methods that enable easy 
@@ -4998,6 +4743,296 @@ var Messages = function () {
   };
 }();
 
+var RME = function () {
+  /**
+   * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create RESTfull webpages with ease and speed.
+   * This library is free to use under the MIT License.
+   * 
+   * RME class is a core of the RME library. The RME class offers functionality to start a RME application, control components, external script files and rme storage.
+   */
+  var RME =
+  /*#__PURE__*/
+  function () {
+    function RME() {
+      _classCallCheck(this, RME);
+
+      this.instance = this;
+
+      this.completeRun = function () {};
+
+      this.runner = function () {};
+
+      this.onStorageChange = function (state) {};
+
+      this.components = {};
+      this.rmeState = {};
+      this.router;
+      this.messages;
+      this.defaultApp;
+    }
+
+    _createClass(RME, [{
+      key: "complete",
+      value: function complete() {
+        this.completeRun.call();
+      }
+    }, {
+      key: "start",
+      value: function start() {
+        this.runner.call();
+      }
+    }, {
+      key: "setComplete",
+      value: function setComplete(runnable) {
+        this.completeRun = runnable;
+      }
+    }, {
+      key: "setRunner",
+      value: function setRunner(runnable) {
+        this.runner = runnable;
+        return this.instance;
+      }
+    }, {
+      key: "addComponent",
+      value: function addComponent(runnable, props) {
+        var comp;
+        if (Util.isFunction(runnable)) comp = runnable.call();else if (Util.isObject(runnable)) comp = runnable;
+
+        for (var p in comp) {
+          if (comp.hasOwnProperty(p)) {
+            this.components[p] = {
+              component: comp[p],
+              update: Util.isFunction(props) ? props : undefined
+            };
+          }
+        }
+
+        comp = null;
+      }
+    }, {
+      key: "getComponent",
+      value: function getComponent(name, props) {
+        var comp = this.components[name];
+        if (!comp) throw "Cannot find a component: \"" + name + "\"";
+
+        if (!Util.isEmpty(props) && Util.isFunction(comp.update)) {
+          var state = Util.isEmpty(props.key) ? name : "".concat(name).concat(props.key);
+          props["ref"] = state;
+          props = this.extendProps(props, comp.update.call()(state));
+        }
+
+        if (Util.isEmpty(props)) props = {};
+        if (!Util.isEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate)) props.onBeforeCreate.call(props, props);
+        var ret = comp.component.call(props, props);
+        if (Template.isTemplate(ret)) ret = Template.resolve(ret);
+        if (!Util.isEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate)) props.onAfterCreate.call(props, ret, props);
+        return ret;
+      }
+    }, {
+      key: "extendProps",
+      value: function extendProps(props, newProps) {
+        if (!Util.isEmpty(newProps)) {
+          for (var p in newProps) {
+            if (newProps.hasOwnProperty(p)) {
+              props[p] = newProps[p];
+            }
+          }
+        }
+
+        return props;
+      }
+    }, {
+      key: "setRmeState",
+      value: function setRmeState(key, value) {
+        this.rmeState[key] = value;
+        this.onStorageChange.call(this, this.rmeState);
+      }
+    }, {
+      key: "getRmeState",
+      value: function getRmeState(key) {
+        return this.rmeState[key];
+      }
+    }, {
+      key: "configure",
+      value: function configure(config) {
+        this.router = config.router;
+        this.messages = config.messages;
+        this.defaultApp = config.app;
+        if (!Util.isEmpty(this.router)) this.router.setApp(this.defaultApp);
+        if (!Util.isEmpty(this.messages)) this.messages.setApp(this.defaultApp);
+        if (!Util.isEmpty(this.defaultApp)) this.defaultApp.setRouter(this.router);
+      }
+      /** 
+       * Runs a runnable script immedeately. If multpile run functions are declared they will be invoked by the declaration order.
+       */
+
+    }], [{
+      key: "run",
+      value: function run(runnable) {
+        if (runnable && Util.isFunction(runnable)) RME.getInstance().setRunner(runnable).start();
+      }
+      /**
+       * Waits until body has been loaded and then runs a runnable script. 
+       * If multiple ready functions are declared the latter one is invoked.
+       */
+
+    }, {
+      key: "ready",
+      value: function ready(runnable) {
+        if (runnable && Util.isFunction(runnable)) RME.getInstance().setComplete(runnable);
+      }
+      /**
+       * Creates or retrieves a RME component. 
+       * If the first parameter is a function then this method will try to create a RME component and store it
+       * in the RME instance.
+       * If the first parameter is a string then this method will try to retrieve a RME component from the 
+       * RME instance.
+       * @param {*} runnable Type function or String.
+       * @param {Object} props 
+       */
+
+    }, {
+      key: "component",
+      value: function component(runnable, props) {
+        if (runnable && (Util.isFunction(runnable) || Util.isObject(runnable))) RME.getInstance().addComponent(runnable, props);else if (runnable && Util.isString(runnable)) return RME.getInstance().getComponent(runnable, props);
+      }
+      /**
+       * Saves data to or get data from the RME instance storage.
+       * If key and value parameters are not empty then this method will try to save the give value by the given key
+       * into to the RME instance storage.
+       * If key is not empty and value is empty then this method will try to get data from the RME instance storage
+       * by the given key.
+       * @param {String} key 
+       * @param {Object} value 
+       */
+
+    }, {
+      key: "storage",
+      value: function storage(key, value) {
+        if (!Util.isEmpty(key) && !Util.isEmpty(value)) RME.getInstance().setRmeState(key, value);else if (!Util.isEmpty(key) && Util.isEmpty(value)) return RME.getInstance().getRmeState(key);
+      }
+      /**
+       * Adds a script file on runtime into the head of the current html document where the method is called on.
+       * Source is required other properties can be omitted.
+       * @param {String} source URL or file name. *Requied
+       * @param {String} id 
+       * @param {String} type 
+       * @param {String} text Content of the script element if any.
+       * @param {boolean} defer If true script is executed when page has finished parsing.
+       * @param {*} crossOrigin 
+       * @param {String} charset 
+       * @param {boolean} async If true script is executed asynchronously when available.
+       */
+
+    }, {
+      key: "script",
+      value: function script(source, id, type, text, defer, crossOrigin, charset, async) {
+        if (!Util.isEmpty(source)) {
+          var sc = new Elem("script").setSource(source);
+          if (!Util.isEmpty(id)) sc.setId(id);
+          if (!Util.isEmpty(type)) sc.setType(type);
+          if (!Util.isEmpty(text)) sc.setText(text);
+          if (!Util.isEmpty(defer)) sc.setAttribute("defer", defer);
+          if (!Util.isEmpty(crossOrigin)) sc.setAttribute("crossOrigin", crossOrigin);
+          if (!Util.isEmpty(charset)) sc.setAttribute("charset", charset);
+          if (!Util.isEmpty(async)) sc.setAttribute("async", async);
+          RME.addScript(sc);
+        }
+      }
+      /**
+       * This is called when ever a new data is saved into the RME instance storage.
+       * Callback function has one paramater newState that is the latest snapshot of the 
+       * current instance storage.
+       * @param {function} listener 
+       */
+
+    }, {
+      key: "onStorageChange",
+      value: function onStorageChange(listener) {
+        if (listener && Util.isFunction(listener)) RME.getInstance().onrmestoragechange = listener;
+      }
+      /**
+       * Function checks if a component with the given name exists.
+       * @param {string} name 
+       * @returns True if the component exist otherwise false
+       */
+
+    }, {
+      key: "hasComponent",
+      value: function hasComponent(name) {
+        return !Util.isEmpty(RME.getInstance().components[name.replace("component:", "")]);
+      }
+      /**
+       * Function receives an object as a parameter that holds three properties router, messages and app. The function will
+       * autoconfigure the Router, the Messages and the App instance to be used as default.
+       * 
+       * The config object represented
+       * {
+       * router: Router reference
+       * messages: Messages reference
+       * app: App instance
+       * }
+       * @param {object} config 
+       */
+
+    }, {
+      key: "use",
+      value: function use(config) {
+        RME.getInstance().configure(config);
+      }
+    }, {
+      key: "addScript",
+      value: function addScript(elem) {
+        var scripts = Tree.getScripts();
+        var lastScript = scripts[scripts.length - 1];
+        lastScript.after(elem);
+      }
+    }, {
+      key: "removeScript",
+      value: function removeScript(sourceOrId) {
+        if (sourceOrId.indexOf("#") === 0) {
+          Tree.getHead().remove(Tree.get(sourceOrId));
+        } else {
+          var scripts = Tree.getScripts();
+
+          for (var s in scripts) {
+            if (scripts.hasOwnProperty(s)) {
+              var src = !Util.isEmpty(scripts[s].getSource()) ? scripts[s].getSource() : "";
+
+              if (src.search(sourceOrId) > -1 && src.search(sourceOrId) === src.length - sourceOrId.length) {
+                Tree.getHead().remove(scripts[s]);
+                break;
+              }
+            }
+          }
+        }
+      }
+    }, {
+      key: "getInstance",
+      value: function getInstance() {
+        if (!this.instance) this.instance = new RME();
+        return this.instance;
+      }
+    }]);
+
+    return RME;
+  }();
+
+  document.addEventListener("readystatechange", function () {
+    if (document.readyState === "complete") RME.getInstance().complete();
+  });
+  return {
+    run: RME.run,
+    ready: RME.ready,
+    component: RME.component,
+    storage: RME.storage,
+    script: RME.script,
+    onStorageChange: RME.onStorageChange,
+    hasComponent: RME.hasComponent,
+    use: RME.use
+  };
+}();
+
 var Router = function () {
   /**
    * Router class handles and renders route elements that are given by Router.routes() method.
@@ -5252,9 +5287,17 @@ var Router = function () {
 
         if (!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
           if (route.scrolltop === true || route.scrolltop === undefined && this.scrolltop) Browser.scrollTo(0, 0);
-          this.prevUrl = url;
+          this.prevUrl = this.getUrlPath(url);
           this.currentRoute = route;
-          if (Util.isEmpty(this.app)) this.root.elem.render(this.resolveElem(route.elem, route.compProps));else this.app.refresh();
+
+          if (Util.isEmpty(this.app)) {
+            if (!Util.isEmpty(route.onBefore)) route.onBefore();
+            this.root.elem.render(this.resolveElem(route.elem, route.compProps));
+            if (!Util.isEmpty(route.onAfter)) route.onAfter();
+          } else {
+            if (!Util.isEmpty(route.onBefore)) route.onBefore();
+            this.app.refresh();
+          }
         }
       }
       /**
@@ -5269,7 +5312,7 @@ var Router = function () {
       value: function findRoute(url, force) {
         var i = 0;
 
-        if (!Util.isEmpty(url) && (this.prevUrl !== url || force)) {
+        if (!Util.isEmpty(url) && (this.prevUrl !== this.getUrlPath(url) || force)) {
           while (i < this.routes.length) {
             if (this.matches(this.routes[i].route, url)) return this.routes[i];
             i++;
@@ -5290,11 +5333,14 @@ var Router = function () {
         var route = this.findRoute(url, true);
 
         if (!Util.isEmpty(route) && Util.isEmpty(this.app)) {
+          if (!Util.isEmpty(route.onBefore)) route.onBefore();
           this.root.elem.render(this.resolveElem(route.elem, route.compProps));
           this.currentRoute = route;
+          if (!Util.isEmpty(route.onAfter)) route.onAfter();
         } else if (Util.isEmpty(this.app)) {
           this.root.elem.render();
         } else if (!Util.isEmpty(route) && !Util.isEmpty(this.app)) {
+          if (!Util.isEmpty(route.onBefore)) route.onBefore();
           this.app.refresh();
           this.currentRoute = route;
         }
@@ -5313,17 +5359,31 @@ var Router = function () {
       value: function matches(url, newUrl) {
         if (this.useHistory) {
           url = Util.isString(url) ? url.replace(/\*/g, '.*').replace(/\/{2,}/g, '/') : url;
-          var path = newUrl.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
+          var path = this.getUrlPath(newUrl);
           var found = path.match(url);
           if (!Util.isEmpty(found)) found = found.join();
           return found === path && new RegExp(url).test(newUrl);
         } else {
           if (Util.isString(url) && url.charAt(0) === '*') url = '.*';else if (Util.isString(url) && url.charAt(0) !== '#') url = "#".concat(url);
           var hash = newUrl.match(/\#{1}.*/).join();
-          var found = hash.match(url);
-          if (!Util.isEmpty(found)) found = found.join();
-          return found === hash && new RegExp(url).test(newUrl);
+
+          var _found = hash.match(url);
+
+          if (!Util.isEmpty(_found)) _found = _found.join();
+          return _found === hash && new RegExp(url).test(newUrl);
         }
+      }
+      /**
+       * Cut the protocol and domain of the url off if exist.
+       * For example https://www.example.com/example -> /example
+       * @param {string} url 
+       * @returns The path of the url.
+       */
+
+    }, {
+      key: "getUrlPath",
+      value: function getUrlPath(url) {
+        return url.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
       }
       /**
        * @returns The current status of the Router in an object.
@@ -5332,9 +5392,11 @@ var Router = function () {
     }, {
       key: "getCurrentState",
       value: function getCurrentState() {
+        // console.log(this.prevUrl, this.currentRoute);
         return {
           root: this.origRoot,
-          current: this.resolveElem(this.currentRoute.elem, this.currentRoute.compProps)
+          current: this.resolveElem(this.currentRoute.elem, this.currentRoute.compProps),
+          onAfter: this.currentRoute.onAfter
         };
       }
       /**
@@ -5627,220 +5689,6 @@ function () {
   }]);
 
   return Storage;
-}();
-/**
- * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
- * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
- * 
- * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
- * operation functionalities.
- */
-
-
-var Tree =
-/*#__PURE__*/
-function () {
-  function Tree() {
-    _classCallCheck(this, Tree);
-  }
-
-  _createClass(Tree, null, [{
-    key: "get",
-
-    /**
-     * Uses CSS selector to find elements on the HTML Document Tree. 
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} selector 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    value: function get(selector) {
-      return Elem.wrapElems(document.querySelectorAll(selector));
-    }
-    /**
-     * Uses CSS selector to find the first match element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} selector 
-     * @returns An Elem instance.
-     */
-
-  }, {
-    key: "getFirst",
-    value: function getFirst(selector) {
-      return Elem.wrap(document.querySelector(selector));
-    }
-    /**
-     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
-     * @param {string} tag 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-
-  }, {
-    key: "getByTag",
-    value: function getByTag(tag) {
-      return Elem.wrapElems(document.getElementsByTagName(tag));
-    }
-    /**
-     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
-     * Found elements will be wrappedn in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} name 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-
-  }, {
-    key: "getByName",
-    value: function getByName(name) {
-      return Elem.wrapElems(document.getElementsByName(name));
-    }
-    /**
-     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} id 
-     * @returns Elem instance.
-     */
-
-  }, {
-    key: "getById",
-    value: function getById(id) {
-      return Elem.wrap(document.getElementById(id));
-    }
-    /**
-     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
-     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} classname 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-
-  }, {
-    key: "getByClass",
-    value: function getByClass(classname) {
-      return Elem.wrapElems(document.getElementsByClassName(classname));
-    }
-    /**
-     * @returns body wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getBody",
-    value: function getBody() {
-      return Elem.wrap(document.body);
-    }
-    /**
-     * @returns head wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getHead",
-    value: function getHead() {
-      return Elem.wrap(document.head);
-    }
-    /**
-     * @returns title of the html document page.
-     */
-
-  }, {
-    key: "getTitle",
-    value: function getTitle() {
-      return document.title;
-    }
-    /**
-     * Set an new title for html document page.
-     * @param {string} title 
-     */
-
-  }, {
-    key: "setTitle",
-    value: function setTitle(title) {
-      document.title = title;
-    }
-    /**
-     * @returns active element wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getActiveElement",
-    value: function getActiveElement() {
-      return Elem.wrap(document.activeElement);
-    }
-    /**
-     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
-     */
-
-  }, {
-    key: "getAnchors",
-    value: function getAnchors() {
-      return Elem.wrapElems(document.anchors);
-    }
-    /**
-     * @returns <html> element.
-     */
-
-  }, {
-    key: "getHtmlElement",
-    value: function getHtmlElement() {
-      return document.documentElement;
-    }
-    /**
-     * @returns <!DOCTYPE> element.
-     */
-
-  }, {
-    key: "getDoctype",
-    value: function getDoctype() {
-      return document.doctype;
-    }
-    /**
-     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
-     */
-
-  }, {
-    key: "getEmbeds",
-    value: function getEmbeds() {
-      return Elem.wrapElems(document.embeds);
-    }
-    /**
-     * @returns an array of image elements (<img>) wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getImages",
-    value: function getImages() {
-      return Elem.wrapElems(document.images);
-    }
-    /**
-     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getLinks",
-    value: function getLinks() {
-      return Elem.wrapElems(document.links);
-    }
-    /**
-     * @returns an array of scripts wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getScripts",
-    value: function getScripts() {
-      return Elem.wrapElems(document.scripts);
-    }
-    /**
-     * @returns an array of form elements wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getForms",
-    value: function getForms() {
-      return Elem.wrapElems(document.forms);
-    }
-  }]);
-
-  return Tree;
 }();
 
 var Template = function () {
@@ -6669,4 +6517,218 @@ function () {
   }]);
 
   return Util;
+}();
+/**
+ * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
+ * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
+ * 
+ * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
+ * operation functionalities.
+ */
+
+
+var Tree =
+/*#__PURE__*/
+function () {
+  function Tree() {
+    _classCallCheck(this, Tree);
+  }
+
+  _createClass(Tree, null, [{
+    key: "get",
+
+    /**
+     * Uses CSS selector to find elements on the HTML Document Tree. 
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} selector 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    value: function get(selector) {
+      return Elem.wrapElems(document.querySelectorAll(selector));
+    }
+    /**
+     * Uses CSS selector to find the first match element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} selector 
+     * @returns An Elem instance.
+     */
+
+  }, {
+    key: "getFirst",
+    value: function getFirst(selector) {
+      return Elem.wrap(document.querySelector(selector));
+    }
+    /**
+     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
+     * @param {string} tag 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+
+  }, {
+    key: "getByTag",
+    value: function getByTag(tag) {
+      return Elem.wrapElems(document.getElementsByTagName(tag));
+    }
+    /**
+     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
+     * Found elements will be wrappedn in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} name 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+
+  }, {
+    key: "getByName",
+    value: function getByName(name) {
+      return Elem.wrapElems(document.getElementsByName(name));
+    }
+    /**
+     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} id 
+     * @returns Elem instance.
+     */
+
+  }, {
+    key: "getById",
+    value: function getById(id) {
+      return Elem.wrap(document.getElementById(id));
+    }
+    /**
+     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
+     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} classname 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+
+  }, {
+    key: "getByClass",
+    value: function getByClass(classname) {
+      return Elem.wrapElems(document.getElementsByClassName(classname));
+    }
+    /**
+     * @returns body wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getBody",
+    value: function getBody() {
+      return Elem.wrap(document.body);
+    }
+    /**
+     * @returns head wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getHead",
+    value: function getHead() {
+      return Elem.wrap(document.head);
+    }
+    /**
+     * @returns title of the html document page.
+     */
+
+  }, {
+    key: "getTitle",
+    value: function getTitle() {
+      return document.title;
+    }
+    /**
+     * Set an new title for html document page.
+     * @param {string} title 
+     */
+
+  }, {
+    key: "setTitle",
+    value: function setTitle(title) {
+      document.title = title;
+    }
+    /**
+     * @returns active element wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getActiveElement",
+    value: function getActiveElement() {
+      return Elem.wrap(document.activeElement);
+    }
+    /**
+     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
+     */
+
+  }, {
+    key: "getAnchors",
+    value: function getAnchors() {
+      return Elem.wrapElems(document.anchors);
+    }
+    /**
+     * @returns <html> element.
+     */
+
+  }, {
+    key: "getHtmlElement",
+    value: function getHtmlElement() {
+      return document.documentElement;
+    }
+    /**
+     * @returns <!DOCTYPE> element.
+     */
+
+  }, {
+    key: "getDoctype",
+    value: function getDoctype() {
+      return document.doctype;
+    }
+    /**
+     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
+     */
+
+  }, {
+    key: "getEmbeds",
+    value: function getEmbeds() {
+      return Elem.wrapElems(document.embeds);
+    }
+    /**
+     * @returns an array of image elements (<img>) wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getImages",
+    value: function getImages() {
+      return Elem.wrapElems(document.images);
+    }
+    /**
+     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getLinks",
+    value: function getLinks() {
+      return Elem.wrapElems(document.links);
+    }
+    /**
+     * @returns an array of scripts wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getScripts",
+    value: function getScripts() {
+      return Elem.wrapElems(document.scripts);
+    }
+    /**
+     * @returns an array of form elements wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getForms",
+    value: function getForms() {
+      return Elem.wrapElems(document.forms);
+    }
+  }]);
+
+  return Tree;
 }();

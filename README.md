@@ -10,9 +10,9 @@ Links
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.3.2/rme.js](https://github.com/JamiLu/RME/releases/download/v1.3.2/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.3.2/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.3.2/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.3.2/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.3.2/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.3.3/rme.js](https://github.com/JamiLu/RME/releases/download/v1.3.3/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.3.3/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.3.3/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.3.3/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.3.3/rme.es5.min.js)
 
 NPM
 ---
@@ -53,7 +53,7 @@ Basics
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.3.2/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.3.3/rme.es5.min.js"></script>`
 
 __Or use NPM__
 
@@ -208,14 +208,14 @@ Classes & Functions
   - create({template}|Elem) **Creates and instantiates a specified application**
   - get(appName) **Returns a specified application instance if empty a default application will be returned.**
   - component({ compName: props => {..}})(appName) **Create a statefull application component, _appName_ parameter is optional if not given the component is created for a default application**
-  - setState(refName, {state} | {refName: {state}}) **Set state according to application reference name, _FOR default app_**
+  - setState(refName, () => {state}|{state}, update) **Set state according to application reference name, _FOR default app_**
   - getState(refName) **Get state according to application reference name, _FOR default app_**
-  - mergeState(refName, {state}) **Merges state according to application reference name, _FOR default app_**
+  - mergeState(refName, () => {state}|{state}, update) **Merges state according to application reference name, _FOR default app_**
   - clearState(refName, update) **Clear state according to application reference name, update is boolean if true application is re-rendered, _FOR default app_**
 * AppInstance **_Handles appropriate application instance received from App.get(appName)_**
-  - setState(refName, {state} | {refName: {state}}) **Set state according to application reference name**
+  - setState(refName, () => {state}|{state}, update) **Set state according to application reference name**
   - getState(refName) **Get state according to application reference name**
-  - mergeState(refName, {state}) **Merges state according to application reference name**
+  - mergeState(refName, () => {state}|{state}, update) **Merges state according to application reference name**
   - clearState(refName, update) **Clear state according to application reference name, update is boolean if true application is re-rendered**
 * Http
   - get(url).then(success).catch(error)
@@ -268,9 +268,8 @@ Classes & Functions
   - root(elem) **Set a root route element to the Router**
   - add(url, elem, hide) **Add a route to the Router**
   - routes(array) **Set routes array. The first element in the array will be removed from the array and set as root render element**
-  - hash() **Use hash implementation**
-  - url() **Use default URL implementation**
-  - manual() **Set URL implementation to manual, Router.navigate need to be invoked in order to change pages**
+  - hash() **Use hash based routing**
+  - url(manual) **Use URL based routing. If manual is true then use Router.navigate to navigate next route.**
   - scroll(auto) **Method sets default level behavior for route naviagation. A value true sets the browser to auto-scroll up when navigating to a new resource and a value false will not auto-scroll up. Default value is true.**
 * Key
   - no methods, only **Key** constants for keyevent such as Key.ENTER
