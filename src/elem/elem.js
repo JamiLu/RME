@@ -322,7 +322,6 @@ let Elem = (function() {
          */
         setTabIndex(idx) {
             this.setAttribute('tabindex', idx);
-            this.html.tabIndex = idx;
             return this;
         }
 
@@ -509,7 +508,6 @@ let Elem = (function() {
          */
         setMaxLength(length) {
             this.setAttribute('maxlength', length);
-            this.html.maxLength = length;
             return this;
         }
 
@@ -527,7 +525,6 @@ let Elem = (function() {
          */
         setMinLength(length) {
             this.setAttribute('minlength', length);
-            this.html.minLength = length;
             return this;
         }
 
@@ -588,10 +585,8 @@ let Elem = (function() {
             if ((Util.isBoolean(boolean) && boolean === true)
                 || (Util.isString(boolean) && boolean === 'disabled')) {
                 this.setAttribute('disabled', 'disabled');
-                this.html.disabled = true;
-            } else{
+            } else {
                 this.removeAttribute('disabled');
-                this.html.disabled = false;
             }
             return this;
         }
@@ -615,10 +610,8 @@ let Elem = (function() {
             if ((Util.isBoolean(boolean) && boolean === true)
             || (Util.isString(boolean) && boolean === 'checked')) {
                 this.setAttribute('checked', 'checked');
-                this.html.checked = true;
             } else {
                 this.removeAttribute('checked');
-                this.html.checked = false;
             }
             return this;
         }

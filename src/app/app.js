@@ -101,15 +101,22 @@ let App = (function() {
         }
 
         /**
-         * Function takes two parameters that enable setting state for components. If only one parameter is given then the parameter must be an object
-         * that defines the component name and its values as follows. ({refName: {key: val, key: val}})
-         * If two parameters are given then the first parameter is a component name and the values is component state object as follows. (refName, {key: val, key: val}).
-         * Given states are stored into default application. 
+         * Function takes three parameters that enable setting state for components.
+         * If only one parameter is given then the parameter must be an object or a function. 
+         * The object should define a component name and its values as follows. ({refName: {key: val, key: val}}) and
+         * the function should return a object describing the component respectively.
+         * If two parameters are given then the first parameter is a component name
+         * and the value parameter should describe the component state object as follows. (refName, {key: val, key: val}).
+         * The value parameter may also be a function that returns the component state object respectively.
+         * The last parameter update is a boolean value that only if explicitly set to false then the app is not updated
+         * after setting the state has occured.
+         * This function will store the state into the default application state. 
          * @param {*} refName 
          * @param {*} value 
+         * @param {boolean} update
          */
-        static setState(refName, value) {
-            return App.get().setState(refName, value);
+        static setState(refName, value, update) {
+            return App.get().setState(refName, value, update);
         }
 
         /**
@@ -142,15 +149,18 @@ let App = (function() {
         }
 
         /**
-         * Function takes two parameters. If the first parameter is string then the second parameter must be an object. The first parameter refName 
-         * defines a component and the second parameter is the state of the component as follows: (compName, {key: val, key: val}) If the first parameter is an object then the second parameter
-         * is omitted. In this case the object must contain a component name and a state for the component as follows: ({compName: {val: key, val: key}}).
-         * Given states are stored into default application.
+         * Function takes three parameters. If the first parameter is string then the second parameter must be an object or a function.
+         * The first parameter refName is a component name and the second parameter is the state of the component as follows: (compName, {key: val, key: val})
+         * or if the second parameter is a function then the function should return the changed state of the component in an object respectively.
+         * If the first parameter is an object or a function then the second parameter is omitted. 
+         * In this case the object must contain a component name and the changed state of the component as follows: ({compName: {val: key, val: key}}).
+         * If the first parameter is a function then the function should return the changed state of the component in an object respectively.
+         * The state is stored into the default application state.
          * @param {string} refName 
          * @param {object} value 
          */
-        static mergeState(key, value) {
-            return App.get().mergeState(key, value);
+        static mergeState(key, value, update) {
+            return App.get().mergeState(key, value, update);
         }
 
         static getInstance() {
@@ -241,24 +251,40 @@ let App = (function() {
         }
     
         /**
-         * Function takes two parameters that enable setting state for components. If only one parameter is given then the parameter must be an object
-         * that defines the component name and its values as follows. ({refName: {key: val, key: val}})
-         * If two parameters are given then the first parameter is a component name and the values is component state object as follows. (refName, {key: val, key: val}).
-         * Given states are stored into this application instance state. 
+         * Function takes three parameters that enable setting state for components.
+         * If only one parameter is given then the parameter must be an object or a function. 
+         * The object should define a component name and its values as follows. ({refName: {key: val, key: val}}) and
+         * the function should return a object describing the component respectively.
+         * If two parameters are given then the first parameter is a component name
+         * and the value parameter should describe the component state object as follows. (refName, {key: val, key: val}).
+         * The value parameter may also be a function that returns the component state object respectively.
+         * The last parameter update is a boolean value that only if explicitly set to false then the app is not updated
+         * after setting the state has occured.
+         * This function will store the state into this application instance state. 
          * @param {*} refName 
          * @param {*} value 
+         * @param {boolean} update
          */
-        setState(refName, value) {
-            if(Util.isString(refName)) {
+        setState(refName, value, update) {
+            if (Util.isString(refName) && Util.isFunction(value)) {
+                this.state[refName] = value(this.state[refName]);
+            } else if (Util.isString(refName) && Util.isObject(value)) {
                 this.state[refName] = value;
-                this.refreshApp();
-            } else if(Util.isObject(refName)) {
-                for(let p in refName) {
-                    if(refName.hasOwnProperty(p))
-                        this.state[p] = refName[p];
-                }
-                this.refreshApp();
+            } else {
+                let state = {};
+                if (Util.isFunction(refName))
+                    state = refName(this.state);
+                else if (Util.isObject(refName))
+                    state = refName;
+
+                    for (let p in state) {
+                        if (state.hasOwnProperty(p))
+                            this.state[p] = state[p];
+                    }
             }
+
+            if (update !== false)
+                this.refreshApp();
         }
     
         /**
@@ -330,25 +356,38 @@ let App = (function() {
         }
     
         /**
-         * Function takes two parameters. If the first parameter is string then the second parameter must be an object. The first parameter refName 
-         * defines a component and the second parameter is the state of the component as follows: (compName, {key: val, key: val}) If the first parameter is an object then the second parameter
-         * is omitted. In this case the object must contain a component name and a state for the component as follows: ({compName: {val: key, val: key}}).
-         * Given states are stored into this application instance state.
+         * Function takes three parameters. If the first parameter is string then the second parameter must be an object or a function.
+         * The first parameter refName is a component name and the second parameter is the state of the component as follows: (compName, {key: val, key: val})
+         * or if the second parameter is a function then the function should return the changed state of the component in an object respectively.
+         * If the first parameter is an object or a function then the second parameter is omitted. 
+         * In this case the object must contain a component name and the changed state of the component as follows: ({compName: {val: key, val: key}}).
+         * If the first parameter is a function then the function should return the changed state of the component in an object respectively.
+         * The state is stored into this application instance state.
          * @param {string} refName 
          * @param {object} value 
+         * @param {boolean} update
          */
-        mergeState(refName, value) {
+        mergeState(refName, value, update) {
             let newState = {};
-            if(Util.isString(refName)) {
+            if (Util.isString(refName) && Util.isFunction(value)) {
+                newState[refName] = value(this.state[refName]);
+            } else if (Util.isString(refName) && Util.isObject(value)) {
                 newState[refName] = value;
-            } else if(Util.isObject(refName)) {
-                for(let p in refName) {
-                    if(refName.hasOwnProperty(p))
-                        newState[p] = refName[p]
+            } else {
+                let state = {};
+                if (Util.isFunction(refName))
+                    state = refName(this.state);
+                else if (Util.isObject(refName))
+                    state = refName;
+
+                for (let p in state) {
+                    if (state.hasOwnProperty(p))
+                        newState[p] = state[p]
                 }
             }
             this.recursiveMergeState(this.state, newState);
-            this.refreshApp();
+            if (update !== false)
+                this.refreshApp();
         }
     
         recursiveMergeState(oldMap, newMap) {
