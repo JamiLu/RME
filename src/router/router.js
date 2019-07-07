@@ -216,7 +216,7 @@ let Router = (function() {
             if (!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
                 if ((route.scrolltop === true) || (route.scrolltop === undefined && this.scrolltop))
                     Browser.scrollTo(0, 0);
-                this.prevUrl = url;
+                this.prevUrl = this.getUrlPath(url);
                 this.currentRoute = route;
                 if (Util.isEmpty(this.app)) {
                     if (!Util.isEmpty(route.onBefore)) route.onBefore();
@@ -237,7 +237,7 @@ let Router = (function() {
          */
         findRoute(url, force) {
             var i = 0;
-            if(!Util.isEmpty(url) && (this.prevUrl !== url || force)) {
+            if(!Util.isEmpty(url) && (this.prevUrl !== this.getUrlPath(url) || force)) {
                 while(i < this.routes.length) {
                     if(this.matches(this.routes[i].route, url))
                         return this.routes[i];
@@ -255,11 +255,14 @@ let Router = (function() {
         renderRoute(url) {
             var route = this.findRoute(url, true);
             if(!Util.isEmpty(route) && Util.isEmpty(this.app)) {
+                if (!Util.isEmpty(route.onBefore)) route.onBefore();
                 this.root.elem.render(this.resolveElem(route.elem, route.compProps));
                 this.currentRoute = route;
+                if (!Util.isEmpty(route.onAfter)) route.onAfter();
             } else if(Util.isEmpty(this.app)) {
                 this.root.elem.render();
             } else if(!Util.isEmpty(route) && !Util.isEmpty(this.app)) {
+                if (!Util.isEmpty(route.onBefore)) route.onBefore();
                 this.app.refresh();
                 this.currentRoute = route;
             }
@@ -276,8 +279,8 @@ let Router = (function() {
         matches(url, newUrl) {
             if (this.useHistory) {
                 url = Util.isString(url) ? url.replace(/\*/g, '.*').replace(/\/{2,}/g, '/') : url;
-                var path = newUrl.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
-                var found = path.match(url);
+                let path = this.getUrlPath(newUrl);
+                let found = path.match(url);
                 if (!Util.isEmpty(found))
                     found = found.join();
                 return found === path && new RegExp(url).test(newUrl);
@@ -286,8 +289,8 @@ let Router = (function() {
                     url = '.*';
                 else if (Util.isString(url) && url.charAt(0) !== '#')
                     url = `#${url}`;
-                var hash = newUrl.match(/\#{1}.*/).join();
-                var found = hash.match(url);
+                let hash = newUrl.match(/\#{1}.*/).join();
+                let found = hash.match(url);
                 if (!Util.isEmpty(found))
                     found = found.join();
                 return found === hash && new RegExp(url).test(newUrl);
@@ -295,9 +298,20 @@ let Router = (function() {
         }
 
         /**
+         * Cut the protocol and domain of the url off if exist.
+         * For example https://www.example.com/example -> /example
+         * @param {string} url 
+         * @returns The path of the url.
+         */
+        getUrlPath(url) {
+            return url.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
+        }
+
+        /**
          * @returns The current status of the Router in an object.
          */
         getCurrentState() {
+            // console.log(this.prevUrl, this.currentRoute);
             return {
                 root: this.origRoot,
                 current: this.resolveElem(this.currentRoute.elem, this.currentRoute.compProps),
