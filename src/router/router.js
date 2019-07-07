@@ -218,10 +218,14 @@ let Router = (function() {
                     Browser.scrollTo(0, 0);
                 this.prevUrl = url;
                 this.currentRoute = route;
-                if (Util.isEmpty(this.app))
+                if (Util.isEmpty(this.app)) {
+                    if (!Util.isEmpty(route.onBefore)) route.onBefore();
                     this.root.elem.render(this.resolveElem(route.elem, route.compProps));
-                else
+                    if (!Util.isEmpty(route.onAfter)) route.onAfter();
+                } else {
+                    if (!Util.isEmpty(route.onBefore)) route.onBefore();
                     this.app.refresh();
+                }
             }
         }
 
@@ -294,7 +298,11 @@ let Router = (function() {
          * @returns The current status of the Router in an object.
          */
         getCurrentState() {
-            return {root: this.origRoot, current: this.resolveElem(this.currentRoute.elem, this.currentRoute.compProps)}
+            return {
+                root: this.origRoot,
+                current: this.resolveElem(this.currentRoute.elem, this.currentRoute.compProps),
+                onAfter: this.currentRoute.onAfter
+            }
         }
 
         /**

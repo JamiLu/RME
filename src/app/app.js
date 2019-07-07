@@ -204,6 +204,7 @@ let App = (function() {
             this.setState = this.setState.bind(this);
             this.getState = this.getState.bind(this);
             this.refresh = this.refreshApp.bind(this);
+            this.afterRefreshCallQueue = [];
             this.bindReadyListener(root);
         }
     
@@ -240,14 +241,21 @@ let App = (function() {
                             let selector = state.root;
                             let element = state.current;
                             freshStage.getFirst(selector).append(element);
+                            if (!Util.isEmpty(state.onAfter)) this.afterRefreshCallQueue.push(state.onAfter);
                         }
                     }
     
                     if(this.oldStage.toString() !== freshStage.toString()) {
                         this.oldStage = this.renderer.merge(this.oldStage, freshStage);
                     }
+                    this.refreshAppDone();
                 });
             }
+        }
+
+        refreshAppDone() {
+            this.afterRefreshCallQueue.forEach(callback => callback());
+            this.afterRefreshCallQueue = [];
         }
     
         /**
