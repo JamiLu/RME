@@ -42,6 +42,15 @@ class RMEElemRenderer {
         } else if (oldNode && !newNode) {
             this.tobeRemoved.push({parent: parent, child: this.wrap(parent.dom().children[index])});
         } else if (this.hasNodeChanged(oldNode, newNode)) {
+            // console.log('OLD', oldNode.toString());
+            // console.log('NEW', newNode.toString());
+            // if (oldNode.dom().hasChildNodes() || newNode.dom().hasChildNodes()) {
+            //     console.log('children', );
+            //     this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
+            // } else {
+                // oldNode.setProps(newNode.getProps());
+            // }
+
             let duplicated = newNode.duplicate();
             let willFocus = oldNode.dom() === document.activeElement;
             if (this.isInputableNode(newNode)) {
@@ -105,7 +114,7 @@ class RMEElemRenderer {
      * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
      */
     hasNodeChanged(oldNode, newNode) {
-        return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && (oldNode.getTagName() !== newNode.getTagName() || oldNode.getProps(true) !== newNode.getProps(true));
+        return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && oldNode.getTagName() === newNode.getTagName() && oldNode.getProps(true) !== newNode.getProps(true);
     }
 
     /**

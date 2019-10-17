@@ -205,6 +205,16 @@ let Elem = (function() {
         }
 
         /**
+         * Method will override old properties with the given properties.
+         * @param {object} props 
+         * @returns Elem instance.
+         */
+        setProps(props) {
+            Template.updateElemProps(this, props);
+            return this;
+        }
+
+        /**
          * Method is able to render child elements dynamically as illustrated below:
          * Renders: [Elem, Elem, Elem.....] | Elem, Elem, Elem | [Elem, Elem], Elem.
          * 

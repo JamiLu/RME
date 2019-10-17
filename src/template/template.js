@@ -13,12 +13,6 @@ let Template = (function() {
         constructor() {
             this.template = {};
             this.root = null;
-            /**
-             * Deprecated, is replaced with Template.isAttr(key, elem); function.
-             * These attributes are supported inside an object notation: {div: {text: "some", class: "some", id:"some"....}}
-             */
-            this.attributes = ["id","name","class","text","value","content","tabIndex","type","src","href","editable",
-            "placeholder","size","checked","disabled","visible","display","draggable","styles", "for", "message", "target", "title", "click", "focus", "blur"];
         }
 
         /**
@@ -57,7 +51,7 @@ let Template = (function() {
                     } else {
                         ++round;
                         if(Template.isAttr(obj, parent)) {
-                            this.resolveAttributes(parent, obj, template[obj]);
+                            this.resolveAttributes(parent, obj, this.resolveFunctionBasedAttribute(template[obj]));
                         } else if(this.isEventKeyVal(obj, template[obj])) {
                             parent[obj].call(parent, template[obj]);
                         } else {
@@ -76,6 +70,17 @@ let Template = (function() {
                     }
                 }
             }
+        }
+
+        /**
+         * Method resolves function based attribute values. If the given attribute value
+         * is type function then the function is invoked and its return value will be returned otherwise
+         * the given attribute value is returned.
+         * @param {*} attr 
+         * @returns Resolved attribute value.
+         */
+        resolveFunctionBasedAttribute(attrValue) {
+            return Util.isFunction(attrValue) ? attrValue.call() : attrValue;
         }
 
         /**
@@ -359,23 +364,6 @@ let Template = (function() {
         }
 
         /**
-         * Deprecated
-         * Checks is a given key is an attribute key.
-         * @param {key}
-         * @returns True if the given key is attribute key otherwise false.
-         */
-        isAttributeKey(key) {
-            let i = 0;
-            while(i < this.attributes.length) {
-                if(key === this.attributes[i]) {
-                    return true;
-                }
-                i++;
-            }
-            return false;
-        }
-
-        /**
          * Checks is a given key val an event listener key val.
          * @param {string} key
          * @param {function} val
@@ -402,6 +390,23 @@ let Template = (function() {
          */
         static resolveTemplate(template) {
             return Template.create().setTemplateAndResolve(template);
+        }
+
+        /**
+         * Method will apply the properties given to the element. Old properties are overridden.
+         * @param {object} elem 
+         * @param {object} props 
+         */
+        static updateElemProps(elem, props) {
+            const templater = Template.create();
+            for (let p in props) {
+                if (props.hasOwnProperty(p)) {
+                    if (templater.isEventKeyVal(p, props[p]))
+                        elem[p].call(elem, props[p]); //element event attribute -> elem, event function
+                    else
+                        templater.resolveAttributes(elem, p, props[p]);
+                }
+            }
         }
 
         static create() {
@@ -559,7 +564,8 @@ let Template = (function() {
     return {
         resolve: Template.resolveTemplate,
         isTemplate: Template.isTemplate,
-        isTag: Template.isTag
+        isTag: Template.isTag,
+        updateElemProps: Template.updateElemProps
     }
 }());
 
