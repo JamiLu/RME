@@ -231,21 +231,23 @@ let App = (function() {
         }
     
         refreshApp() {
-            if(this.ready) {
+            if (this.ready) {
                 Util.setTimeout(() => {
                     let freshStage = Template.isTemplate(this.rawStage) ? Template.resolve(this.rawStage) : this.rawStage;
     
-                    if(!Util.isEmpty(this.router)) {
+                    if (!Util.isEmpty(this.router)) {
                         let state = this.router.getCurrentState();
-                        if(!Util.isEmpty(state.current)) {
+                        if (!Util.isEmpty(state.current)) {
                             let selector = state.root;
                             let element = state.current;
+                            if (Template.isFragment(element))
+                                throw new Error("Fragment is not allowed to use as root element of the route component.");
                             freshStage.getFirst(selector).append(element);
                             if (!Util.isEmpty(state.onAfter)) this.afterRefreshCallQueue.push(state.onAfter);
                         }
                     }
     
-                    if(this.oldStage.toString() !== freshStage.toString()) {
+                    if (this.oldStage.toString() !== freshStage.toString()) {
                         this.oldStage = this.renderer.merge(this.oldStage, freshStage);
                     }
                     this.refreshAppDone();

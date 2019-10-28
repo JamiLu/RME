@@ -311,7 +311,6 @@ let Router = (function() {
          * @returns The current status of the Router in an object.
          */
         getCurrentState() {
-            // console.log(this.prevUrl, this.currentRoute);
             return {
                 root: this.origRoot,
                 current: this.resolveElem(this.currentRoute.elem, this.currentRoute.compProps),

@@ -21,8 +21,9 @@ let Template = (function() {
          * @param {object} template
          * @returns Elem instance element tree.
          */
-        setTemplateAndResolve(template) {
+        setTemplateAndResolve(template, parent) {
             this.template = template;
+            this.root = parent;
             this.resolve(this.template, this.root, 0);
             return this.root;
         }
@@ -35,41 +36,58 @@ let Template = (function() {
          * @param {number} round
          */
         resolve(template, parent, round) {
-            for(var obj in template) {
-                if(template.hasOwnProperty(obj)) {
-                    if(round === 0) {
+            for (var obj in template) {
+                if (template.hasOwnProperty(obj)) {
+                    if (round === 0) {
                         ++round;
                         this.root = this.resolveElement(obj, template[obj]);
-                        if(Util.isArray(template[obj]))
+                        if (Util.isArray(template[obj]))
                             this.resolveArray(template[obj], this.root, round);
-                        else if(!this.isComponent(obj) && Util.isObject(template[obj]))
+                        else if (!this.isComponent(obj) && Util.isObject(template[obj]))
                             this.resolve(template[obj], this.root, round);
-                        else if(Util.isString(template[obj]) || Util.isNumber(template[obj]))
+                        else if (Util.isString(template[obj]) || Util.isNumber(template[obj]))
                             this.resolveStringNumber(this.root, template[obj]);
-                        else if(Util.isFunction(template[obj]))
+                        else if (Util.isFunction(template[obj]))
                             this.resolveFunction(this.root, template[obj]);
                     } else {
                         ++round;
-                        if(Template.isAttr(obj, parent)) {
+                        if (Template.isAttr(obj, parent)) {
                             this.resolveAttributes(parent, obj, this.resolveFunctionBasedAttribute(template[obj]));
-                        } else if(this.isEventKeyVal(obj, template[obj])) {
+                        } else if (this.isEventKeyVal(obj, template[obj])) {
                             parent[obj].call(parent, template[obj]);
                         } else {
                             var child = this.resolveElement(obj, template[obj]);
-                            parent.append(child);
-                            if(Util.isArray(template[obj])) {
+                            if (Template.isFragment(child))
+                                this.resolveFragment(child.fragment || template[obj], parent, round);
+                            else
+                                parent.append(child);
+                            if (Util.isArray(template[obj])) {
                                 this.resolveArray(template[obj], child, round);
-                            } else if(!this.isComponent(obj) && Util.isObject(template[obj])) {
+                            } else if (!this.isComponent(obj) && Util.isObject(template[obj])) {
                                 this.resolve(template[obj], child, round);
-                            } else if(Util.isString(template[obj]) || Util.isNumber(template[obj])) {
+                            } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
                                 this.resolveStringNumber(child, template[obj]);
-                            } else if(Util.isFunction(template[obj])) {
+                            } else if (Util.isFunction(template[obj])) {
                                 this.resolveFunction(child, template[obj]);
                             }
                         }
                     }
                 }
             }
+        }
+
+        /**
+         * Method receives three parameters that represent pieces of the HTML tree. Method resolves
+         * given parameters accordingly and eventually HTML nodes are appended into the HTML tree.
+         * @param {*} fragment 
+         * @param {*} parent 
+         * @param {*} round 
+         */
+        resolveFragment(fragment, parent, round) {
+            if (Util.isArray(fragment))
+                this.resolveArray(fragment, parent, round);
+            else
+                this.resolve(fragment, parent, round);
         }
 
         /**
@@ -131,14 +149,14 @@ let Template = (function() {
          */
         resolveFunction(elem, func) {
             let ret = func.call(elem, elem);
-            if(!Util.isEmpty(ret) && Util.isString(ret)) {
-                if(this.isMessage(ret)) {
+            if (!Util.isEmpty(ret)) {
+                if (Util.isString(ret) && this.isMessage(ret)) {
                     this.resolveMessage(elem, ret);
-                } else {
+                } else if (Util.isString(ret) || Util.isNumber(ret)) {
                     elem.setText(ret);
+                } else if (Template.isTemplate(ret)) {
+                    elem.append(Template.resolveTemplate(ret));
                 }
-            }  else if (!Util.isEmpty(ret) && Util.isNumber(ret)) {
-                elem.setText(ret);
             }
         }
 
@@ -393,6 +411,28 @@ let Template = (function() {
         }
 
         /**
+         * Method takes a template and a parent element as parameter and it resolves the given template
+         * into the given parent.
+         * @param {*} template
+         * @param {*} parent
+         * @returns Elem instance element tree.
+         */
+        static resolveToParent(template, parent) {
+            return Template.create().setTemplateAndResolve(template, parent);
+        }
+
+        /**
+         * Method takes a parameter that represents a child node in the HTML tree and checks if
+         * the parameter is type fragment. If the parameter is type fragment the method will return true
+         * otherwise false is returned.
+         * @param {*} child 
+         * @returns True if the parameter is type fragment otherwise false is returned.
+         */
+        static isFragment(child) {
+            return (child.html && child.getTagName() === 'FRAGMENT') || child.fragment
+        }
+
+        /**
          * Method will apply the properties given to the element. Old properties are overridden.
          * @param {object} elem 
          * @param {object} props 
@@ -565,7 +605,9 @@ let Template = (function() {
         resolve: Template.resolveTemplate,
         isTemplate: Template.isTemplate,
         isTag: Template.isTag,
-        updateElemProps: Template.updateElemProps
+        updateElemProps: Template.updateElemProps,
+        isFragment: Template.isFragment,
+        resolveToParent: Template.resolveToParent
     }
 }());
 

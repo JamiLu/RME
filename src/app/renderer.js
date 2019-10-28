@@ -42,26 +42,11 @@ class RMEElemRenderer {
         } else if (oldNode && !newNode) {
             this.tobeRemoved.push({parent: parent, child: this.wrap(parent.dom().children[index])});
         } else if (this.hasNodeChanged(oldNode, newNode)) {
-            // console.log('OLD', oldNode.toString());
-            // console.log('NEW', newNode.toString());
-            // if (oldNode.dom().hasChildNodes() || newNode.dom().hasChildNodes()) {
-            //     console.log('children', );
-            //     this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
-            // } else {
-                // oldNode.setProps(newNode.getProps());
-            // }
-
-            let duplicated = newNode.duplicate();
-            let willFocus = oldNode.dom() === document.activeElement;
-            if (this.isInputableNode(newNode)) {
-                this.wrap(parent.dom().children[index]).replace(duplicated);
-                duplicated.dom().selectionStart = duplicated.getValue().length;
-                duplicated.dom().selectionEnd = duplicated.getValue().length;
+            if (oldNode.getTagName() !== newNode.getTagName() || (oldNode.dom().children.length > 0 || newNode.dom().children.length > 0)) {
+                this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
             } else {
-                this.wrap(parent.dom().children[index]).replace(duplicated);
+                oldNode.setProps(newNode.getProps());
             }
-            if (willFocus) 
-                duplicated.focus();
         } else {
             let i = 0;
             let oldLength = oldNode ? oldNode.dom().children.length : 0;
@@ -114,7 +99,7 @@ class RMEElemRenderer {
      * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
      */
     hasNodeChanged(oldNode, newNode) {
-        return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && oldNode.getTagName() === newNode.getTagName() && oldNode.getProps(true) !== newNode.getProps(true);
+        return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && oldNode.getProps(true) !== newNode.getProps(true);
     }
 
     /**
