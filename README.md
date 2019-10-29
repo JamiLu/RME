@@ -10,9 +10,9 @@ Links
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.3.3/rme.js](https://github.com/JamiLu/RME/releases/download/v1.3.3/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.3.3/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.3.3/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.3.3/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.3.3/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.3.4/rme.js](https://github.com/JamiLu/RME/releases/download/v1.3.4/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.3.4/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.3.4/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.3.4/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.3.4/rme.es5.min.js)
 
 NPM
 ---
@@ -53,7 +53,7 @@ Basics
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.3.3/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.3.4/rme.es5.min.js"></script>`
 
 __Or use NPM__
 
@@ -246,6 +246,9 @@ Classes & Functions
   - resolve(template) **Resolves a given JSON format template and returns a created Elem instance element tree.**
   - isTemplate(object) **Method checks if the given object is an unresolved JSON template and returns true if it is an unresolved JSON template, otherwise false.**
   - isTag(tag) **Function checks if the given tag is the HTML5 tag and returns true if is otherwise false is returned.**
+  - updateElemProps(elem, props) **Method will apply the properties given to the element. Old properties are overridden.**
+  - isFragment(child) **Method takes a parameter and checks if the parameter is type fragment. If the parameter is type fragment the method will return true otherwise false is returned.**
+  - resolveToParent(template, parent) **Method takes a template and a parent element as parameter and it resolves the given template into the given parent.**
 * Tree
   - get(cssSelector) **Returns an Array of Elem objects or one Elem object**
   - getFirst(cssSelector) **Returns one Elem object**

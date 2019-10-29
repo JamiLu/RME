@@ -432,8 +432,8 @@ let Template = (function() {
         }
 
         /**
-         * Method takes a parameter that represents a child node in the HTML tree and checks if
-         * the parameter is type fragment. If the parameter is type fragment the method will return true
+         * Method takes a parameter and checks if the parameter is type fragment. 
+         * If the parameter is type fragment the method will return true
          * otherwise false is returned.
          * @param {*} child 
          * @returns True if the parameter is type fragment otherwise false is returned.

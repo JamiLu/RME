@@ -229,21 +229,26 @@ let App = (function() {
         }
     
         refreshApp() {
-            if(this.ready) {
+            if (this.ready) {
                 Util.setTimeout(() => {
                     let freshStage = Template.isTemplate(this.rawStage) ? Template.resolve(this.rawStage) : this.rawStage;
     
-                    if(!Util.isEmpty(this.router)) {
+                    if (!Util.isEmpty(this.router)) {
                         let state = this.router.getCurrentState();
-                        if(!Util.isEmpty(state.current)) {
+                        if (!Util.isEmpty(state.current)) {
                             let selector = state.root;
                             let element = state.current;
-                            freshStage.getFirst(selector).append(element);
+                            if (Template.isFragment(element)) {
+                                element = Template.resolveToParent(element, state.rootElem);
+                                freshStage.getFirst(selector).replace(element);
+                            } else {
+                                freshStage.getFirst(selector).append(element);
+                            }
                             if (!Util.isEmpty(state.onAfter)) this.afterRefreshCallQueue.push(state.onAfter);
                         }
                     }
     
-                    if(this.oldStage.toString() !== freshStage.toString()) {
+                    if (this.oldStage.toString() !== freshStage.toString()) {
                         this.oldStage = this.renderer.merge(this.oldStage, freshStage);
                     }
                     this.refreshAppDone();
@@ -474,17 +479,11 @@ class RMEElemRenderer {
         } else if (oldNode && !newNode) {
             this.tobeRemoved.push({parent: parent, child: this.wrap(parent.dom().children[index])});
         } else if (this.hasNodeChanged(oldNode, newNode)) {
-            let duplicated = newNode.duplicate();
-            let willFocus = oldNode.dom() === document.activeElement;
-            if (this.isInputableNode(newNode)) {
-                this.wrap(parent.dom().children[index]).replace(duplicated);
-                duplicated.dom().selectionStart = duplicated.getValue().length;
-                duplicated.dom().selectionEnd = duplicated.getValue().length;
+            if (oldNode.getTagName() !== newNode.getTagName() || (oldNode.dom().children.length > 0 || newNode.dom().children.length > 0)) {
+                this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
             } else {
-                this.wrap(parent.dom().children[index]).replace(duplicated);
+                oldNode.setProps(newNode.getProps());
             }
-            if (willFocus) 
-                duplicated.focus();
         } else {
             let i = 0;
             let oldLength = oldNode ? oldNode.dom().children.length : 0;
@@ -537,7 +536,7 @@ class RMEElemRenderer {
      * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
      */
     hasNodeChanged(oldNode, newNode) {
-        return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && (oldNode.getTagName() !== newNode.getTagName() || oldNode.getProps(true) !== newNode.getProps(true));
+        return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && oldNode.getProps(true) !== newNode.getProps(true);
     }
 
     /**
@@ -1304,6 +1303,16 @@ let Elem = (function() {
                 return JSON.stringify(RMEElemTemplater.getElementProps(this));
             else
                 return RMEElemTemplater.getElementProps(this);
+        }
+
+        /**
+         * Method will override old properties with the given properties.
+         * @param {object} props 
+         * @returns Elem instance.
+         */
+        setProps(props) {
+            Template.updateElemProps(this, props);
+            return this;
         }
 
         /**
@@ -3627,7 +3636,6 @@ Key.COMMA = ",";
 Key.DOT = ".";
 
 
-
 let Messages = (function() {
     /**
      * Messages class handles internationalization. The class offers public methods that enable easy 
@@ -3872,6 +3880,7 @@ let Messages = (function() {
         setApp: Messages.setApp
     };
 }());
+
 
 
 
@@ -4454,9 +4463,9 @@ let Router = (function() {
          * @returns The current status of the Router in an object.
          */
         getCurrentState() {
-            // console.log(this.prevUrl, this.currentRoute);
             return {
                 root: this.origRoot,
+                rootElem: this.root.elem,
                 current: this.resolveElem(this.currentRoute.elem, this.currentRoute.compProps),
                 onAfter: this.currentRoute.onAfter
             }
@@ -4685,6 +4694,7 @@ class Storage {
 
 
 
+
 let Template = (function() {
     /**
      * Template class reads a JSON format notation and creates an element tree from it.
@@ -4695,12 +4705,6 @@ let Template = (function() {
         constructor() {
             this.template = {};
             this.root = null;
-            /**
-             * Deprecated, is replaced with Template.isAttr(key, elem); function.
-             * These attributes are supported inside an object notation: {div: {text: "some", class: "some", id:"some"....}}
-             */
-            this.attributes = ["id","name","class","text","value","content","tabIndex","type","src","href","editable",
-            "placeholder","size","checked","disabled","visible","display","draggable","styles", "for", "message", "target", "title", "click", "focus", "blur"];
         }
 
         /**
@@ -4709,9 +4713,14 @@ let Template = (function() {
          * @param {object} template
          * @returns Elem instance element tree.
          */
-        setTemplateAndResolve(template) {
+        setTemplateAndResolve(template, parent) {
             this.template = template;
-            this.resolve(this.template, this.root, 0);
+            if (parent) {
+                this.root = parent;
+                this.resolve(this.template, this.root, 1);
+            } else {
+                this.resolve(this.template, this.root, 0);
+            }
             return this.root;
         }
 
@@ -4723,41 +4732,72 @@ let Template = (function() {
          * @param {number} round
          */
         resolve(template, parent, round) {
-            for(var obj in template) {
-                if(template.hasOwnProperty(obj)) {
-                    if(round === 0) {
+            for (var obj in template) {
+                if (template.hasOwnProperty(obj)) {
+                    if (round === 0) {
                         ++round;
                         this.root = this.resolveElement(obj, template[obj]);
-                        if(Util.isArray(template[obj]))
+                        if (Util.isArray(template[obj]))
                             this.resolveArray(template[obj], this.root, round);
-                        else if(!this.isComponent(obj) && Util.isObject(template[obj]))
+                        else if (!this.isComponent(obj) && Util.isObject(template[obj]))
                             this.resolve(template[obj], this.root, round);
-                        else if(Util.isString(template[obj]) || Util.isNumber(template[obj]))
+                        else if (Util.isString(template[obj]) || Util.isNumber(template[obj]))
                             this.resolveStringNumber(this.root, template[obj]);
-                        else if(Util.isFunction(template[obj]))
+                        else if (Util.isFunction(template[obj]))
                             this.resolveFunction(this.root, template[obj]);
                     } else {
                         ++round;
-                        if(Template.isAttr(obj, parent)) {
-                            this.resolveAttributes(parent, obj, template[obj]);
-                        } else if(this.isEventKeyVal(obj, template[obj])) {
+                        if (Template.isAttr(obj, parent)) {
+                            this.resolveAttributes(parent, obj, this.resolveFunctionBasedAttribute(template[obj]));
+                        } else if (this.isEventKeyVal(obj, template[obj])) {
                             parent[obj].call(parent, template[obj]);
                         } else {
                             var child = this.resolveElement(obj, template[obj]);
-                            parent.append(child);
-                            if(Util.isArray(template[obj])) {
-                                this.resolveArray(template[obj], child, round);
-                            } else if(!this.isComponent(obj) && Util.isObject(template[obj])) {
-                                this.resolve(template[obj], child, round);
-                            } else if(Util.isString(template[obj]) || Util.isNumber(template[obj])) {
-                                this.resolveStringNumber(child, template[obj]);
-                            } else if(Util.isFunction(template[obj])) {
-                                this.resolveFunction(child, template[obj]);
+                            if (Template.isFragment(child)) {
+                                this.resolveFragment(child.fragment || template[obj], parent, round);
+                            } else {
+                                parent.append(child);
+                                if (Util.isArray(template[obj])) {
+                                    this.resolveArray(template[obj], child, round);
+                                } else if (!this.isComponent(obj) && Util.isObject(template[obj])) {
+                                    this.resolve(template[obj], child, round);
+                                } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
+                                    this.resolveStringNumber(child, template[obj]);
+                                } else if (Util.isFunction(template[obj])) {
+                                    this.resolveFunction(child, template[obj]);
+                                }
                             }
                         }
                     }
                 }
             }
+        }
+
+        /**
+         * Method receives three parameters that represent pieces of the HTML tree. Method resolves
+         * given parameters accordingly and eventually HTML nodes are appended into the HTML tree.
+         * @param {*} fragment 
+         * @param {*} parent 
+         * @param {*} round 
+         */
+        resolveFragment(fragment, parent, round) {
+            if (Util.isArray(fragment))
+                this.resolveArray(fragment, parent, round);
+            else if (Util.isFunction(fragment))
+                Template.resolveToParent(fragment.call(parent, parent), parent);
+            else
+                this.resolve(fragment, parent, round);
+        }
+
+        /**
+         * Method resolves function based attribute values. If the given attribute value
+         * is type function then the function is invoked and its return value will be returned otherwise
+         * the given attribute value is returned.
+         * @param {*} attr 
+         * @returns Resolved attribute value.
+         */
+        resolveFunctionBasedAttribute(attrValue) {
+            return Util.isFunction(attrValue) ? attrValue.call() : attrValue;
         }
 
         /**
@@ -4808,14 +4848,14 @@ let Template = (function() {
          */
         resolveFunction(elem, func) {
             let ret = func.call(elem, elem);
-            if(!Util.isEmpty(ret) && Util.isString(ret)) {
-                if(this.isMessage(ret)) {
+            if (!Util.isEmpty(ret)) {
+                if (Util.isString(ret) && this.isMessage(ret)) {
                     this.resolveMessage(elem, ret);
-                } else {
+                } else if (Util.isString(ret) || Util.isNumber(ret)) {
                     elem.setText(ret);
+                } else if (Template.isTemplate(ret)) {
+                    elem.append(Template.resolveTemplate(ret));
                 }
-            }  else if (!Util.isEmpty(ret) && Util.isNumber(ret)) {
-                elem.setText(ret);
             }
         }
 
@@ -4846,12 +4886,15 @@ let Template = (function() {
             if (RME.hasComponent(el)) {
                 el = el.replace(/component:/, "");
                 resolved = RME.component(el, obj);
-                if(Util.isEmpty(resolved))
+                if (Util.isEmpty(resolved))
                     return resolved;
-            } else if(Util.isEmpty(el))
+            } else if (Util.isEmpty(el)) {
                 throw `Template resolver could not find element: ${el} from the given tag: ${tag}`;
-            else
+            } else if (el.indexOf('fragment') === 0) {
+                return el.match(/fragment/).join();
+            } else {
                 resolved = new Elem(el);
+            }
 
             match = tag.match(/[a-z0-9]+\#[a-zA-Z0-9\-]+/); //find id
             if (!Util.isEmpty(match))
@@ -5041,23 +5084,6 @@ let Template = (function() {
         }
 
         /**
-         * Deprecated
-         * Checks is a given key is an attribute key.
-         * @param {key}
-         * @returns True if the given key is attribute key otherwise false.
-         */
-        isAttributeKey(key) {
-            let i = 0;
-            while(i < this.attributes.length) {
-                if(key === this.attributes[i]) {
-                    return true;
-                }
-                i++;
-            }
-            return false;
-        }
-
-        /**
          * Checks is a given key val an event listener key val.
          * @param {string} key
          * @param {function} val
@@ -5084,6 +5110,45 @@ let Template = (function() {
          */
         static resolveTemplate(template) {
             return Template.create().setTemplateAndResolve(template);
+        }
+
+        /**
+         * Method takes a template and a parent element as parameter and it resolves the given template
+         * into the given parent.
+         * @param {*} template
+         * @param {*} parent
+         * @returns Elem instance element tree.
+         */
+        static resolveToParent(template, parent) {
+            return Template.create().setTemplateAndResolve(template, parent);
+        }
+
+        /**
+         * Method takes a parameter and checks if the parameter is type fragment. 
+         * If the parameter is type fragment the method will return true
+         * otherwise false is returned.
+         * @param {*} child 
+         * @returns True if the parameter is type fragment otherwise false is returned.
+         */
+        static isFragment(child) {
+            return child === 'fragment' || child.fragment
+        }
+
+        /**
+         * Method will apply the properties given to the element. Old properties are overridden.
+         * @param {object} elem 
+         * @param {object} props 
+         */
+        static updateElemProps(elem, props) {
+            const templater = Template.create();
+            for (let p in props) {
+                if (props.hasOwnProperty(p)) {
+                    if (templater.isEventKeyVal(p, props[p]))
+                        elem[p].call(elem, props[p]); //element event attribute -> elem, event function
+                    else
+                        templater.resolveAttributes(elem, p, props[p]);
+                }
+            }
         }
 
         static create() {
@@ -5241,174 +5306,12 @@ let Template = (function() {
     return {
         resolve: Template.resolveTemplate,
         isTemplate: Template.isTemplate,
-        isTag: Template.isTag
+        isTag: Template.isTag,
+        updateElemProps: Template.updateElemProps,
+        isFragment: Template.isFragment,
+        resolveToParent: Template.resolveToParent
     }
 }());
-
-
-/**
- * General Utility methods.
- */
-class Util {
-    /**
-     * Checks is a given value empty.
-     * @param {*} value
-     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
-     */
-    static isEmpty(value) {
-        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
-    }
-
-    /**
-     * Get the type of the given value.
-     * @param {*} value
-     * @returns The type of the given value.
-     */
-    static getType(value) {
-        return typeof value;
-    }
-
-    /**
-     * Checks is a given value is a given type.
-     * @param {*} value
-     * @param {string} type
-     * @returns True if the given value is the given type otherwise false.
-     */
-    static isType(value, type) {
-        return (Util.getType(value) === type);
-    }
-
-    /**
-     * Checks is a given parameter a function.
-     * @param {*} func 
-     * @returns True if the given parameter is fuction otherwise false.
-     */
-    static isFunction(func) {
-        return Util.isType(func, "function");
-    }
-
-    /**
-     * Checks is a given parameter a boolean.
-     * @param {*} boolean
-     * @returns True if the given parameter is boolean otherwise false.
-     */
-    static isBoolean(boolean) {
-        return Util.isType(boolean, "boolean");
-    }
-
-    /**
-     * Checks is a given parameter a string.
-     * @param {*} string
-     * @returns True if the given parameter is string otherwise false.
-     */
-    static isString(string) {
-        return Util.isType(string, "string");
-    }
-
-    /**
-     * Checks is a given parameter a number.
-     * @param {*} number
-     * @returns True if the given parameter is number otherwise false.
-     */
-    static isNumber(number) {
-        return Util.isType(number, "number");
-    }
-
-    /**
-     * Checks is a given parameter a symbol.
-     * @param {*} symbol
-     * @returns True if the given parameter is symbol otherwise false.
-     */
-    static isSymbol(symbol) {
-        return Util.isType(symbol, "symbol");
-    }
-
-    /**
-     * Checks is a given parameter a object.
-     * @param {*} object
-     * @returns True if the given parameter is object otherwise false.
-     */
-    static isObject(object) {
-        return Util.isType(object, "object");
-    }
-
-    /**
-     * Checks is a given parameter an array.
-     * @param {*} array
-     * @returns True if the given parameter is array otherwise false.
-     */
-    static isArray(array) {
-        return Array.isArray(array);
-    }
-
-    /**
-     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The timeout object.
-     */
-    static setTimeout(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setTimeout(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes a timeout that was created by setTimeout method.
-     * @param {object} timeoutObject
-     */
-    static clearTimeout(timeoutObject) {
-        window.clearTimeout(timeoutObject);
-    }
-
-    /**
-     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The interval object.
-     */
-    static setInterval(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setInterval(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes an interval that was created by setInterval method.
-     */
-    static clearInterval(intervalObject) {
-        window.clearInterval(intervalObject);
-    }
-
-    /**
-     * Encodes a string to Base64.
-     * @param {string} string
-     * @returns The base64 encoded string.
-     */
-    static encodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.btoa(string);
-    }
-
-    /**
-     * Decodes a base 64 encoded string.
-     * @param {string} string
-     * @returns The base64 decoded string.
-     */
-    static decodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.atob(string);
-    }
-}
-
 
 
 /**
@@ -5573,6 +5476,170 @@ class Tree {
      */
     static getForms() {
         return Elem.wrapElems(document.forms);
+    }
+}
+
+
+/**
+ * General Utility methods.
+ */
+class Util {
+    /**
+     * Checks is a given value empty.
+     * @param {*} value
+     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
+     */
+    static isEmpty(value) {
+        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
+    }
+
+    /**
+     * Get the type of the given value.
+     * @param {*} value
+     * @returns The type of the given value.
+     */
+    static getType(value) {
+        return typeof value;
+    }
+
+    /**
+     * Checks is a given value is a given type.
+     * @param {*} value
+     * @param {string} type
+     * @returns True if the given value is the given type otherwise false.
+     */
+    static isType(value, type) {
+        return (Util.getType(value) === type);
+    }
+
+    /**
+     * Checks is a given parameter a function.
+     * @param {*} func 
+     * @returns True if the given parameter is fuction otherwise false.
+     */
+    static isFunction(func) {
+        return Util.isType(func, "function");
+    }
+
+    /**
+     * Checks is a given parameter a boolean.
+     * @param {*} boolean
+     * @returns True if the given parameter is boolean otherwise false.
+     */
+    static isBoolean(boolean) {
+        return Util.isType(boolean, "boolean");
+    }
+
+    /**
+     * Checks is a given parameter a string.
+     * @param {*} string
+     * @returns True if the given parameter is string otherwise false.
+     */
+    static isString(string) {
+        return Util.isType(string, "string");
+    }
+
+    /**
+     * Checks is a given parameter a number.
+     * @param {*} number
+     * @returns True if the given parameter is number otherwise false.
+     */
+    static isNumber(number) {
+        return Util.isType(number, "number");
+    }
+
+    /**
+     * Checks is a given parameter a symbol.
+     * @param {*} symbol
+     * @returns True if the given parameter is symbol otherwise false.
+     */
+    static isSymbol(symbol) {
+        return Util.isType(symbol, "symbol");
+    }
+
+    /**
+     * Checks is a given parameter a object.
+     * @param {*} object
+     * @returns True if the given parameter is object otherwise false.
+     */
+    static isObject(object) {
+        return Util.isType(object, "object");
+    }
+
+    /**
+     * Checks is a given parameter an array.
+     * @param {*} array
+     * @returns True if the given parameter is array otherwise false.
+     */
+    static isArray(array) {
+        return Array.isArray(array);
+    }
+
+    /**
+     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The timeout object.
+     */
+    static setTimeout(callback, milliseconds, ...params) {
+        if(!Util.isFunction(callback)) {
+            throw "callback not fuction";
+        }
+        return window.setTimeout(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes a timeout that was created by setTimeout method.
+     * @param {object} timeoutObject
+     */
+    static clearTimeout(timeoutObject) {
+        window.clearTimeout(timeoutObject);
+    }
+
+    /**
+     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The interval object.
+     */
+    static setInterval(callback, milliseconds, ...params) {
+        if(!Util.isFunction(callback)) {
+            throw "callback not fuction";
+        }
+        return window.setInterval(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes an interval that was created by setInterval method.
+     */
+    static clearInterval(intervalObject) {
+        window.clearInterval(intervalObject);
+    }
+
+    /**
+     * Encodes a string to Base64.
+     * @param {string} string
+     * @returns The base64 encoded string.
+     */
+    static encodeBase64String(string) {
+        if(!Util.isString(string)) {
+            throw "the given parameter is not a string: " +string;
+        }
+        return window.btoa(string);
+    }
+
+    /**
+     * Decodes a base 64 encoded string.
+     * @param {string} string
+     * @returns The base64 decoded string.
+     */
+    static decodeBase64String(string) {
+        if(!Util.isString(string)) {
+            throw "the given parameter is not a string: " +string;
+        }
+        return window.atob(string);
     }
 }
 

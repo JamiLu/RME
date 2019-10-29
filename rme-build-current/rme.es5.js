@@ -293,7 +293,14 @@ var App = function () {
               if (!Util.isEmpty(state.current)) {
                 var selector = state.root;
                 var element = state.current;
-                freshStage.getFirst(selector).append(element);
+
+                if (Template.isFragment(element)) {
+                  element = Template.resolveToParent(element, state.rootElem);
+                  freshStage.getFirst(selector).replace(element);
+                } else {
+                  freshStage.getFirst(selector).append(element);
+                }
+
                 if (!Util.isEmpty(state.onAfter)) _this2.afterRefreshCallQueue.push(state.onAfter);
               }
             }
@@ -533,18 +540,11 @@ function () {
           child: this.wrap(parent.dom().children[index])
         });
       } else if (this.hasNodeChanged(oldNode, newNode)) {
-        var duplicated = newNode.duplicate();
-        var willFocus = oldNode.dom() === document.activeElement;
-
-        if (this.isInputableNode(newNode)) {
-          this.wrap(parent.dom().children[index]).replace(duplicated);
-          duplicated.dom().selectionStart = duplicated.getValue().length;
-          duplicated.dom().selectionEnd = duplicated.getValue().length;
+        if (oldNode.getTagName() !== newNode.getTagName() || oldNode.dom().children.length > 0 || newNode.dom().children.length > 0) {
+          this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
         } else {
-          this.wrap(parent.dom().children[index]).replace(duplicated);
+          oldNode.setProps(newNode.getProps());
         }
-
-        if (willFocus) duplicated.focus();
       } else {
         var i = 0;
         var oldLength = oldNode ? oldNode.dom().children.length : 0;
@@ -599,7 +599,7 @@ function () {
   }, {
     key: "hasNodeChanged",
     value: function hasNodeChanged(oldNode, newNode) {
-      return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && (oldNode.getTagName() !== newNode.getTagName() || oldNode.getProps(true) !== newNode.getProps(true));
+      return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && oldNode.getProps(true) !== newNode.getProps(true);
     }
     /**
      * Function takes DOM node as a parameter and wraps it to Elem object.
@@ -1535,6 +1535,18 @@ var Elem = function () {
       key: "getProps",
       value: function getProps(json) {
         if (Util.isBoolean(json) && json === true) return JSON.stringify(RMEElemTemplater.getElementProps(this));else return RMEElemTemplater.getElementProps(this);
+      }
+      /**
+       * Method will override old properties with the given properties.
+       * @param {object} props 
+       * @returns Elem instance.
+       */
+
+    }, {
+      key: "setProps",
+      value: function setProps(props) {
+        Template.updateElemProps(this, props);
+        return this;
       }
       /**
        * Method is able to render child elements dynamically as illustrated below:
@@ -5392,9 +5404,9 @@ var Router = function () {
     }, {
       key: "getCurrentState",
       value: function getCurrentState() {
-        // console.log(this.prevUrl, this.currentRoute);
         return {
           root: this.origRoot,
+          rootElem: this.root.elem,
           current: this.resolveElem(this.currentRoute.elem, this.currentRoute.compProps),
           onAfter: this.currentRoute.onAfter
         };
@@ -5705,12 +5717,6 @@ var Template = function () {
 
       this.template = {};
       this.root = null;
-      /**
-       * Deprecated, is replaced with Template.isAttr(key, elem); function.
-       * These attributes are supported inside an object notation: {div: {text: "some", class: "some", id:"some"....}}
-       */
-
-      this.attributes = ["id", "name", "class", "text", "value", "content", "tabIndex", "type", "src", "href", "editable", "placeholder", "size", "checked", "disabled", "visible", "display", "draggable", "styles", "for", "message", "target", "title", "click", "focus", "blur"];
     }
     /**
      * Method takes a template as parameter, starts resolving it and returns 
@@ -5722,9 +5728,16 @@ var Template = function () {
 
     _createClass(Template, [{
       key: "setTemplateAndResolve",
-      value: function setTemplateAndResolve(template) {
+      value: function setTemplateAndResolve(template, parent) {
         this.template = template;
-        this.resolve(this.template, this.root, 0);
+
+        if (parent) {
+          this.root = parent;
+          this.resolve(this.template, this.root, 1);
+        } else {
+          this.resolve(this.template, this.root, 0);
+        }
+
         return this.root;
       }
       /**
@@ -5748,26 +5761,57 @@ var Template = function () {
               ++round;
 
               if (Template.isAttr(obj, parent)) {
-                this.resolveAttributes(parent, obj, template[obj]);
+                this.resolveAttributes(parent, obj, this.resolveFunctionBasedAttribute(template[obj]));
               } else if (this.isEventKeyVal(obj, template[obj])) {
                 parent[obj].call(parent, template[obj]);
               } else {
                 var child = this.resolveElement(obj, template[obj]);
-                parent.append(child);
 
-                if (Util.isArray(template[obj])) {
-                  this.resolveArray(template[obj], child, round);
-                } else if (!this.isComponent(obj) && Util.isObject(template[obj])) {
-                  this.resolve(template[obj], child, round);
-                } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
-                  this.resolveStringNumber(child, template[obj]);
-                } else if (Util.isFunction(template[obj])) {
-                  this.resolveFunction(child, template[obj]);
+                if (Template.isFragment(child)) {
+                  this.resolveFragment(child.fragment || template[obj], parent, round);
+                } else {
+                  parent.append(child);
+
+                  if (Util.isArray(template[obj])) {
+                    this.resolveArray(template[obj], child, round);
+                  } else if (!this.isComponent(obj) && Util.isObject(template[obj])) {
+                    this.resolve(template[obj], child, round);
+                  } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
+                    this.resolveStringNumber(child, template[obj]);
+                  } else if (Util.isFunction(template[obj])) {
+                    this.resolveFunction(child, template[obj]);
+                  }
                 }
               }
             }
           }
         }
+      }
+      /**
+       * Method receives three parameters that represent pieces of the HTML tree. Method resolves
+       * given parameters accordingly and eventually HTML nodes are appended into the HTML tree.
+       * @param {*} fragment 
+       * @param {*} parent 
+       * @param {*} round 
+       */
+
+    }, {
+      key: "resolveFragment",
+      value: function resolveFragment(fragment, parent, round) {
+        if (Util.isArray(fragment)) this.resolveArray(fragment, parent, round);else if (Util.isFunction(fragment)) Template.resolveToParent(fragment.call(parent, parent), parent);else this.resolve(fragment, parent, round);
+      }
+      /**
+       * Method resolves function based attribute values. If the given attribute value
+       * is type function then the function is invoked and its return value will be returned otherwise
+       * the given attribute value is returned.
+       * @param {*} attr 
+       * @returns Resolved attribute value.
+       */
+
+    }, {
+      key: "resolveFunctionBasedAttribute",
+      value: function resolveFunctionBasedAttribute(attrValue) {
+        return Util.isFunction(attrValue) ? attrValue.call() : attrValue;
       }
       /**
        * Method resolves a given array template elements.
@@ -5825,14 +5869,14 @@ var Template = function () {
       value: function resolveFunction(elem, func) {
         var ret = func.call(elem, elem);
 
-        if (!Util.isEmpty(ret) && Util.isString(ret)) {
-          if (this.isMessage(ret)) {
+        if (!Util.isEmpty(ret)) {
+          if (Util.isString(ret) && this.isMessage(ret)) {
             this.resolveMessage(elem, ret);
-          } else {
+          } else if (Util.isString(ret) || Util.isNumber(ret)) {
             elem.setText(ret);
+          } else if (Template.isTemplate(ret)) {
+            elem.append(Template.resolveTemplate(ret));
           }
-        } else if (!Util.isEmpty(ret) && Util.isNumber(ret)) {
-          elem.setText(ret);
         }
       }
       /**
@@ -5868,7 +5912,13 @@ var Template = function () {
           el = el.replace(/component:/, "");
           resolved = RME.component(el, obj);
           if (Util.isEmpty(resolved)) return resolved;
-        } else if (Util.isEmpty(el)) throw "Template resolver could not find element: ".concat(el, " from the given tag: ").concat(tag);else resolved = new Elem(el);
+        } else if (Util.isEmpty(el)) {
+          throw "Template resolver could not find element: ".concat(el, " from the given tag: ").concat(tag);
+        } else if (el.indexOf('fragment') === 0) {
+          return el.match(/fragment/).join();
+        } else {
+          resolved = new Elem(el);
+        }
 
         match = tag.match(/[a-z0-9]+\#[a-zA-Z0-9\-]+/); //find id
 
@@ -6082,28 +6132,6 @@ var Template = function () {
         return message.match(/\:?(\{.*\}\;?)/g);
       }
       /**
-       * Deprecated
-       * Checks is a given key is an attribute key.
-       * @param {key}
-       * @returns True if the given key is attribute key otherwise false.
-       */
-
-    }, {
-      key: "isAttributeKey",
-      value: function isAttributeKey(key) {
-        var i = 0;
-
-        while (i < this.attributes.length) {
-          if (key === this.attributes[i]) {
-            return true;
-          }
-
-          i++;
-        }
-
-        return false;
-      }
-      /**
        * Checks is a given key val an event listener key val.
        * @param {string} key
        * @param {function} val
@@ -6137,6 +6165,50 @@ var Template = function () {
       key: "resolveTemplate",
       value: function resolveTemplate(template) {
         return Template.create().setTemplateAndResolve(template);
+      }
+      /**
+       * Method takes a template and a parent element as parameter and it resolves the given template
+       * into the given parent.
+       * @param {*} template
+       * @param {*} parent
+       * @returns Elem instance element tree.
+       */
+
+    }, {
+      key: "resolveToParent",
+      value: function resolveToParent(template, parent) {
+        return Template.create().setTemplateAndResolve(template, parent);
+      }
+      /**
+       * Method takes a parameter and checks if the parameter is type fragment. 
+       * If the parameter is type fragment the method will return true
+       * otherwise false is returned.
+       * @param {*} child 
+       * @returns True if the parameter is type fragment otherwise false is returned.
+       */
+
+    }, {
+      key: "isFragment",
+      value: function isFragment(child) {
+        return child === 'fragment' || child.fragment;
+      }
+      /**
+       * Method will apply the properties given to the element. Old properties are overridden.
+       * @param {object} elem 
+       * @param {object} props 
+       */
+
+    }, {
+      key: "updateElemProps",
+      value: function updateElemProps(elem, props) {
+        var templater = Template.create();
+
+        for (var p in props) {
+          if (props.hasOwnProperty(p)) {
+            if (templater.isEventKeyVal(p, props[p])) elem[p].call(elem, props[p]); //element event attribute -> elem, event function
+            else templater.resolveAttributes(elem, p, props[p]);
+          }
+        }
       }
     }, {
       key: "create",
@@ -6297,8 +6369,225 @@ var Template = function () {
   return {
     resolve: Template.resolveTemplate,
     isTemplate: Template.isTemplate,
-    isTag: Template.isTag
+    isTag: Template.isTag,
+    updateElemProps: Template.updateElemProps,
+    isFragment: Template.isFragment,
+    resolveToParent: Template.resolveToParent
   };
+}();
+/**
+ * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
+ * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
+ * 
+ * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
+ * operation functionalities.
+ */
+
+
+var Tree =
+/*#__PURE__*/
+function () {
+  function Tree() {
+    _classCallCheck(this, Tree);
+  }
+
+  _createClass(Tree, null, [{
+    key: "get",
+
+    /**
+     * Uses CSS selector to find elements on the HTML Document Tree. 
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} selector 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    value: function get(selector) {
+      return Elem.wrapElems(document.querySelectorAll(selector));
+    }
+    /**
+     * Uses CSS selector to find the first match element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} selector 
+     * @returns An Elem instance.
+     */
+
+  }, {
+    key: "getFirst",
+    value: function getFirst(selector) {
+      return Elem.wrap(document.querySelector(selector));
+    }
+    /**
+     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
+     * @param {string} tag 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+
+  }, {
+    key: "getByTag",
+    value: function getByTag(tag) {
+      return Elem.wrapElems(document.getElementsByTagName(tag));
+    }
+    /**
+     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
+     * Found elements will be wrappedn in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} name 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+
+  }, {
+    key: "getByName",
+    value: function getByName(name) {
+      return Elem.wrapElems(document.getElementsByName(name));
+    }
+    /**
+     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} id 
+     * @returns Elem instance.
+     */
+
+  }, {
+    key: "getById",
+    value: function getById(id) {
+      return Elem.wrap(document.getElementById(id));
+    }
+    /**
+     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
+     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} classname 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+
+  }, {
+    key: "getByClass",
+    value: function getByClass(classname) {
+      return Elem.wrapElems(document.getElementsByClassName(classname));
+    }
+    /**
+     * @returns body wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getBody",
+    value: function getBody() {
+      return Elem.wrap(document.body);
+    }
+    /**
+     * @returns head wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getHead",
+    value: function getHead() {
+      return Elem.wrap(document.head);
+    }
+    /**
+     * @returns title of the html document page.
+     */
+
+  }, {
+    key: "getTitle",
+    value: function getTitle() {
+      return document.title;
+    }
+    /**
+     * Set an new title for html document page.
+     * @param {string} title 
+     */
+
+  }, {
+    key: "setTitle",
+    value: function setTitle(title) {
+      document.title = title;
+    }
+    /**
+     * @returns active element wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getActiveElement",
+    value: function getActiveElement() {
+      return Elem.wrap(document.activeElement);
+    }
+    /**
+     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
+     */
+
+  }, {
+    key: "getAnchors",
+    value: function getAnchors() {
+      return Elem.wrapElems(document.anchors);
+    }
+    /**
+     * @returns <html> element.
+     */
+
+  }, {
+    key: "getHtmlElement",
+    value: function getHtmlElement() {
+      return document.documentElement;
+    }
+    /**
+     * @returns <!DOCTYPE> element.
+     */
+
+  }, {
+    key: "getDoctype",
+    value: function getDoctype() {
+      return document.doctype;
+    }
+    /**
+     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
+     */
+
+  }, {
+    key: "getEmbeds",
+    value: function getEmbeds() {
+      return Elem.wrapElems(document.embeds);
+    }
+    /**
+     * @returns an array of image elements (<img>) wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getImages",
+    value: function getImages() {
+      return Elem.wrapElems(document.images);
+    }
+    /**
+     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getLinks",
+    value: function getLinks() {
+      return Elem.wrapElems(document.links);
+    }
+    /**
+     * @returns an array of scripts wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getScripts",
+    value: function getScripts() {
+      return Elem.wrapElems(document.scripts);
+    }
+    /**
+     * @returns an array of form elements wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getForms",
+    value: function getForms() {
+      return Elem.wrapElems(document.forms);
+    }
+  }]);
+
+  return Tree;
 }();
 /**
  * General Utility methods.
@@ -6517,218 +6806,4 @@ function () {
   }]);
 
   return Util;
-}();
-/**
- * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
- * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
- * 
- * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
- * operation functionalities.
- */
-
-
-var Tree =
-/*#__PURE__*/
-function () {
-  function Tree() {
-    _classCallCheck(this, Tree);
-  }
-
-  _createClass(Tree, null, [{
-    key: "get",
-
-    /**
-     * Uses CSS selector to find elements on the HTML Document Tree. 
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} selector 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    value: function get(selector) {
-      return Elem.wrapElems(document.querySelectorAll(selector));
-    }
-    /**
-     * Uses CSS selector to find the first match element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} selector 
-     * @returns An Elem instance.
-     */
-
-  }, {
-    key: "getFirst",
-    value: function getFirst(selector) {
-      return Elem.wrap(document.querySelector(selector));
-    }
-    /**
-     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
-     * @param {string} tag 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-
-  }, {
-    key: "getByTag",
-    value: function getByTag(tag) {
-      return Elem.wrapElems(document.getElementsByTagName(tag));
-    }
-    /**
-     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
-     * Found elements will be wrappedn in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} name 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-
-  }, {
-    key: "getByName",
-    value: function getByName(name) {
-      return Elem.wrapElems(document.getElementsByName(name));
-    }
-    /**
-     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} id 
-     * @returns Elem instance.
-     */
-
-  }, {
-    key: "getById",
-    value: function getById(id) {
-      return Elem.wrap(document.getElementById(id));
-    }
-    /**
-     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
-     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} classname 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-
-  }, {
-    key: "getByClass",
-    value: function getByClass(classname) {
-      return Elem.wrapElems(document.getElementsByClassName(classname));
-    }
-    /**
-     * @returns body wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getBody",
-    value: function getBody() {
-      return Elem.wrap(document.body);
-    }
-    /**
-     * @returns head wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getHead",
-    value: function getHead() {
-      return Elem.wrap(document.head);
-    }
-    /**
-     * @returns title of the html document page.
-     */
-
-  }, {
-    key: "getTitle",
-    value: function getTitle() {
-      return document.title;
-    }
-    /**
-     * Set an new title for html document page.
-     * @param {string} title 
-     */
-
-  }, {
-    key: "setTitle",
-    value: function setTitle(title) {
-      document.title = title;
-    }
-    /**
-     * @returns active element wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getActiveElement",
-    value: function getActiveElement() {
-      return Elem.wrap(document.activeElement);
-    }
-    /**
-     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
-     */
-
-  }, {
-    key: "getAnchors",
-    value: function getAnchors() {
-      return Elem.wrapElems(document.anchors);
-    }
-    /**
-     * @returns <html> element.
-     */
-
-  }, {
-    key: "getHtmlElement",
-    value: function getHtmlElement() {
-      return document.documentElement;
-    }
-    /**
-     * @returns <!DOCTYPE> element.
-     */
-
-  }, {
-    key: "getDoctype",
-    value: function getDoctype() {
-      return document.doctype;
-    }
-    /**
-     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
-     */
-
-  }, {
-    key: "getEmbeds",
-    value: function getEmbeds() {
-      return Elem.wrapElems(document.embeds);
-    }
-    /**
-     * @returns an array of image elements (<img>) wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getImages",
-    value: function getImages() {
-      return Elem.wrapElems(document.images);
-    }
-    /**
-     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getLinks",
-    value: function getLinks() {
-      return Elem.wrapElems(document.links);
-    }
-    /**
-     * @returns an array of scripts wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getScripts",
-    value: function getScripts() {
-      return Elem.wrapElems(document.scripts);
-    }
-    /**
-     * @returns an array of form elements wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getForms",
-    value: function getForms() {
-      return Elem.wrapElems(document.forms);
-    }
-  }]);
-
-  return Tree;
 }();
