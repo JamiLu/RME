@@ -23,8 +23,12 @@ let Template = (function() {
          */
         setTemplateAndResolve(template, parent) {
             this.template = template;
-            this.root = parent;
-            this.resolve(this.template, this.root, 0);
+            if (parent) {
+                this.root = parent;
+                this.resolve(this.template, this.root, 1);
+            } else {
+                this.resolve(this.template, this.root, 0);
+            }
             return this.root;
         }
 
@@ -57,18 +61,19 @@ let Template = (function() {
                             parent[obj].call(parent, template[obj]);
                         } else {
                             var child = this.resolveElement(obj, template[obj]);
-                            if (Template.isFragment(child))
+                            if (Template.isFragment(child)) {
                                 this.resolveFragment(child.fragment || template[obj], parent, round);
-                            else
+                            } else {
                                 parent.append(child);
-                            if (Util.isArray(template[obj])) {
-                                this.resolveArray(template[obj], child, round);
-                            } else if (!this.isComponent(obj) && Util.isObject(template[obj])) {
-                                this.resolve(template[obj], child, round);
-                            } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
-                                this.resolveStringNumber(child, template[obj]);
-                            } else if (Util.isFunction(template[obj])) {
-                                this.resolveFunction(child, template[obj]);
+                                if (Util.isArray(template[obj])) {
+                                    this.resolveArray(template[obj], child, round);
+                                } else if (!this.isComponent(obj) && Util.isObject(template[obj])) {
+                                    this.resolve(template[obj], child, round);
+                                } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
+                                    this.resolveStringNumber(child, template[obj]);
+                                } else if (Util.isFunction(template[obj])) {
+                                    this.resolveFunction(child, template[obj]);
+                                }
                             }
                         }
                     }
@@ -86,6 +91,8 @@ let Template = (function() {
         resolveFragment(fragment, parent, round) {
             if (Util.isArray(fragment))
                 this.resolveArray(fragment, parent, round);
+            else if (Util.isFunction(fragment))
+                Template.resolveToParent(fragment.call(parent, parent), parent);
             else
                 this.resolve(fragment, parent, round);
         }
@@ -187,12 +194,15 @@ let Template = (function() {
             if (RME.hasComponent(el)) {
                 el = el.replace(/component:/, "");
                 resolved = RME.component(el, obj);
-                if(Util.isEmpty(resolved))
+                if (Util.isEmpty(resolved))
                     return resolved;
-            } else if(Util.isEmpty(el))
+            } else if (Util.isEmpty(el)) {
                 throw `Template resolver could not find element: ${el} from the given tag: ${tag}`;
-            else
+            } else if (el.indexOf('fragment') === 0) {
+                return el.match(/fragment/).join();
+            } else {
                 resolved = new Elem(el);
+            }
 
             match = tag.match(/[a-z0-9]+\#[a-zA-Z0-9\-]+/); //find id
             if (!Util.isEmpty(match))
@@ -429,7 +439,7 @@ let Template = (function() {
          * @returns True if the parameter is type fragment otherwise false is returned.
          */
         static isFragment(child) {
-            return (child.html && child.getTagName() === 'FRAGMENT') || child.fragment
+            return child === 'fragment' || child.fragment
         }
 
         /**

@@ -313,6 +313,7 @@ let Router = (function() {
         getCurrentState() {
             return {
                 root: this.origRoot,
+                rootElem: this.root.elem,
                 current: this.resolveElem(this.currentRoute.elem, this.currentRoute.compProps),
                 onAfter: this.currentRoute.onAfter
             }

@@ -240,9 +240,12 @@ let App = (function() {
                         if (!Util.isEmpty(state.current)) {
                             let selector = state.root;
                             let element = state.current;
-                            if (Template.isFragment(element))
-                                throw new Error("Fragment is not allowed to use as root element of the route component.");
-                            freshStage.getFirst(selector).append(element);
+                            if (Template.isFragment(element)) {
+                                element = Template.resolveToParent(element, state.rootElem);
+                                freshStage.getFirst(selector).replace(element);
+                            } else {
+                                freshStage.getFirst(selector).append(element);
+                            }
                             if (!Util.isEmpty(state.onAfter)) this.afterRefreshCallQueue.push(state.onAfter);
                         }
                     }
