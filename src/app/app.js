@@ -241,8 +241,11 @@ let App = (function() {
                             let selector = state.root;
                             let element = state.current;
                             if (Template.isFragment(element)) {
-                                element = Template.resolveToParent(element, state.rootElem);
-                                freshStage.getFirst(selector).replace(element);
+                                const fragment = {};
+                                fragment[state.rootElem.getTagName().toLowerCase()+selector] = {
+                                    ...element.fragment
+                                };
+                                freshStage.getFirst(selector).replace(Template.resolve(fragment));
                             } else {
                                 freshStage.getFirst(selector).append(element);
                             }
@@ -261,6 +264,12 @@ let App = (function() {
         refreshAppDone() {
             this.afterRefreshCallQueue.forEach(callback => callback());
             this.afterRefreshCallQueue = [];
+        }
+
+        addAfterRefreshCallback(callback) {
+            if(Util.isFunction(callback)) {
+                this.afterRefreshCallQueue.push(callback)
+            }
         }
     
         /**
@@ -340,7 +349,8 @@ let App = (function() {
     
         /**
          * Function takes two optional parameters. If refName is given then only a state of the component with the refName is cleared otherwise 
-         * whole application state of this application instance is cleared. If update is given then after clearing the state the application is refreshed.
+         * whole application state of this application instance is cleared. The application is updated unless the update parameter is 
+         * explicitly set false.
          * @param {string} refName 
          * @param {boolean} update 
          */
@@ -350,7 +360,7 @@ let App = (function() {
             else 
                 this.recursiveClearMap(this.state[refName]);
     
-            if(Util.isBoolean(update) && update === true) {
+            if(update !== false) {
                 this.refreshApp();
             }
         }

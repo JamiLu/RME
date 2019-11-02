@@ -61,7 +61,9 @@ let RME = (function() {
             if(!Util.isEmpty(props) && Util.isFunction(comp.update)) {
                 let state = Util.isEmpty(props.key) ? name : `${name}${props.key}`
                 props["ref"] = state;
-                props = this.extendProps(props, comp.update.call()(state));
+                const newProps = comp.update.call()(state);
+                if (!props.shouldComponentUpdate || props.shouldComponentUpdate({...props, ...newProps}) !== false)
+                    props = this.extendProps(props, newProps);
             }
             if(Util.isEmpty(props))
                 props = {};
@@ -72,6 +74,8 @@ let RME = (function() {
                 ret = Template.resolve(ret);
             if(!Util.isEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate))
                 props.onAfterCreate.call(props, ret, props);
+            if (!Util.isEmpty(this.defaultApp) && !Util.isEmpty(props.onAfterRender) && Util.isFunction(props.onAfterRender))
+                this.defaultApp.addAfterRefreshCallback(props.onAfterRender.bind(ret, ret, props));
 
             return ret;
         }

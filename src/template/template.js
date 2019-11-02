@@ -52,7 +52,7 @@ let Template = (function() {
                         else if (Util.isString(template[obj]) || Util.isNumber(template[obj]))
                             this.resolveStringNumber(this.root, template[obj]);
                         else if (Util.isFunction(template[obj]))
-                            this.resolveFunction(this.root, template[obj]);
+                            this.resolveFunction(this.root, template[obj], round);
                     } else {
                         ++round;
                         if (Template.isAttr(obj, parent)) {
@@ -72,7 +72,7 @@ let Template = (function() {
                                 } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
                                     this.resolveStringNumber(child, template[obj]);
                                 } else if (Util.isFunction(template[obj])) {
-                                    this.resolveFunction(child, template[obj]);
+                                    this.resolveFunction(child, template[obj], round);
                                 }
                             }
                         }
@@ -89,12 +89,17 @@ let Template = (function() {
          * @param {*} round 
          */
         resolveFragment(fragment, parent, round) {
-            if (Util.isArray(fragment))
+            if (Util.isArray(fragment)) {
                 this.resolveArray(fragment, parent, round);
-            else if (Util.isFunction(fragment))
-                Template.resolveToParent(fragment.call(parent, parent), parent);
-            else
+            } else if (Util.isFunction(fragment)) {
+                const ret = fragment.call(parent, parent);
+                if (Util.isArray(ret))
+                    this.resolveArray(ret, parent, round);
+                else
+                    Template.resolveToParent(ret, parent);
+            } else {
                 this.resolve(fragment, parent, round);
+            }
         }
 
         /**
@@ -154,13 +159,15 @@ let Template = (function() {
          * @param {object} elem
          * @param {func} func
          */
-        resolveFunction(elem, func) {
+        resolveFunction(elem, func, round) {
             let ret = func.call(elem, elem);
             if (!Util.isEmpty(ret)) {
                 if (Util.isString(ret) && this.isMessage(ret)) {
                     this.resolveMessage(elem, ret);
                 } else if (Util.isString(ret) || Util.isNumber(ret)) {
                     elem.setText(ret);
+                } else if(Util.isArray(ret)) {
+                    this.resolveArray(ret, elem, round)
                 } else if (Template.isTemplate(ret)) {
                     elem.append(Template.resolveTemplate(ret));
                 }
