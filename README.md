@@ -10,9 +10,9 @@ Links
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.3.4/rme.js](https://github.com/JamiLu/RME/releases/download/v1.3.4/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.3.4/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.3.4/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.3.4/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.3.4/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.3.5/rme.js](https://github.com/JamiLu/RME/releases/download/v1.3.5/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.3.5/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.3.5/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.3.5/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.3.5/rme.es5.min.js)
 
 NPM
 ---
@@ -53,7 +53,7 @@ Basics
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.3.4/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.3.5/rme.es5.min.js"></script>`
 
 __Or use NPM__
 
@@ -96,7 +96,7 @@ RME.component({ todoExample: () =>
         },
         button: {
             text: 'Clear list',
-            onClick: () => App.clearState('lister', true)
+            onClick: () => App.clearState('lister')
         },
         lister: {}
     }})
@@ -117,9 +117,10 @@ RME.component({ formExample: () =>
         statefulHeader: {fname: '', lname: ''},
         'component:form': {
             input: event => {
-                let state = App.getState('statefulHeader');
-                state[event.target.name] = event.target.value
-                App.mergeState('statefulHeader', state);
+                App.setState('statefulHeader', state => ({
+                    ...state,
+                    [event.target.name]: event.target.value
+                }));
             }
         }
     }})
