@@ -642,16 +642,30 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         addClasses(classes) {
-            let toAdd = classes.trim().split(" ");
-            let origClass = ` ${this.getClasses()} `;
-            let i = 0;
-            while(i < toAdd.length) {
-                let clazz = toAdd[i];
-                if(origClass.match(` ${clazz} `) === null)
-                    origClass += " "+clazz;
-                i++;
-            }
-            this.html.className = origClass.trim();
+            let addClassesArray = classes.trim().split(' ');
+            let origClassName = this.getClasses();
+            let origClassesArray = origClassName.split(' ');
+
+            addClassesArray = addClassesArray
+                .filter(clazz => origClassName.match(clazz) === null)
+
+            this.html.className = origClassesArray.concat(addClassesArray).join(' ').trim();
+            return this;
+        }
+
+        updateClasses(classes) {
+            this.addClasses(classes);
+            let origClassName = this.getClasses();
+            let origClassesArray = origClassName.split(' ');
+            let updateClassesArray = [];
+
+            classes.trim().split(' ')
+                .forEach(clazz => {
+                    if (origClassesArray.filter(cl => cl === clazz).length > 0)
+                        updateClassesArray.push(clazz);
+                });
+
+            this.html.className = updateClassesArray.join(' ').trim();
             return this;
         }
 

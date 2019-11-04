@@ -460,6 +460,8 @@ let Template = (function() {
                 if (props.hasOwnProperty(p)) {
                     if (templater.isEventKeyVal(p, props[p]))
                         elem[p].call(elem, props[p]); //element event attribute -> elem, event function
+                    else if (p === 'class')
+                        elem.updateClasses(props[p]);
                     else
                         templater.resolveAttributes(elem, p, props[p]);
                 }
