@@ -446,7 +446,7 @@ let Template = (function() {
          * @returns True if the parameter is type fragment otherwise false is returned.
          */
         static isFragment(child) {
-            return child === 'fragment' || child.fragment
+            return !Util.isEmpty(child) && (child === 'fragment' || !Util.isEmpty(child.fragment))
         }
 
         /**
