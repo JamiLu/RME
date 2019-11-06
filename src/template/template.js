@@ -571,7 +571,7 @@ let Template = (function() {
                 a: ["alt", "async", "autocomplete", "autofocus", "autoplay", "accept", "accept-charset", "accpetCharset", "accesskey", "action"],
                 b: ["blur"],
                 c: ["class", "checked", "content", "contenteditable", "click", "charset", "cols", "colspan", "controls", "coords"],
-                d: ["disabled", "display", "draggable", "dropzone", "datetime", "default", "defer", "dir", "dirname", "download"],
+                d: ["disabled", "draggable", "dropzone", "datetime", "default", "defer", "dir", "dirname", "download"],
                 e: ["editable", "enctype"],
                 f: ["for", "focus", "formaction"],
                 h: ["href", "height", "hidden", "high", "hreflang", "headers", "http-equiv", "httpEquiv"],

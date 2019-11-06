@@ -753,7 +753,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setVisible(boolean) {
-            this.html.style.visibility = boolean ? "" : "hidden";
+            this.html.style.visibility = boolean ? "visible" : "hidden";
             return this;
         }
 
