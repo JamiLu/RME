@@ -1318,6 +1318,478 @@ var Cookie = function () {
 
   return Cookie;
 }();
+
+var Http = function () {
+  /**
+   * FOR XmlHttpRequest
+   * A config object supports following. More features could be added.
+   *  {
+   *    method: method,
+   *    url: url,
+   *    data: data,
+   *    contentType: contentType,
+   *    onProgress: function(event),
+   *    onTimeout: function(event),
+   *    headers: headersObject{"header": "value"},
+   *    useFetch: true|false **determines that is fetch used or not.
+   *  }
+   * 
+   * If contentType is not defined, application/json is used, if set to null, default is used, otherwise used defined is used.
+   * If contentType is application/json, data is automatically stringified with JSON.stringify()
+   * 
+   * Http class automatically tries to parse reuqest.responseText to JSON using JSON.parse().
+   * If parsing succeeds, parsed JSON will be set on request.responseJSON attribute.
+   */
+  var Http =
+  /*#__PURE__*/
+  function () {
+    function Http(config) {
+      _classCallCheck(this, Http);
+
+      config.contentType = config.contentType === undefined ? Http.JSON : config.contentType;
+
+      if (config.useFetch) {
+        this.self = new HttpFetchRequest();
+      } else if (window.Promise) {
+        this.self = new HttpPromiseAjax(config).instance();
+      } else {
+        this.self = new HttpAjax(config);
+      }
+    }
+
+    _createClass(Http, [{
+      key: "instance",
+      value: function instance() {
+        return this.self;
+      }
+      /**
+       * Do GET XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+       * @param {string} url *Required
+       * @param {string} requestContentType 
+       */
+
+    }], [{
+      key: "get",
+      value: function get(url, requestContentType) {
+        return new Http({
+          method: "GET",
+          url: url,
+          data: undefined,
+          contentType: requestContentType
+        }).instance();
+      }
+      /**
+       * Do POST XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+       * @param {string} url *Required
+       * @param {*} data 
+       * @param {string} requestContentType 
+       */
+
+    }, {
+      key: "post",
+      value: function post(url, data, requestContentType) {
+        return new Http({
+          method: "POST",
+          url: url,
+          data: data,
+          contentType: requestContentType
+        }).instance();
+      }
+      /**
+       * Do PUT XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+       * @param {string} url *Required
+       * @param {*} data 
+       * @param {string} requestContentType 
+       */
+
+    }, {
+      key: "put",
+      value: function put(url, data, requestContentType) {
+        return new Http({
+          method: "PUT",
+          url: url,
+          data: data,
+          contentType: requestContentType
+        }).instance();
+      }
+      /**
+       * Do DELETE XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+       * @param {string} url *Required
+       * @param {*} requestContentType 
+       */
+
+    }, {
+      key: "delete",
+      value: function _delete(url, requestContentType) {
+        return new Http({
+          method: "DELETE",
+          url: url,
+          data: undefined,
+          contentType: requestContentType
+        }).instance();
+      }
+      /**
+       * Does any XMLHttpRequest that is defined by a given config object. Promise will be used if available.
+       * 
+       * Config object can contain parameters:
+       * {
+       *    method: method,
+       *    url: url,
+       *    data: data,
+       *    contentType: contentType,
+       *    onProgress: function(event),
+       *    onTimeout: function(event),
+       *    headers: headersObject{"header": "value"},
+       *    useFetch: true|false **determines that is fetch used or not.
+       *  }
+       * @param {object} config 
+       */
+
+    }, {
+      key: "do",
+      value: function _do(config) {
+        return new Http(config).instance();
+      }
+      /**
+       * Uses Fetch interface to make a request to server.
+       * 
+       * Before using fetch you should also be familiar on how to use fetch since usage of this function
+       * will be quite similar to fetch except predefined candy that is added.
+       *
+       * The fetch interface adds some predefined candy over the JavaScript Fetch interface.
+       * get|post|put|delete methods will automatically use JSON as a Content-Type
+       * and request methods will be predefined also.
+       *
+       * FOR Fetch
+       * A Config object supports following:
+       *  {
+       *      url: url,
+       *      method: method,
+       *      contentType: contentType,
+       *      init: init
+       *  }
+       *
+       *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
+       *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+       *
+       *  If a total custom request is desired you should use a method do({}) e.g.
+       *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
+       */
+
+    }, {
+      key: "fetch",
+      value: function fetch() {
+        return new Http({
+          useFetch: true
+        }).instance();
+      }
+    }]);
+
+    return Http;
+  }();
+  /**
+   * Content-Type application/json;charset=UTF-8
+   */
+
+
+  Http.JSON = "application/json;charset=UTF-8";
+  /**
+   * Content-Type multipart/form-data
+   */
+
+  Http.FORM_DATA = "multipart/form-data";
+  /**
+   * Content-Type text/plain
+   */
+
+  Http.TEXT_PLAIN = "text/plain";
+  /**
+   * Old Fashion XMLHttpRequest made into the Promise pattern.
+   */
+
+  var HttpAjax =
+  /*#__PURE__*/
+  function () {
+    function HttpAjax(config) {
+      _classCallCheck(this, HttpAjax);
+
+      this.progressHandler = config.onProgress ? config.onProgress : function (event) {};
+      this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
+      this.xhr = new XMLHttpRequest();
+      this.xhr.open(config.method, config.url);
+      if (config.contentType) this.xhr.setRequestHeader("Content-Type", config.contentType);
+      if (config.headers) setXhrHeaders(this.xhr, config.headers);
+    }
+
+    _createClass(HttpAjax, [{
+      key: "then",
+      value: function then(successHandler, errorHandler) {
+        var _this3 = this;
+
+        this.xhr.onload = function () {
+          _this3.xhr.responseJSON = tryParseJSON(_this3.xhr.responseText);
+          isResponseOK(_this3.xhr.status) ? successHandler(resolveResponse(_this3.xhr.response), _this3.xhr) : errorHandler(_this3.xhr);
+        };
+
+        this.xhr.onprogress = function (event) {
+          if (_this3.progressHandler) _this3.progressHandler(event);
+        };
+
+        if (this.xhr.ontimeout && config.onTimeout) {
+          this.xhr.ontimeout = function (event) {
+            config.onTimeout(event);
+          };
+        }
+
+        this.xhr.onerror = function () {
+          _this3.xhr.responseJSON = tryParseJSON(_this3.xhr.responseText);
+          if (errorHandler) errorHandler(_this3.xhr);
+        };
+
+        this.data ? this.xhr.send(this.data) : this.xhr.send();
+        return this;
+      }
+    }, {
+      key: "catch",
+      value: function _catch(errorHandler) {
+        var _this4 = this;
+
+        this.xhr.onerror = function () {
+          _this4.xhr.responseJSON = tryParseJSON(_this4.xhr.responrenderseText);
+          if (errorHandler) errorHandler(_this4.xhr);
+        };
+      }
+    }]);
+
+    return HttpAjax;
+  }();
+  /**
+   * XMLHttpRequest using the Promise.
+   */
+
+
+  var HttpPromiseAjax =
+  /*#__PURE__*/
+  function () {
+    function HttpPromiseAjax(config) {
+      var _this5 = this;
+
+      _classCallCheck(this, HttpPromiseAjax);
+
+      this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
+      this.promise = new Promise(function (resolve, reject) {
+        var request = new XMLHttpRequest();
+        request.open(config.method, config.url);
+        if (config.contentType) request.setRequestHeader("Content-Type", config.contentType);
+        if (config.headers) setXhrHeaders(request, config.headers);
+
+        request.onload = function () {
+          request.responseJSON = tryParseJSON(request.responseText);
+          isResponseOK(request.status) ? resolve(resolveResponse(request.response)) : reject(request);
+        };
+
+        if (request.ontimeout && config.onTimeout) {
+          request.ontimeout = function (event) {
+            config.onTimeout(event);
+          };
+        }
+
+        request.onprogress = function (event) {
+          if (config.onProgress) config.onProgress(event);
+        };
+
+        request.onerror = function () {
+          request.responseJSON = tryParseJSON(request.responseText);
+          reject(request);
+        };
+
+        _this5.data ? request.send(_this5.data) : request.send();
+      });
+    }
+
+    _createClass(HttpPromiseAjax, [{
+      key: "instance",
+      value: function instance() {
+        return this.promise;
+      }
+    }]);
+
+    return HttpPromiseAjax;
+  }();
+
+  var resolveResponse = function resolveResponse(response) {
+    var resp = tryParseJSON(response);
+    if (Util.isEmpty(resp)) resp = response;
+    return resp;
+  };
+
+  var setXhrHeaders = function setXhrHeaders(xhr, headers) {
+    for (var header in headers) {
+      if (headers.hasOwnProperty(header)) xhr.setRequestHeader(header, headers[header]);
+    }
+  };
+
+  var isResponseOK = function isResponseOK(status) {
+    var okResponses = [200, 201, 202, 203, 204, 205, 206, 207, 208, 226];
+    var i = 0;
+
+    while (i < okResponses.length) {
+      if (okResponses[i] === status) return true;
+      i++;
+    }
+
+    return false;
+  };
+
+  var isContentTypeJson = function isContentTypeJson(contentType) {
+    return contentType === Http.JSON;
+  };
+
+  var tryParseJSON = function tryParseJSON(text) {
+    try {
+      return JSON.parse(text);
+    } catch (e) {}
+  };
+
+  return Http;
+}();
+/**
+ * Before using this class you should also be familiar on how to use fetch since usage of this class
+ * will be quite similar to fetch except predefined candy that is added on a class.
+ *
+ * The class is added some predefined candy over the JavaScript Fetch interface.
+ * get|post|put|delete methods will automatically use JSON as a Content-Type
+ * and request methods will be predefined also.
+ *
+ * FOR Fetch
+ * A Config object supports following:
+ *  {
+ *      url: url,
+ *      method: method,
+ *      contentType: contentType,
+ *      init: init
+ *  }
+ *
+ *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
+ *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+ *
+ *  If a total custom request is desired you should use a method do({}) e.g.
+ *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
+ */
+
+
+var HttpFetchRequest =
+/*#__PURE__*/
+function () {
+  function HttpFetchRequest() {
+    _classCallCheck(this, HttpFetchRequest);
+  }
+  /**
+   * Does Fetch GET request. Content-Type JSON is used by default.
+   * @param {stirng} url *Required
+   * @param {*} init 
+   */
+
+
+  _createClass(HttpFetchRequest, [{
+    key: "get",
+    value: function get(url, init) {
+      if (!init) init = {};
+      init.method = "GET";
+      return this.do({
+        url: url,
+        init: init,
+        contentType: Http.JSON
+      });
+    }
+    /**
+     * Does Fetch POST request. Content-Type JSON is used by default.
+     * @param {string} url *Required
+     * @param {*} body 
+     * @param {*} init 
+     */
+
+  }, {
+    key: "post",
+    value: function post(url, body, init) {
+      if (!init) init = {};
+      init.method = "POST";
+      init.body = body;
+      return this.do({
+        url: url,
+        init: init,
+        contentType: Http.JSON
+      });
+    }
+    /**
+     * Does Fetch PUT request. Content-Type JSON is used by default.
+     * @param {string} url *Required
+     * @param {*} body 
+     * @param {*} init 
+     */
+
+  }, {
+    key: "put",
+    value: function put(url, body, init) {
+      if (!init) init = {};
+      init.method = "PUT";
+      init.body = body;
+      return this.do({
+        url: url,
+        init: init,
+        contentType: Http.JSON
+      });
+    }
+    /**
+     * Does Fetch DELETE request. Content-Type JSON is used by default.
+     * @param {string} url 
+     * @param {*} init 
+     */
+
+  }, {
+    key: "delete",
+    value: function _delete(url, init) {
+      if (!init) init = {};
+      init.method = "DELETE";
+      return this.do({
+        url: url,
+        init: init,
+        contentType: Http.JSON
+      });
+    }
+    /**
+     * Does any Fetch request a given config object defines.
+     * 
+     * Config object can contain parameters:
+     * {
+     *      url: url,
+     *      method: method,
+     *      contentType: contentType,
+     *      init: init
+     *  }
+     * @param {object} config 
+     */
+
+  }, {
+    key: "do",
+    value: function _do(config) {
+      if (!config.init) config.init = {};
+
+      if (config.contentType) {
+        if (!config.init.headers) config.init.headers = new Headers({});
+        if (!config.init.headers.has("Content-Type")) config.init.headers.set("Content-Type", config.contentType);
+      }
+
+      if (config.method) {
+        config.init.method = config.method;
+      }
+
+      return fetch(config.url, config.init);
+    }
+  }]);
+
+  return HttpFetchRequest;
+}();
 /**
  * RMEElemTemplater class is able to create a Template out of an Elem object.
  */
@@ -2671,10 +3143,10 @@ var Elem = function () {
     }, {
       key: "click",
       value: function click() {
-        var _this3 = this;
+        var _this6 = this;
 
         Util.setTimeout(function () {
-          return _this3.html.click();
+          return _this6.html.click();
         });
         return this;
       }
@@ -2686,10 +3158,10 @@ var Elem = function () {
     }, {
       key: "focus",
       value: function focus() {
-        var _this4 = this;
+        var _this7 = this;
 
         Util.setTimeout(function () {
-          return _this4.html.focus();
+          return _this7.html.focus();
         });
         return this;
       }
@@ -2701,10 +3173,10 @@ var Elem = function () {
     }, {
       key: "blur",
       value: function blur() {
-        var _this5 = this;
+        var _this8 = this;
 
         Util.setTimeout(function () {
-          return _this5.html.blur();
+          return _this8.html.blur();
         });
         return this;
       }
@@ -3753,478 +4225,6 @@ var Elem = function () {
   }();
 
   return Elem;
-}();
-/**
- * Before using this class you should also be familiar on how to use fetch since usage of this class
- * will be quite similar to fetch except predefined candy that is added on a class.
- *
- * The class is added some predefined candy over the JavaScript Fetch interface.
- * get|post|put|delete methods will automatically use JSON as a Content-Type
- * and request methods will be predefined also.
- *
- * FOR Fetch
- * A Config object supports following:
- *  {
- *      url: url,
- *      method: method,
- *      contentType: contentType,
- *      init: init
- *  }
- *
- *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
- *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
- *
- *  If a total custom request is desired you should use a method do({}) e.g.
- *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
- */
-
-
-var HttpFetchRequest =
-/*#__PURE__*/
-function () {
-  function HttpFetchRequest() {
-    _classCallCheck(this, HttpFetchRequest);
-  }
-  /**
-   * Does Fetch GET request. Content-Type JSON is used by default.
-   * @param {stirng} url *Required
-   * @param {*} init 
-   */
-
-
-  _createClass(HttpFetchRequest, [{
-    key: "get",
-    value: function get(url, init) {
-      if (!init) init = {};
-      init.method = "GET";
-      return this.do({
-        url: url,
-        init: init,
-        contentType: Http.JSON
-      });
-    }
-    /**
-     * Does Fetch POST request. Content-Type JSON is used by default.
-     * @param {string} url *Required
-     * @param {*} body 
-     * @param {*} init 
-     */
-
-  }, {
-    key: "post",
-    value: function post(url, body, init) {
-      if (!init) init = {};
-      init.method = "POST";
-      init.body = body;
-      return this.do({
-        url: url,
-        init: init,
-        contentType: Http.JSON
-      });
-    }
-    /**
-     * Does Fetch PUT request. Content-Type JSON is used by default.
-     * @param {string} url *Required
-     * @param {*} body 
-     * @param {*} init 
-     */
-
-  }, {
-    key: "put",
-    value: function put(url, body, init) {
-      if (!init) init = {};
-      init.method = "PUT";
-      init.body = body;
-      return this.do({
-        url: url,
-        init: init,
-        contentType: Http.JSON
-      });
-    }
-    /**
-     * Does Fetch DELETE request. Content-Type JSON is used by default.
-     * @param {string} url 
-     * @param {*} init 
-     */
-
-  }, {
-    key: "delete",
-    value: function _delete(url, init) {
-      if (!init) init = {};
-      init.method = "DELETE";
-      return this.do({
-        url: url,
-        init: init,
-        contentType: Http.JSON
-      });
-    }
-    /**
-     * Does any Fetch request a given config object defines.
-     * 
-     * Config object can contain parameters:
-     * {
-     *      url: url,
-     *      method: method,
-     *      contentType: contentType,
-     *      init: init
-     *  }
-     * @param {object} config 
-     */
-
-  }, {
-    key: "do",
-    value: function _do(config) {
-      if (!config.init) config.init = {};
-
-      if (config.contentType) {
-        if (!config.init.headers) config.init.headers = new Headers({});
-        if (!config.init.headers.has("Content-Type")) config.init.headers.set("Content-Type", config.contentType);
-      }
-
-      if (config.method) {
-        config.init.method = config.method;
-      }
-
-      return fetch(config.url, config.init);
-    }
-  }]);
-
-  return HttpFetchRequest;
-}();
-
-var Http = function () {
-  /**
-   * FOR XmlHttpRequest
-   * A config object supports following. More features could be added.
-   *  {
-   *    method: method,
-   *    url: url,
-   *    data: data,
-   *    contentType: contentType,
-   *    onProgress: function(event),
-   *    onTimeout: function(event),
-   *    headers: headersObject{"header": "value"},
-   *    useFetch: true|false **determines that is fetch used or not.
-   *  }
-   * 
-   * If contentType is not defined, application/json is used, if set to null, default is used, otherwise used defined is used.
-   * If contentType is application/json, data is automatically stringified with JSON.stringify()
-   * 
-   * Http class automatically tries to parse reuqest.responseText to JSON using JSON.parse().
-   * If parsing succeeds, parsed JSON will be set on request.responseJSON attribute.
-   */
-  var Http =
-  /*#__PURE__*/
-  function () {
-    function Http(config) {
-      _classCallCheck(this, Http);
-
-      config.contentType = config.contentType === undefined ? Http.JSON : config.contentType;
-
-      if (config.useFetch) {
-        this.self = new HttpFetchRequest();
-      } else if (window.Promise) {
-        this.self = new HttpPromiseAjax(config).instance();
-      } else {
-        this.self = new HttpAjax(config);
-      }
-    }
-
-    _createClass(Http, [{
-      key: "instance",
-      value: function instance() {
-        return this.self;
-      }
-      /**
-       * Do GET XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-       * @param {string} url *Required
-       * @param {string} requestContentType 
-       */
-
-    }], [{
-      key: "get",
-      value: function get(url, requestContentType) {
-        return new Http({
-          method: "GET",
-          url: url,
-          data: undefined,
-          contentType: requestContentType
-        }).instance();
-      }
-      /**
-       * Do POST XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-       * @param {string} url *Required
-       * @param {*} data 
-       * @param {string} requestContentType 
-       */
-
-    }, {
-      key: "post",
-      value: function post(url, data, requestContentType) {
-        return new Http({
-          method: "POST",
-          url: url,
-          data: data,
-          contentType: requestContentType
-        }).instance();
-      }
-      /**
-       * Do PUT XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-       * @param {string} url *Required
-       * @param {*} data 
-       * @param {string} requestContentType 
-       */
-
-    }, {
-      key: "put",
-      value: function put(url, data, requestContentType) {
-        return new Http({
-          method: "PUT",
-          url: url,
-          data: data,
-          contentType: requestContentType
-        }).instance();
-      }
-      /**
-       * Do DELETE XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-       * @param {string} url *Required
-       * @param {*} requestContentType 
-       */
-
-    }, {
-      key: "delete",
-      value: function _delete(url, requestContentType) {
-        return new Http({
-          method: "DELETE",
-          url: url,
-          data: undefined,
-          contentType: requestContentType
-        }).instance();
-      }
-      /**
-       * Does any XMLHttpRequest that is defined by a given config object. Promise will be used if available.
-       * 
-       * Config object can contain parameters:
-       * {
-       *    method: method,
-       *    url: url,
-       *    data: data,
-       *    contentType: contentType,
-       *    onProgress: function(event),
-       *    onTimeout: function(event),
-       *    headers: headersObject{"header": "value"},
-       *    useFetch: true|false **determines that is fetch used or not.
-       *  }
-       * @param {object} config 
-       */
-
-    }, {
-      key: "do",
-      value: function _do(config) {
-        return new Http(config).instance();
-      }
-      /**
-       * Uses Fetch interface to make a request to server.
-       * 
-       * Before using fetch you should also be familiar on how to use fetch since usage of this function
-       * will be quite similar to fetch except predefined candy that is added.
-       *
-       * The fetch interface adds some predefined candy over the JavaScript Fetch interface.
-       * get|post|put|delete methods will automatically use JSON as a Content-Type
-       * and request methods will be predefined also.
-       *
-       * FOR Fetch
-       * A Config object supports following:
-       *  {
-       *      url: url,
-       *      method: method,
-       *      contentType: contentType,
-       *      init: init
-       *  }
-       *
-       *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
-       *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-       *
-       *  If a total custom request is desired you should use a method do({}) e.g.
-       *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
-       */
-
-    }, {
-      key: "fetch",
-      value: function fetch() {
-        return new Http({
-          useFetch: true
-        }).instance();
-      }
-    }]);
-
-    return Http;
-  }();
-  /**
-   * Content-Type application/json;charset=UTF-8
-   */
-
-
-  Http.JSON = "application/json;charset=UTF-8";
-  /**
-   * Content-Type multipart/form-data
-   */
-
-  Http.FORM_DATA = "multipart/form-data";
-  /**
-   * Content-Type text/plain
-   */
-
-  Http.TEXT_PLAIN = "text/plain";
-  /**
-   * Old Fashion XMLHttpRequest made into the Promise pattern.
-   */
-
-  var HttpAjax =
-  /*#__PURE__*/
-  function () {
-    function HttpAjax(config) {
-      _classCallCheck(this, HttpAjax);
-
-      this.progressHandler = config.onProgress ? config.onProgress : function (event) {};
-      this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
-      this.xhr = new XMLHttpRequest();
-      this.xhr.open(config.method, config.url);
-      if (config.contentType) this.xhr.setRequestHeader("Content-Type", config.contentType);
-      if (config.headers) setXhrHeaders(this.xhr, config.headers);
-    }
-
-    _createClass(HttpAjax, [{
-      key: "then",
-      value: function then(successHandler, errorHandler) {
-        var _this6 = this;
-
-        this.xhr.onload = function () {
-          _this6.xhr.responseJSON = tryParseJSON(_this6.xhr.responseText);
-          isResponseOK(_this6.xhr.status) ? successHandler(resolveResponse(_this6.xhr.response), _this6.xhr) : errorHandler(_this6.xhr);
-        };
-
-        this.xhr.onprogress = function (event) {
-          if (_this6.progressHandler) _this6.progressHandler(event);
-        };
-
-        if (this.xhr.ontimeout && config.onTimeout) {
-          this.xhr.ontimeout = function (event) {
-            config.onTimeout(event);
-          };
-        }
-
-        this.xhr.onerror = function () {
-          _this6.xhr.responseJSON = tryParseJSON(_this6.xhr.responseText);
-          if (errorHandler) errorHandler(_this6.xhr);
-        };
-
-        this.data ? this.xhr.send(this.data) : this.xhr.send();
-        return this;
-      }
-    }, {
-      key: "catch",
-      value: function _catch(errorHandler) {
-        var _this7 = this;
-
-        this.xhr.onerror = function () {
-          _this7.xhr.responseJSON = tryParseJSON(_this7.xhr.responrenderseText);
-          if (errorHandler) errorHandler(_this7.xhr);
-        };
-      }
-    }]);
-
-    return HttpAjax;
-  }();
-  /**
-   * XMLHttpRequest using the Promise.
-   */
-
-
-  var HttpPromiseAjax =
-  /*#__PURE__*/
-  function () {
-    function HttpPromiseAjax(config) {
-      var _this8 = this;
-
-      _classCallCheck(this, HttpPromiseAjax);
-
-      this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
-      this.promise = new Promise(function (resolve, reject) {
-        var request = new XMLHttpRequest();
-        request.open(config.method, config.url);
-        if (config.contentType) request.setRequestHeader("Content-Type", config.contentType);
-        if (config.headers) setXhrHeaders(request, config.headers);
-
-        request.onload = function () {
-          request.responseJSON = tryParseJSON(request.responseText);
-          isResponseOK(request.status) ? resolve(resolveResponse(request.response)) : reject(request);
-        };
-
-        if (request.ontimeout && config.onTimeout) {
-          request.ontimeout = function (event) {
-            config.onTimeout(event);
-          };
-        }
-
-        request.onprogress = function (event) {
-          if (config.onProgress) config.onProgress(event);
-        };
-
-        request.onerror = function () {
-          request.responseJSON = tryParseJSON(request.responseText);
-          reject(request);
-        };
-
-        _this8.data ? request.send(_this8.data) : request.send();
-      });
-    }
-
-    _createClass(HttpPromiseAjax, [{
-      key: "instance",
-      value: function instance() {
-        return this.promise;
-      }
-    }]);
-
-    return HttpPromiseAjax;
-  }();
-
-  var resolveResponse = function resolveResponse(response) {
-    var resp = tryParseJSON(response);
-    if (Util.isEmpty(resp)) resp = response;
-    return resp;
-  };
-
-  var setXhrHeaders = function setXhrHeaders(xhr, headers) {
-    for (var header in headers) {
-      if (headers.hasOwnProperty(header)) xhr.setRequestHeader(header, headers[header]);
-    }
-  };
-
-  var isResponseOK = function isResponseOK(status) {
-    var okResponses = [200, 201, 202, 203, 204, 205, 206, 207, 208, 226];
-    var i = 0;
-
-    while (i < okResponses.length) {
-      if (okResponses[i] === status) return true;
-      i++;
-    }
-
-    return false;
-  };
-
-  var isContentTypeJson = function isContentTypeJson(contentType) {
-    return contentType === Http.JSON;
-  };
-
-  var tryParseJSON = function tryParseJSON(text) {
-    try {
-      return JSON.parse(text);
-    } catch (e) {}
-  };
-
-  return Http;
 }();
 /**
  * Key class does not have any methods as it only contains key mappings for keyevent. For example:
@@ -5402,7 +5402,11 @@ var Router = function () {
           if (!Util.isEmpty(found)) found = found.join();
           return found === path && new RegExp(url).test(newUrl);
         } else {
-          if (Util.isString(url) && url.charAt(0) === '*') url = '.*';else if (Util.isString(url) && url.charAt(0) !== '#') url = "#".concat(url);
+          if (Util.isString(url)) {
+            url = url.replace(/\*/g, '.*');
+            if (url.charAt(0) !== '#') url = "#".concat(url);
+          }
+
           var hash = newUrl.match(/\#{1}.*/).join();
 
           var _found = hash.match(url);
@@ -5421,7 +5425,7 @@ var Router = function () {
     }, {
       key: "getUrlPath",
       value: function getUrlPath(url) {
-        return url.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
+        return this.useHash ? url : url.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
       }
       /**
        * @returns The current status of the Router in an object.
