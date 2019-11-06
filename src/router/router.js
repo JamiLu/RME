@@ -285,10 +285,11 @@ let Router = (function() {
                     found = found.join();
                 return found === path && new RegExp(url).test(newUrl);
             } else {
-                if (Util.isString(url) && url.charAt(0) === '*')
-                    url = '.*';
-                else if (Util.isString(url) && url.charAt(0) !== '#')
-                    url = `#${url}`;
+                if (Util.isString(url)) {
+                    url = url.replace(/\*/g, '.*');
+                    if (url.charAt(0) !== '#')
+                        url = `#${url}`;
+                }
                 let hash = newUrl.match(/\#{1}.*/).join();
                 let found = hash.match(url);
                 if (!Util.isEmpty(found))
@@ -304,7 +305,7 @@ let Router = (function() {
          * @returns The path of the url.
          */
         getUrlPath(url) {
-            return url.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
+            return this.useHash ? url : url.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
         }
 
         /**
