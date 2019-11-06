@@ -1000,7 +1000,6 @@ class Browser {
 
 
 
-
 let Cookie = (function() {
     /**
      * Cookie interface offers an easy way to get, set or remove cookies in application logic.
@@ -1113,694 +1112,6 @@ let Cookie = (function() {
 }());
 
 
-let Http = (function() {
-    /**
-     * FOR XmlHttpRequest
-     * A config object supports following. More features could be added.
-     *  {
-     *    method: method,
-     *    url: url,
-     *    data: data,
-     *    contentType: contentType,
-     *    onProgress: function(event),
-     *    onTimeout: function(event),
-     *    headers: headersObject{"header": "value"},
-     *    useFetch: true|false **determines that is fetch used or not.
-     *  }
-     * 
-     * If contentType is not defined, application/json is used, if set to null, default is used, otherwise used defined is used.
-     * If contentType is application/json, data is automatically stringified with JSON.stringify()
-     * 
-     * Http class automatically tries to parse reuqest.responseText to JSON using JSON.parse().
-     * If parsing succeeds, parsed JSON will be set on request.responseJSON attribute.
-     */
-    class Http {
-        constructor(config) {
-            config.contentType = config.contentType === undefined ? Http.JSON : config.contentType;
-            if(config.useFetch) {
-                this.self = new HttpFetchRequest();
-            } else if(window.Promise) {
-                this.self = new HttpPromiseAjax(config).instance();
-            } else {
-                this.self = new HttpAjax(config);
-            }
-        }
-
-        instance() {
-            return this.self;
-        }
-
-        /**
-         * Do GET XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-         * @param {string} url *Required
-         * @param {string} requestContentType 
-         */
-        static get(url, requestContentType) {
-            return new Http({method: "GET", url: url, data: undefined, contentType: requestContentType}).instance();
-        }
-
-        /**
-         * Do POST XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-         * @param {string} url *Required
-         * @param {*} data 
-         * @param {string} requestContentType 
-         */
-        static post(url, data, requestContentType) {
-            return new Http({method: "POST", url: url, data: data, contentType: requestContentType}).instance();
-        }
-
-        /**
-         * Do PUT XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-         * @param {string} url *Required
-         * @param {*} data 
-         * @param {string} requestContentType 
-         */
-        static put(url, data, requestContentType) {
-            return new Http({method: "PUT", url: url, data: data, contentType: requestContentType}).instance();
-        }
-
-        /**
-         * Do DELETE XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-         * @param {string} url *Required
-         * @param {*} requestContentType 
-         */
-        static delete(url, requestContentType) {
-            return new Http({method: "DELETE", url: url, data: undefined, contentType: requestContentType}).instance();
-        }
-
-        /**
-         * Does any XMLHttpRequest that is defined by a given config object. Promise will be used if available.
-         * 
-         * Config object can contain parameters:
-         * {
-         *    method: method,
-         *    url: url,
-         *    data: data,
-         *    contentType: contentType,
-         *    onProgress: function(event),
-         *    onTimeout: function(event),
-         *    headers: headersObject{"header": "value"},
-         *    useFetch: true|false **determines that is fetch used or not.
-         *  }
-         * @param {object} config 
-         */
-        static do(config) {
-            return new Http(config).instance();
-        }
-
-        /**
-         * Uses Fetch interface to make a request to server.
-         * 
-         * Before using fetch you should also be familiar on how to use fetch since usage of this function
-         * will be quite similar to fetch except predefined candy that is added.
-         *
-         * The fetch interface adds some predefined candy over the JavaScript Fetch interface.
-         * get|post|put|delete methods will automatically use JSON as a Content-Type
-         * and request methods will be predefined also.
-         *
-         * FOR Fetch
-         * A Config object supports following:
-         *  {
-         *      url: url,
-         *      method: method,
-         *      contentType: contentType,
-         *      init: init
-         *  }
-         *
-         *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
-         *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-         *
-         *  If a total custom request is desired you should use a method do({}) e.g.
-         *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
-         */
-        static fetch() {
-            return new Http({useFetch: true}).instance();
-        }
-    }
-    /**
-     * Content-Type application/json;charset=UTF-8
-     */
-    Http.JSON = "application/json;charset=UTF-8";
-    /**
-     * Content-Type multipart/form-data
-     */
-    Http.FORM_DATA = "multipart/form-data";
-    /**
-     * Content-Type text/plain
-     */
-    Http.TEXT_PLAIN = "text/plain";
-
-    /**
-     * Old Fashion XMLHttpRequest made into the Promise pattern.
-     */
-    class HttpAjax {
-        constructor(config) {
-            this.progressHandler = config.onProgress ? config.onProgress : function(event) {};
-            this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
-            this.xhr = new XMLHttpRequest();
-            this.xhr.open(config.method, config.url);
-            if(config.contentType)
-                this.xhr.setRequestHeader("Content-Type", config.contentType);
-            if(config.headers)
-                setXhrHeaders(this.xhr, config.headers);
-        }
-        then(successHandler, errorHandler) {
-            this.xhr.onload = () => {
-                this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
-                isResponseOK(this.xhr.status) ? successHandler(resolveResponse(this.xhr.response), this.xhr) : errorHandler(this.xhr)
-            };
-            this.xhr.onprogress = (event) => {
-                if(this.progressHandler)
-                    this.progressHandler(event);
-            };
-            if(this.xhr.ontimeout && config.onTimeout) {
-                this.xhr.ontimeout = (event) => {
-                    config.onTimeout(event);
-                }
-            }
-            this.xhr.onerror = () => {
-                this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
-                if(errorHandler)
-                    errorHandler(this.xhr);
-            };
-            this.data ? this.xhr.send(this.data) : this.xhr.send();
-            return this;
-        }
-        catch(errorHandler) {
-            this.xhr.onerror = () => {
-                this.xhr.responseJSON = tryParseJSON(this.xhr.responrenderseText);
-                if(errorHandler)
-                    errorHandler(this.xhr);
-            }
-        }
-    }
-
-    /**
-     * XMLHttpRequest using the Promise.
-     */
-    class HttpPromiseAjax {
-        constructor(config) {
-            this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
-            this.promise = new Promise((resolve, reject) => {
-                var request = new XMLHttpRequest();
-                request.open(config.method, config.url);
-                if(config.contentType)
-                    request.setRequestHeader("Content-Type", config.contentType);
-                if(config.headers)
-                    setXhrHeaders(request, config.headers);
-                request.onload = () => {
-                    request.responseJSON = tryParseJSON(request.responseText);
-                    isResponseOK(request.status) ? resolve(resolveResponse(request.response)) : reject(request);
-                };
-                if(request.ontimeout && config.onTimeout) {
-                    request.ontimeout = (event) => {
-                        config.onTimeout(event);
-                    }
-                }
-                request.onprogress = (event) => {
-                    if(config.onProgress)
-                        config.onProgress(event);
-                }
-                request.onerror = () => {
-                    request.responseJSON = tryParseJSON(request.responseText);
-                    reject(request)
-                };
-                this.data ? request.send(this.data) : request.send();
-            });
-        }
-        instance() {
-            return this.promise;
-        }
-    }
-
-    const resolveResponse = (response) => {
-        let resp = tryParseJSON(response);
-        if(Util.isEmpty(resp))
-            resp = response;
-        return resp;
-    }
-    
-    const setXhrHeaders = (xhr, headers) => {
-        for(let header in headers) {
-            if(headers.hasOwnProperty(header))
-                xhr.setRequestHeader(header, headers[header]);
-        }
-    }
-    
-    const isResponseOK = (status) => {
-        let okResponses = [200, 201, 202, 203, 204, 205, 206, 207, 208, 226];
-        let i = 0;
-        while(i < okResponses.length) {
-            if(okResponses[i] === status)
-                return true;
-            i++;
-        }
-        return false;
-    }
-    
-    const isContentTypeJson = (contentType) => {
-        return contentType === Http.JSON;
-    }
-    
-    const tryParseJSON = (text) => {
-        try {
-            return JSON.parse(text);
-        } catch(e) {}
-    }
-
-    return Http;
-}());
-
-
-/**
- * Before using this class you should also be familiar on how to use fetch since usage of this class
- * will be quite similar to fetch except predefined candy that is added on a class.
- *
- * The class is added some predefined candy over the JavaScript Fetch interface.
- * get|post|put|delete methods will automatically use JSON as a Content-Type
- * and request methods will be predefined also.
- *
- * FOR Fetch
- * A Config object supports following:
- *  {
- *      url: url,
- *      method: method,
- *      contentType: contentType,
- *      init: init
- *  }
- *
- *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
- *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
- *
- *  If a total custom request is desired you should use a method do({}) e.g.
- *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
- */
-class HttpFetchRequest {
-    constructor() {}
-    /**
-     * Does Fetch GET request. Content-Type JSON is used by default.
-     * @param {stirng} url *Required
-     * @param {*} init 
-     */
-    get(url, init) {
-        if(!init) init = {};
-        init.method = "GET";
-        return this.do({url: url, init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does Fetch POST request. Content-Type JSON is used by default.
-     * @param {string} url *Required
-     * @param {*} body 
-     * @param {*} init 
-     */
-    post(url, body, init) {
-        if(!init) init = {};
-        init.method = "POST";
-        init.body = body;
-        return this.do({url: url, init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does Fetch PUT request. Content-Type JSON is used by default.
-     * @param {string} url *Required
-     * @param {*} body 
-     * @param {*} init 
-     */
-    put(url, body, init) {
-        if(!init) init = {};
-        init.method = "PUT";
-        init.body = body;
-        return this.do({url: url, init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does Fetch DELETE request. Content-Type JSON is used by default.
-     * @param {string} url 
-     * @param {*} init 
-     */
-    delete(url, init) {
-        if(!init) init = {};
-        init.method = "DELETE";
-        return this.do({url: url,  init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does any Fetch request a given config object defines.
-     * 
-     * Config object can contain parameters:
-     * {
-     *      url: url,
-     *      method: method,
-     *      contentType: contentType,
-     *      init: init
-     *  }
-     * @param {object} config 
-     */
-    do(config) {
-        if(!config.init) config.init = {};
-        if(config.contentType) {
-            if(!config.init.headers)
-                config.init.headers = new Headers({});
-            if(!config.init.headers.has("Content-Type"))
-                config.init.headers.set("Content-Type", config.contentType);
-        }
-        if(config.method) {
-            config.init.method = config.method;
-        }
-        return fetch(config.url, config.init);
-    }
-}
-
-
-
-
-/**
- * RMEElemTemplater class is able to create a Template out of an Elem object.
- */
-class RMEElemTemplater {
-    constructor() {
-        this.instance;
-        this.template = {};
-        this.deep = true;
-    }
-
-    toTemplate(elem, deep) {
-        if(!Util.isEmpty(deep))
-            this.deep = deep;
-        this.resolve(elem, this.template);
-        return this.template;
-    }
-
-    /**
-     * Function is called recursively and resolves an Elem object and its children in recursion
-     * @param {object} elem 
-     * @param {object} parent 
-     */
-    resolve(elem, parent) {
-        let resolved = this.resolveElem(elem, this.resolveProps(elem));
-        for(let p in parent) {
-            if(parent.hasOwnProperty(p)) {
-                if(Util.isArray(parent[p]))
-                    parent[p].push(resolved);
-                else
-                    this.extendMap(parent[p], resolved);
-            }
-        }
-
-        let i = 0;
-        let children = Util.isArray(elem.getChildren()) ? elem.getChildren() : [elem.getChildren()];
-        if(children && this.deep) {
-            while(i < children.length) {
-                this.resolve(children[i], resolved);
-                i++;
-            }
-        }
-        this.template = resolved;
-    }
-
-    extendMap(map, next) {
-        for(let v in next) {
-            if(next.hasOwnProperty(v)) {
-                map[v] = next[v];
-            }
-        }
-    }
-
-    /**
-     * Function will attach given properties into a given Elem and returns the resolved Elem.
-     * @param {object} elem 
-     * @param {object} props 
-     * @returns The resolved elem with attached properties.
-     */
-    resolveElem(elem, props) {
-        let el = {};
-        let children = elem.getChildren();
-        if(Util.isArray(children) && children.length > 1) {
-            let elTag = elem.getTagName().toLowerCase();
-            let elName = this.resolveId(elTag, props);
-            elName = this.resolveClass(elName, props);
-            elName = this.resolveAttrs(elName, props);
-            el[elName] = [];
-        } else {
-            el[elem.getTagName().toLowerCase()] = props
-        }
-        return el;
-    }
-
-    /**
-     * Function will place an ID attribute into an element tag if the ID attribute is found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with the ID or without.
-     */
-    resolveId(tag, props) {
-        if(props.id)
-            return tag+"#"+props.id;
-        else
-            return tag;
-    }
-
-    /**
-     * Function will place a class attribute into an element tag if the class attribute is found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with the classes or without.
-     */
-    resolveClass(tag, props) {
-        if(props.class)
-            return tag+"."+props.class.replace(/ /g, ".");
-        else
-            return tag;
-    }
-
-    /**
-     * Function will resolve all other attributes and place them into an element tag if other attributes are found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with other attributes or without.
-     */
-    resolveAttrs(tag, props) {
-        let tagName = tag;
-        for(let p in props) {
-            if(props.hasOwnProperty(p) && p !== "id" && p !== "class") {
-                tagName += `[${p}=${props[p]}]`
-            }
-        }
-        return tagName;
-    }
-
-    /**
-     * Resolves a given Elem object and returns its properties in an object.
-     * @param {object} elem 
-     * @returns The properties object of the given element.
-     */
-    resolveProps(elem) {
-        let props = {};
-        let attributes = elem.dom().attributes;
-        let a = 0;
-        if(attributes) {
-            while(a < attributes.length) {
-                props[this.resolveAttributeNames(attributes[a].name)] = attributes[a].value;
-                a++;
-            }
-        }
-
-        if(elem.dom().hasChildNodes() && elem.dom().childNodes[0].nodeType === 3) {
-            props["text"] = elem.getText();
-        }
-
-        for(let p in elem.dom()) {
-            if(p.indexOf("on") !== 0 || Util.isEmpty(elem.dom()[p]))
-                continue;
-            else
-                props[this.resolveListeners(p)] = elem.dom()[p];
-        }
-
-        return props;
-    }
-
-    /**
-     * Resolves html data-* attributes by removing '-' and setting the next character to uppercase. If the attribute is not 
-     * data-* attribute then it is directly returned.
-     * @param {string} attrName 
-     * @returns Resolved attribute name.
-     */
-    resolveAttributeNames(attrName) {
-        if(attrName.indexOf("data" === 0 && attrName.length > "data".length)) {
-            while(attrName.search("-") > -1) {
-                attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search("-") + 1).toUpperCase());
-            }
-            return attrName
-        } else {
-            return attrName;
-        }
-    }
-
-    resolveListeners(name) {
-        switch(name) {
-            case "onanimationstart":
-                return "onAnimationStart";
-            case "onanimationiteration":
-                return "onAnimationIteration";
-            case "onanimationend":
-                return "onAnimationEnd";
-            case "ontransitionend":
-                return "onTransitionEnd";
-            case "ondrag":
-                return "onDrag"
-            case "ondragend":
-                return "onDragEnd";
-            case "ondragenter":
-                return "onDragEnter";
-            case "ondragover":
-                return "onDragOver";
-            case "ondragstart":
-                return "onDragStart";
-            case "ondrop":
-                return "onDrop"; 
-            case "onclick":
-                return "onClick";
-            case "ondblclick":
-                return "onDoubleClick";
-            case "oncontextmenu":
-                return "onContextMenu";
-            case "onmousedown":
-                return "onMouseDown";
-            case "onmouseenter":
-                return "onMouseEnter";
-            case "onmouseleave":
-                return "onMouseLeave";
-            case "onmousemove":
-                return "onMouseMove";
-            case "onmouseover":
-                return "onMouseOver";
-            case "onmouseout":
-                return "onMouseOut";
-            case "onmouseup":
-                return "onMouseUp";
-            case "onwheel":
-                return "onWheel";
-            case "onscroll":
-                return "onScroll";
-            case "onresize":
-                return "onResize";
-            case "onerror":
-                return "onError";
-            case "onload":
-                return "onLoad";
-            case "onunload":
-                return "onUnload";
-            case "onbeforeunload":
-                return "onBeforeUnload";
-            case "onkeyup":
-                return "onKeyUp";
-            case "onkeydown":
-                return "onKeyDown";
-            case "onkeypress":
-                return "onKeyPress";
-            case "oninput":
-                return "onInput";
-            case "onchange":
-                return "onChange";
-            case "onsubmit":
-                return "onSubmit";
-            case "onselect":
-                return "onSelect";
-            case "onreset":
-                return "onReset"
-            case "onfocus":
-                return "onFocus";
-            case "onfocusin":
-                return "onFocusIn";
-            case "onfocusout":
-                return "onFocusOut";
-            case "onblur":
-                return "onBlur";
-            case "oncopy":
-                return "onCopy";
-            case "oncut":
-                return "onCut";
-            case "onpaste":
-                return "onPaste";
-            case "onabort":
-                return "onAbort";
-            case "onwaiting":
-                return "onWaiting";
-            case "onvolumechange":
-                return "onVolumeChange";
-            case "ontimeupdate":
-                return "onTimeUpdate";
-            case "onseeking":
-                return "onSeeking";
-            case "onseekend":
-                return "onSeekEnd";
-            case "onratechange":
-                return "onRateChange";
-            case "onprogress":
-                return "onProgress";
-            case "onloadmetadata":
-                return "onLoadMetadata";
-            case "onloadeddata":
-                return "onLoadedData";
-            case "onloadstart":
-                return "onLoadStart";
-            case "onplaying":
-                return "onPlaying";
-            case "onplay":
-                return "onPlay";
-            case "onpause":
-                return "onPause";
-            case "onended":
-                return "onEnded";
-            case "ondurationchange":
-                return "onDurationChange";
-            case "oncanplay":
-                return "onCanPlay";
-            case "oncanplaythrough":
-                return "onCanPlayThrough";
-            case "onstalled":
-                return "onStalled";
-            case "onsuspend":
-                return "onSuspend";
-            case "onpopstate":
-                return "onPopState";
-            case "onstorage":
-                return "onStorage";
-            case "onhashchange":
-                return "onHashChange";
-            case "onafterprint":
-                return "onAfterPrint";
-            case "onbeforeprint":
-                return "onBeforePrint";
-            case "onpagehide":
-                return "onPageHide";
-            case "onpageshow":
-                return "onPageShow";
-        }
-    }
-
-    /**
-     * Function by default resolves a given element and its' children and returns template representation of the element.
-     * @param {object} elem 
-     * @param {boolean} deep 
-     * @returns Template object representation of the Elem
-     */
-    static toTemplate(elem, deep) {
-        return RMEElemTemplater.getInstance().toTemplate(elem, deep);
-    }
-
-    /**
-     * Function resolves and returns properties of a given Elem object.
-     * @param {object} elem 
-     * @returns The properties object of the given Elem.
-     */
-    static getElementProps(elem) {
-        return RMEElemTemplater.getInstance().resolveProps(elem);
-    }
-
-    static getInstance() {
-        if(!this.instance)
-            this.instance = new RMEElemTemplater();
-        return this.instance;
-    }
-}
 
 
 let Elem = (function() {
@@ -2553,7 +1864,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setVisible(boolean) {
-            this.html.style.visibility = boolean ? "" : "hidden";
+            this.html.style.visibility = boolean ? "visible" : "hidden";
             return this;
         }
 
@@ -3492,6 +2803,695 @@ let Elem = (function() {
 
 
 /**
+ * RMEElemTemplater class is able to create a Template out of an Elem object.
+ */
+class RMEElemTemplater {
+    constructor() {
+        this.instance;
+        this.template = {};
+        this.deep = true;
+    }
+
+    toTemplate(elem, deep) {
+        if(!Util.isEmpty(deep))
+            this.deep = deep;
+        this.resolve(elem, this.template);
+        return this.template;
+    }
+
+    /**
+     * Function is called recursively and resolves an Elem object and its children in recursion
+     * @param {object} elem 
+     * @param {object} parent 
+     */
+    resolve(elem, parent) {
+        let resolved = this.resolveElem(elem, this.resolveProps(elem));
+        for(let p in parent) {
+            if(parent.hasOwnProperty(p)) {
+                if(Util.isArray(parent[p]))
+                    parent[p].push(resolved);
+                else
+                    this.extendMap(parent[p], resolved);
+            }
+        }
+
+        let i = 0;
+        let children = Util.isArray(elem.getChildren()) ? elem.getChildren() : [elem.getChildren()];
+        if(children && this.deep) {
+            while(i < children.length) {
+                this.resolve(children[i], resolved);
+                i++;
+            }
+        }
+        this.template = resolved;
+    }
+
+    extendMap(map, next) {
+        for(let v in next) {
+            if(next.hasOwnProperty(v)) {
+                map[v] = next[v];
+            }
+        }
+    }
+
+    /**
+     * Function will attach given properties into a given Elem and returns the resolved Elem.
+     * @param {object} elem 
+     * @param {object} props 
+     * @returns The resolved elem with attached properties.
+     */
+    resolveElem(elem, props) {
+        let el = {};
+        let children = elem.getChildren();
+        if(Util.isArray(children) && children.length > 1) {
+            let elTag = elem.getTagName().toLowerCase();
+            let elName = this.resolveId(elTag, props);
+            elName = this.resolveClass(elName, props);
+            elName = this.resolveAttrs(elName, props);
+            el[elName] = [];
+        } else {
+            el[elem.getTagName().toLowerCase()] = props
+        }
+        return el;
+    }
+
+    /**
+     * Function will place an ID attribute into an element tag if the ID attribute is found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with the ID or without.
+     */
+    resolveId(tag, props) {
+        if(props.id)
+            return tag+"#"+props.id;
+        else
+            return tag;
+    }
+
+    /**
+     * Function will place a class attribute into an element tag if the class attribute is found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with the classes or without.
+     */
+    resolveClass(tag, props) {
+        if(props.class)
+            return tag+"."+props.class.replace(/ /g, ".");
+        else
+            return tag;
+    }
+
+    /**
+     * Function will resolve all other attributes and place them into an element tag if other attributes are found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with other attributes or without.
+     */
+    resolveAttrs(tag, props) {
+        let tagName = tag;
+        for(let p in props) {
+            if(props.hasOwnProperty(p) && p !== "id" && p !== "class") {
+                tagName += `[${p}=${props[p]}]`
+            }
+        }
+        return tagName;
+    }
+
+    /**
+     * Resolves a given Elem object and returns its properties in an object.
+     * @param {object} elem 
+     * @returns The properties object of the given element.
+     */
+    resolveProps(elem) {
+        let props = {};
+        let attributes = elem.dom().attributes;
+        let a = 0;
+        if(attributes) {
+            while(a < attributes.length) {
+                props[this.resolveAttributeNames(attributes[a].name)] = attributes[a].value;
+                a++;
+            }
+        }
+
+        if(elem.dom().hasChildNodes() && elem.dom().childNodes[0].nodeType === 3) {
+            props["text"] = elem.getText();
+        }
+
+        for(let p in elem.dom()) {
+            if(p.indexOf("on") !== 0 || Util.isEmpty(elem.dom()[p]))
+                continue;
+            else
+                props[this.resolveListeners(p)] = elem.dom()[p];
+        }
+
+        return props;
+    }
+
+    /**
+     * Resolves html data-* attributes by removing '-' and setting the next character to uppercase. If the attribute is not 
+     * data-* attribute then it is directly returned.
+     * @param {string} attrName 
+     * @returns Resolved attribute name.
+     */
+    resolveAttributeNames(attrName) {
+        if(attrName.indexOf("data" === 0 && attrName.length > "data".length)) {
+            while(attrName.search("-") > -1) {
+                attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search("-") + 1).toUpperCase());
+            }
+            return attrName
+        } else {
+            return attrName;
+        }
+    }
+
+    resolveListeners(name) {
+        switch(name) {
+            case "onanimationstart":
+                return "onAnimationStart";
+            case "onanimationiteration":
+                return "onAnimationIteration";
+            case "onanimationend":
+                return "onAnimationEnd";
+            case "ontransitionend":
+                return "onTransitionEnd";
+            case "ondrag":
+                return "onDrag"
+            case "ondragend":
+                return "onDragEnd";
+            case "ondragenter":
+                return "onDragEnter";
+            case "ondragover":
+                return "onDragOver";
+            case "ondragstart":
+                return "onDragStart";
+            case "ondrop":
+                return "onDrop"; 
+            case "onclick":
+                return "onClick";
+            case "ondblclick":
+                return "onDoubleClick";
+            case "oncontextmenu":
+                return "onContextMenu";
+            case "onmousedown":
+                return "onMouseDown";
+            case "onmouseenter":
+                return "onMouseEnter";
+            case "onmouseleave":
+                return "onMouseLeave";
+            case "onmousemove":
+                return "onMouseMove";
+            case "onmouseover":
+                return "onMouseOver";
+            case "onmouseout":
+                return "onMouseOut";
+            case "onmouseup":
+                return "onMouseUp";
+            case "onwheel":
+                return "onWheel";
+            case "onscroll":
+                return "onScroll";
+            case "onresize":
+                return "onResize";
+            case "onerror":
+                return "onError";
+            case "onload":
+                return "onLoad";
+            case "onunload":
+                return "onUnload";
+            case "onbeforeunload":
+                return "onBeforeUnload";
+            case "onkeyup":
+                return "onKeyUp";
+            case "onkeydown":
+                return "onKeyDown";
+            case "onkeypress":
+                return "onKeyPress";
+            case "oninput":
+                return "onInput";
+            case "onchange":
+                return "onChange";
+            case "onsubmit":
+                return "onSubmit";
+            case "onselect":
+                return "onSelect";
+            case "onreset":
+                return "onReset"
+            case "onfocus":
+                return "onFocus";
+            case "onfocusin":
+                return "onFocusIn";
+            case "onfocusout":
+                return "onFocusOut";
+            case "onblur":
+                return "onBlur";
+            case "oncopy":
+                return "onCopy";
+            case "oncut":
+                return "onCut";
+            case "onpaste":
+                return "onPaste";
+            case "onabort":
+                return "onAbort";
+            case "onwaiting":
+                return "onWaiting";
+            case "onvolumechange":
+                return "onVolumeChange";
+            case "ontimeupdate":
+                return "onTimeUpdate";
+            case "onseeking":
+                return "onSeeking";
+            case "onseekend":
+                return "onSeekEnd";
+            case "onratechange":
+                return "onRateChange";
+            case "onprogress":
+                return "onProgress";
+            case "onloadmetadata":
+                return "onLoadMetadata";
+            case "onloadeddata":
+                return "onLoadedData";
+            case "onloadstart":
+                return "onLoadStart";
+            case "onplaying":
+                return "onPlaying";
+            case "onplay":
+                return "onPlay";
+            case "onpause":
+                return "onPause";
+            case "onended":
+                return "onEnded";
+            case "ondurationchange":
+                return "onDurationChange";
+            case "oncanplay":
+                return "onCanPlay";
+            case "oncanplaythrough":
+                return "onCanPlayThrough";
+            case "onstalled":
+                return "onStalled";
+            case "onsuspend":
+                return "onSuspend";
+            case "onpopstate":
+                return "onPopState";
+            case "onstorage":
+                return "onStorage";
+            case "onhashchange":
+                return "onHashChange";
+            case "onafterprint":
+                return "onAfterPrint";
+            case "onbeforeprint":
+                return "onBeforePrint";
+            case "onpagehide":
+                return "onPageHide";
+            case "onpageshow":
+                return "onPageShow";
+        }
+    }
+
+    /**
+     * Function by default resolves a given element and its' children and returns template representation of the element.
+     * @param {object} elem 
+     * @param {boolean} deep 
+     * @returns Template object representation of the Elem
+     */
+    static toTemplate(elem, deep) {
+        return RMEElemTemplater.getInstance().toTemplate(elem, deep);
+    }
+
+    /**
+     * Function resolves and returns properties of a given Elem object.
+     * @param {object} elem 
+     * @returns The properties object of the given Elem.
+     */
+    static getElementProps(elem) {
+        return RMEElemTemplater.getInstance().resolveProps(elem);
+    }
+
+    static getInstance() {
+        if(!this.instance)
+            this.instance = new RMEElemTemplater();
+        return this.instance;
+    }
+}
+
+
+/**
+ * Before using this class you should also be familiar on how to use fetch since usage of this class
+ * will be quite similar to fetch except predefined candy that is added on a class.
+ *
+ * The class is added some predefined candy over the JavaScript Fetch interface.
+ * get|post|put|delete methods will automatically use JSON as a Content-Type
+ * and request methods will be predefined also.
+ *
+ * FOR Fetch
+ * A Config object supports following:
+ *  {
+ *      url: url,
+ *      method: method,
+ *      contentType: contentType,
+ *      init: init
+ *  }
+ *
+ *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
+ *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+ *
+ *  If a total custom request is desired you should use a method do({}) e.g.
+ *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
+ */
+class HttpFetchRequest {
+    constructor() {}
+    /**
+     * Does Fetch GET request. Content-Type JSON is used by default.
+     * @param {stirng} url *Required
+     * @param {*} init 
+     */
+    get(url, init) {
+        if(!init) init = {};
+        init.method = "GET";
+        return this.do({url: url, init: init, contentType: Http.JSON});
+    }
+    /**
+     * Does Fetch POST request. Content-Type JSON is used by default.
+     * @param {string} url *Required
+     * @param {*} body 
+     * @param {*} init 
+     */
+    post(url, body, init) {
+        if(!init) init = {};
+        init.method = "POST";
+        init.body = body;
+        return this.do({url: url, init: init, contentType: Http.JSON});
+    }
+    /**
+     * Does Fetch PUT request. Content-Type JSON is used by default.
+     * @param {string} url *Required
+     * @param {*} body 
+     * @param {*} init 
+     */
+    put(url, body, init) {
+        if(!init) init = {};
+        init.method = "PUT";
+        init.body = body;
+        return this.do({url: url, init: init, contentType: Http.JSON});
+    }
+    /**
+     * Does Fetch DELETE request. Content-Type JSON is used by default.
+     * @param {string} url 
+     * @param {*} init 
+     */
+    delete(url, init) {
+        if(!init) init = {};
+        init.method = "DELETE";
+        return this.do({url: url,  init: init, contentType: Http.JSON});
+    }
+    /**
+     * Does any Fetch request a given config object defines.
+     * 
+     * Config object can contain parameters:
+     * {
+     *      url: url,
+     *      method: method,
+     *      contentType: contentType,
+     *      init: init
+     *  }
+     * @param {object} config 
+     */
+    do(config) {
+        if(!config.init) config.init = {};
+        if(config.contentType) {
+            if(!config.init.headers)
+                config.init.headers = new Headers({});
+            if(!config.init.headers.has("Content-Type"))
+                config.init.headers.set("Content-Type", config.contentType);
+        }
+        if(config.method) {
+            config.init.method = config.method;
+        }
+        return fetch(config.url, config.init);
+    }
+}
+
+
+let Http = (function() {
+    /**
+     * FOR XmlHttpRequest
+     * A config object supports following. More features could be added.
+     *  {
+     *    method: method,
+     *    url: url,
+     *    data: data,
+     *    contentType: contentType,
+     *    onProgress: function(event),
+     *    onTimeout: function(event),
+     *    headers: headersObject{"header": "value"},
+     *    useFetch: true|false **determines that is fetch used or not.
+     *  }
+     * 
+     * If contentType is not defined, application/json is used, if set to null, default is used, otherwise used defined is used.
+     * If contentType is application/json, data is automatically stringified with JSON.stringify()
+     * 
+     * Http class automatically tries to parse reuqest.responseText to JSON using JSON.parse().
+     * If parsing succeeds, parsed JSON will be set on request.responseJSON attribute.
+     */
+    class Http {
+        constructor(config) {
+            config.contentType = config.contentType === undefined ? Http.JSON : config.contentType;
+            if(config.useFetch) {
+                this.self = new HttpFetchRequest();
+            } else if(window.Promise) {
+                this.self = new HttpPromiseAjax(config).instance();
+            } else {
+                this.self = new HttpAjax(config);
+            }
+        }
+
+        instance() {
+            return this.self;
+        }
+
+        /**
+         * Do GET XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+         * @param {string} url *Required
+         * @param {string} requestContentType 
+         */
+        static get(url, requestContentType) {
+            return new Http({method: "GET", url: url, data: undefined, contentType: requestContentType}).instance();
+        }
+
+        /**
+         * Do POST XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+         * @param {string} url *Required
+         * @param {*} data 
+         * @param {string} requestContentType 
+         */
+        static post(url, data, requestContentType) {
+            return new Http({method: "POST", url: url, data: data, contentType: requestContentType}).instance();
+        }
+
+        /**
+         * Do PUT XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+         * @param {string} url *Required
+         * @param {*} data 
+         * @param {string} requestContentType 
+         */
+        static put(url, data, requestContentType) {
+            return new Http({method: "PUT", url: url, data: data, contentType: requestContentType}).instance();
+        }
+
+        /**
+         * Do DELETE XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+         * @param {string} url *Required
+         * @param {*} requestContentType 
+         */
+        static delete(url, requestContentType) {
+            return new Http({method: "DELETE", url: url, data: undefined, contentType: requestContentType}).instance();
+        }
+
+        /**
+         * Does any XMLHttpRequest that is defined by a given config object. Promise will be used if available.
+         * 
+         * Config object can contain parameters:
+         * {
+         *    method: method,
+         *    url: url,
+         *    data: data,
+         *    contentType: contentType,
+         *    onProgress: function(event),
+         *    onTimeout: function(event),
+         *    headers: headersObject{"header": "value"},
+         *    useFetch: true|false **determines that is fetch used or not.
+         *  }
+         * @param {object} config 
+         */
+        static do(config) {
+            return new Http(config).instance();
+        }
+
+        /**
+         * Uses Fetch interface to make a request to server.
+         * 
+         * Before using fetch you should also be familiar on how to use fetch since usage of this function
+         * will be quite similar to fetch except predefined candy that is added.
+         *
+         * The fetch interface adds some predefined candy over the JavaScript Fetch interface.
+         * get|post|put|delete methods will automatically use JSON as a Content-Type
+         * and request methods will be predefined also.
+         *
+         * FOR Fetch
+         * A Config object supports following:
+         *  {
+         *      url: url,
+         *      method: method,
+         *      contentType: contentType,
+         *      init: init
+         *  }
+         *
+         *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
+         *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+         *
+         *  If a total custom request is desired you should use a method do({}) e.g.
+         *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
+         */
+        static fetch() {
+            return new Http({useFetch: true}).instance();
+        }
+    }
+    /**
+     * Content-Type application/json;charset=UTF-8
+     */
+    Http.JSON = "application/json;charset=UTF-8";
+    /**
+     * Content-Type multipart/form-data
+     */
+    Http.FORM_DATA = "multipart/form-data";
+    /**
+     * Content-Type text/plain
+     */
+    Http.TEXT_PLAIN = "text/plain";
+
+    /**
+     * Old Fashion XMLHttpRequest made into the Promise pattern.
+     */
+    class HttpAjax {
+        constructor(config) {
+            this.progressHandler = config.onProgress ? config.onProgress : function(event) {};
+            this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
+            this.xhr = new XMLHttpRequest();
+            this.xhr.open(config.method, config.url);
+            if(config.contentType)
+                this.xhr.setRequestHeader("Content-Type", config.contentType);
+            if(config.headers)
+                setXhrHeaders(this.xhr, config.headers);
+        }
+        then(successHandler, errorHandler) {
+            this.xhr.onload = () => {
+                this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
+                isResponseOK(this.xhr.status) ? successHandler(resolveResponse(this.xhr.response), this.xhr) : errorHandler(this.xhr)
+            };
+            this.xhr.onprogress = (event) => {
+                if(this.progressHandler)
+                    this.progressHandler(event);
+            };
+            if(this.xhr.ontimeout && config.onTimeout) {
+                this.xhr.ontimeout = (event) => {
+                    config.onTimeout(event);
+                }
+            }
+            this.xhr.onerror = () => {
+                this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
+                if(errorHandler)
+                    errorHandler(this.xhr);
+            };
+            this.data ? this.xhr.send(this.data) : this.xhr.send();
+            return this;
+        }
+        catch(errorHandler) {
+            this.xhr.onerror = () => {
+                this.xhr.responseJSON = tryParseJSON(this.xhr.responrenderseText);
+                if(errorHandler)
+                    errorHandler(this.xhr);
+            }
+        }
+    }
+
+    /**
+     * XMLHttpRequest using the Promise.
+     */
+    class HttpPromiseAjax {
+        constructor(config) {
+            this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
+            this.promise = new Promise((resolve, reject) => {
+                var request = new XMLHttpRequest();
+                request.open(config.method, config.url);
+                if(config.contentType)
+                    request.setRequestHeader("Content-Type", config.contentType);
+                if(config.headers)
+                    setXhrHeaders(request, config.headers);
+                request.onload = () => {
+                    request.responseJSON = tryParseJSON(request.responseText);
+                    isResponseOK(request.status) ? resolve(resolveResponse(request.response)) : reject(request);
+                };
+                if(request.ontimeout && config.onTimeout) {
+                    request.ontimeout = (event) => {
+                        config.onTimeout(event);
+                    }
+                }
+                request.onprogress = (event) => {
+                    if(config.onProgress)
+                        config.onProgress(event);
+                }
+                request.onerror = () => {
+                    request.responseJSON = tryParseJSON(request.responseText);
+                    reject(request)
+                };
+                this.data ? request.send(this.data) : request.send();
+            });
+        }
+        instance() {
+            return this.promise;
+        }
+    }
+
+    const resolveResponse = (response) => {
+        let resp = tryParseJSON(response);
+        if(Util.isEmpty(resp))
+            resp = response;
+        return resp;
+    }
+    
+    const setXhrHeaders = (xhr, headers) => {
+        for(let header in headers) {
+            if(headers.hasOwnProperty(header))
+                xhr.setRequestHeader(header, headers[header]);
+        }
+    }
+    
+    const isResponseOK = (status) => {
+        let okResponses = [200, 201, 202, 203, 204, 205, 206, 207, 208, 226];
+        let i = 0;
+        while(i < okResponses.length) {
+            if(okResponses[i] === status)
+                return true;
+            i++;
+        }
+        return false;
+    }
+    
+    const isContentTypeJson = (contentType) => {
+        return contentType === Http.JSON;
+    }
+    
+    const tryParseJSON = (text) => {
+        try {
+            return JSON.parse(text);
+        } catch(e) {}
+    }
+
+    return Http;
+}());
+
+
+
+/**
  * Key class does not have any methods as it only contains key mappings for keyevent. For example:
  * 
  * onKeyDown(function(event) {
@@ -3907,6 +3907,7 @@ let Messages = (function() {
 }());
 
 
+
 let RME = (function() {
     /**
      * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create RESTfull webpages with ease and speed.
@@ -4181,7 +4182,6 @@ let RME = (function() {
         use: RME.use
     }
 }());
-
 
 
 
@@ -4651,6 +4651,7 @@ let Router = (function() {
     }
 }());
 
+
 /**
  * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
  */
@@ -4686,8 +4687,6 @@ class Session {
 }
 
 
-
-
 /**
  * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
  */
@@ -4721,6 +4720,7 @@ class Storage {
         localStorage.clear();
     }
 }
+
 
 
 let Template = (function() {
@@ -5291,7 +5291,7 @@ let Template = (function() {
                 a: ["alt", "async", "autocomplete", "autofocus", "autoplay", "accept", "accept-charset", "accpetCharset", "accesskey", "action"],
                 b: ["blur"],
                 c: ["class", "checked", "content", "contenteditable", "click", "charset", "cols", "colspan", "controls", "coords"],
-                d: ["disabled", "display", "draggable", "dropzone", "datetime", "default", "defer", "dir", "dirname", "download"],
+                d: ["disabled", "draggable", "dropzone", "datetime", "default", "defer", "dir", "dirname", "download"],
                 e: ["editable", "enctype"],
                 f: ["for", "focus", "formaction"],
                 h: ["href", "height", "hidden", "high", "hreflang", "headers", "http-equiv", "httpEquiv"],
