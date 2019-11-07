@@ -205,6 +205,7 @@ let App = (function() {
             this.getState = this.getState.bind(this);
             this.refresh = this.refreshApp.bind(this);
             this.afterRefreshCallQueue = [];
+            this.refreshQueue;
             this.bindReadyListener(root);
         }
     
@@ -232,7 +233,10 @@ let App = (function() {
     
         refreshApp() {
             if (this.ready) {
-                Util.setTimeout(() => {
+                if (this.refreshQueue)
+                    Util.clearTimeout(this.refreshQueue);
+
+                this.refreshQueue = Util.setTimeout(() => {
                     let freshStage = Template.isTemplate(this.rawStage) ? Template.resolve(this.rawStage) : this.rawStage;
     
                     if (!Util.isEmpty(this.router)) {
@@ -257,6 +261,7 @@ let App = (function() {
                         this.oldStage = this.renderer.merge(this.oldStage, freshStage);
                     }
                     this.refreshAppDone();
+                    Util.clearTimeout(this.refreshQueue);
                 });
             }
         }
