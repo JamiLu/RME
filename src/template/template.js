@@ -168,8 +168,8 @@ let Template = (function() {
                     elem.setText(ret);
                 } else if(Util.isArray(ret)) {
                     this.resolveArray(ret, elem, round)
-                } else if (Template.isTemplate(ret)) {
-                    elem.append(Template.resolveTemplate(ret));
+                } else if (Util.isObject(ret)) {
+                    this.resolve(ret, elem, round);
                 }
             }
         }
@@ -453,19 +453,37 @@ let Template = (function() {
          * Method will apply the properties given to the element. Old properties are overridden.
          * @param {object} elem 
          * @param {object} props 
+         * @param {object} oldProps
          */
-        static updateElemProps(elem, props) {
+        static updateElemProps(elem, props, oldProps) {
+            let mashed = Template.mashElemProps(props, oldProps);
             const templater = Template.create();
-            for (let p in props) {
-                if (props.hasOwnProperty(p)) {
-                    if (templater.isEventKeyVal(p, props[p]))
-                        elem[p].call(elem, props[p]); //element event attribute -> elem, event function
+            for (let p in mashed) {
+                if (mashed.hasOwnProperty(p)) {
+                    if (templater.isEventKeyVal(p, mashed[p]))
+                        elem[p].call(elem, mashed[p]); //element event attribute -> elem, event function
                     else if (p === 'class')
-                        elem.updateClasses(props[p]);
+                        elem.updateClasses(mashed[p]);
                     else
-                        templater.resolveAttributes(elem, p, props[p]);
+                        templater.resolveAttributes(elem, p, mashed[p]);
                 }
             }
+        }
+
+        static mashElemProps(newProps, oldProps) {
+            let props = {};
+            for (let p in oldProps) {
+                if (oldProps.hasOwnProperty(p)) {
+                    if (!newProps[p] && oldProps[p]) {
+                        props[p] = p === 'style' ? '' : undefined
+                    }
+                }
+            }
+            props = {
+                ...props,
+                ...newProps
+            }
+            return props;
         }
 
         static create() {
@@ -571,7 +589,7 @@ let Template = (function() {
                 a: ["alt", "async", "autocomplete", "autofocus", "autoplay", "accept", "accept-charset", "accpetCharset", "accesskey", "action"],
                 b: ["blur"],
                 c: ["class", "checked", "content", "contenteditable", "click", "charset", "cols", "colspan", "controls", "coords"],
-                d: ["disabled", "draggable", "dropzone", "datetime", "default", "defer", "dir", "dirname", "download"],
+                d: ["disabled", "display", "draggable", "dropzone", "datetime", "default", "defer", "dir", "dirname", "download"],
                 e: ["editable", "enctype"],
                 f: ["for", "focus", "formaction"],
                 h: ["href", "height", "hidden", "high", "hreflang", "headers", "http-equiv", "httpEquiv"],

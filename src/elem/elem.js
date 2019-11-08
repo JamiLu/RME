@@ -210,7 +210,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setProps(props) {
-            Template.updateElemProps(this, props);
+            Template.updateElemProps(this, props, this.getProps());
             return this;
         }
 
@@ -753,7 +753,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setVisible(boolean) {
-            this.html.style.visibility = boolean ? "visible" : "hidden";
+            this.html.style.visibility = boolean ? "" : "hidden";
             return this;
         }
 
