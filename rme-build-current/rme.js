@@ -453,6 +453,672 @@ let App = (function() {
 
 
 
+class RMEElemRenderer {
+    constructor(root) {
+        this.root = root;
+        this.mergedStage;
+        this.tobeRemoved = [];
+    }
+
+    /**
+     * Function merges a newStage to a oldStage. Merge rules are following.
+     * New stage has what old stage doesn't > add it.
+     * New stage has what old stage has > has it changed ? yes > change|update it : no > do nothing.
+     * New stage doesn't have what old stage has > remove it.
+     * @param {object} oldStage
+     * @param {object} newStage
+     * @returns The merged stage.
+     */
+    merge(oldStage, newStage) {
+        if (Util.isEmpty(this.root.getChildren())) {
+            this.root.append(newStage);
+            this.mergedStage = newStage;
+        } else {
+            this.render(this.root, oldStage, newStage, 0);
+            this.mergedStage = oldStage;
+            this.removeToBeRemoved();
+        }
+        return this.mergedStage;
+    }
+
+    /**
+     * Function is called recusively and goes through a oldStage and a newStage simultaneosly in recursion and comparing them and updating changed content.
+     * @param {object} parent 
+     * @param {object} oldNode 
+     * @param {object} newNode 
+     * @param {number} index 
+     */
+    render(parent, oldNode, newNode, index) {
+        if (!oldNode && newNode) {
+            parent.append(newNode.duplicate());
+        } else if (oldNode && !newNode) {
+            this.tobeRemoved.push({parent: parent, child: this.wrap(parent.dom().children[index])});
+        } else if (this.hasNodeChanged(oldNode, newNode)) {
+            if (oldNode.getTagName() !== newNode.getTagName() || (oldNode.dom().children.length > 0 || newNode.dom().children.length > 0)) {
+                this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
+            } else {
+                oldNode.setProps(newNode.getProps());
+            }
+        } else {
+            let i = 0;
+            let oldLength = oldNode ? oldNode.dom().children.length : 0;
+            let newLength = newNode ? newNode.dom().children.length : 0;
+            
+            while(i < newLength || i < oldLength) {
+                this.render(
+                    this.wrap(parent.dom().children[index]),
+                    oldNode ? this.wrap(oldNode.dom().children[i]) : null,
+                    newNode ? this.wrap(newNode.dom().children[i]) : null,
+                    i);
+                i++;
+            }
+        }
+    }
+
+    /**
+     * Fuction tests if a given node is inputable. The node is inputable in following cases:
+     *  - The node is a textarea
+     *  - The node is type of text, password, search, tel, url
+     *  - The node has an attribute contentEditable === true
+     * @param {*} node 
+     * @returns True if the node is inputable otherwise false.
+     */
+    isInputableNode(node) {
+        let tag = node.getTagName().toLowerCase();
+        return (tag === 'textarea')
+            || (tag === 'input' && ['text', 'password', 'search', 'tel', 'url'].indexOf(node.dom().type) > -1)
+            || (Util.isBoolean(node.dom().contentEditable) && node.dom().contentEditable === true)
+    }
+
+    /**
+     * Function removes all the marked as to be removed elements which did not come in the new stage by starting from the last to the first.
+     */
+    removeToBeRemoved() {
+        if(this.tobeRemoved.length > 0) {
+            let lastIdx = this.tobeRemoved.length - 1;
+            while (lastIdx >= 0) {
+                this.tobeRemoved[lastIdx].parent.remove(this.tobeRemoved[lastIdx].child);
+                lastIdx--;
+            }
+            this.tobeRemoved = [];
+        }
+    }
+
+    /**
+     * Function takes two Elem objects as parameter and compares them if they are equal or have some properties changed.
+     * @param {object} oldNode 
+     * @param {object} newNode 
+     * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
+     */
+    hasNodeChanged(oldNode, newNode) {
+        return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && oldNode.getProps(true) !== newNode.getProps(true);
+    }
+
+    /**
+     * Function takes DOM node as a parameter and wraps it to Elem object.
+     * @param {object} node 
+     * @returns the Wrapped Elem object.
+     */
+    wrap(node) {
+        if (!Util.isEmpty(node))
+            return Elem.wrap(node);
+    }
+
+}
+
+/**
+ * Browser class contains all the rest utility functions which JavaScript has to offer from Window, Navigator, Screen, History, Location objects.
+ */
+class Browser {
+    /**
+     * Scroll once to a given location (xPos, yPos)
+     * @param {number} xPos
+     * @param {number} yPos
+     */
+    static scrollTo(xPos, yPos) {
+        window.scrollTo(xPos, yPos);
+    }
+
+    /**
+     * Scroll multiple times by given pixel amount (xPx, yPx)
+     * @param {number} xPx
+     * @param {number} yPx
+     */
+    static scrollBy(xPx, yPx) {
+        window.scrollBy(xPx, yPx);
+    }
+
+    /**
+     * Opens a new browser window.
+     * 
+     * Name pamareter can have following values: name or target value (name|_blank|_parent|_self|_top)
+     * 
+     * Specs parameter is defined as comma,separated,list,without,whitespace and it can have following values:
+     * channelmode=yes|no|1|0,
+     * direcotries=yes|no|1|0,
+     * fullscreen=yes|no|1|0,
+     * height=pixels,
+     * left=pixels,
+     * location=yes|no|1|0,
+     * menubar=yes|no|1|0,
+     * resizable=yes|no|1|0,
+     * scrollbars=yes|no|1|0,
+     * status=yes|no|1|0,
+     * titlebar=yes|no|1|0,
+     * toolbar|yes|no|1|0,
+     * top=pixels,
+     * width=pixels min 100
+     * 
+     * Replace parameter defines is a new history entry created or is current replaced with the new one.
+     * If true the current entry is replaced with the new one. If false a new history entry is created.
+     * @param {string} url 
+     * @param {string} name 
+     * @param {string} specs 
+     * @param {boolean} replace 
+     * @returns Reference to the opened window or null if opening the window failes.
+     */
+    static open(url, name, specs, replace) {
+        return window.open(url, name, specs, replace);
+    }
+
+    /**
+     * Closes a given opened window. Same as calling openedWindow.close();
+     * @param {*} openedWindow 
+     */
+    static close(openedWindow) {
+        openedWindow.close();
+    }
+
+    /**
+     * Opens a print webpage dialog.
+     */
+    static print() {
+        window.print();
+    }
+
+    /**
+     * Displays an alert dialog with a given message and an OK button.
+     * @param {string} message
+     */
+    static alert(message) {
+        window.alert(message);
+    }
+
+    /**
+     * Displays a confirm dialog with a given message, OK and Cancel button.
+     * @param {string} message
+     * @returns True if OK was pressed otherwise false.
+     */
+    static confirm(message) {
+        return window.confirm(message);
+    }
+
+    /**
+     * Displays a prompt dialog with a given message, a prefilled default text, OK and Cancel button.
+     * @param {string} message
+     * @param {string} defaultText
+     * @returns If OK was pressed and an input field has text then the text is returned. 
+     * If the input does not have text and OK was pressed then empty string is returned.
+     * If Cancel was pressed then null is returned.
+     */
+    static prompt(message, defaultText) {
+        return window.prompt(message, defaultText);
+    }
+
+    /**
+     * Method is used to make a media query to the viewport/screen object. The media query is done according to a given mediaString.
+     * Syntax of the media string would be (min-width: 300px) but using this method enables user to omit parentheses(). 
+     * Which then leads to syntax min-width: 300px.
+     * 
+     * Method returns a MediaQueryList object which has few neat properties. Matches and media in addition it has 
+     * two functions addListener and removeListener which can be used to query media in realtime. Usage could be something following:
+     * 
+     * var matcher = Browser.mediaMatcher("max-height: 300px");
+     * 
+     * matcher.addlistener(function(matcher) {
+     *  if(matcher.matches)
+     *      Tree.getBody().setStyles({backgroundColor: "red"});
+     *  else
+     *      Tree.getBody().setStyles({backgroundColor: "green"});
+     * });
+     * 
+     * matcher.media returns the media query string.
+     * 
+     * matcher.matches returns the boolean indicating does it does the query string match or not. True if it matches, otherwise false.
+     * 
+     * mathcer.addListener(function(matcher)) is used to track changes on the viewport/screen.
+     * 
+     * matcher.removeListener(listenerFunction) is used to remove a created listener.
+     * @param {string} mediaString 
+     * @returns MediaQueryList object.
+     */
+    static mediaMatcher(mediaString) {
+        if(mediaString.indexOf("(") !== 0)
+            mediaString = "("+mediaString;
+        if(mediaString.indexOf(")") !== mediaString.length -1)
+            mediaString = mediaString+")";
+        return window.matchMedia(mediaString);
+    }
+
+    /**
+     * Loads one page back in the browsers history list.
+     */
+    static pageBack() {
+        history.back();
+    }
+
+    /**
+     * Loads one page forward in the browsers history list.
+     */
+    static pageForward() {
+        history.forward();
+    }
+
+    /**
+     * Loads to specified page in the browsers history list. A parameter can either be a number or string.
+     * If the parameter is number then positive and negative values are allowed as positive values will go forward
+     * and negative values will go backward. 
+     * If the parameter is string then it must be partial or full url of the page in the history list.
+     * @param {string|number} numberOfPagesOrUrl
+     */
+    static pageGo(numberOfPagesOrUrl) {
+        history.go(numberOfPagesOrUrl)
+    }
+
+    /**
+     * Create a new history entry with given parameters without reloading the page. State object will be the state
+     * next history entry will be using. Title is ignored value by the history object at the time but it could be 
+     * the same title what the HTML Document page has at the moment of create the new history entry. New url must 
+     * be of the same origin (e.g. www.example.com) but the rest of url could be anything.
+     * @param {object} stateObject 
+     * @param {string} title 
+     * @param {string} newURL 
+     */
+    static pushState(stateObject, title, newURL) {
+        history.pushState(stateObject, title, newURL);
+    }
+
+    /**
+     * Replace a history entry with given parameters without reloading the page. State object will be the state
+     * next history entry will be using. Title is ignored value by the history object at the time but it could be 
+     * the same title what the HTML Document page has at the moment of create the new history entry. New url must 
+     * be of the same origin (e.g. www.example.com) but the rest of url could be anything.
+     * @param {object} stateObject 
+     * @param {string} title 
+     * @param {string} newURL 
+     */
+    static replaceState(stateObject, title, newURL) {
+        history.replaceState(stateObject, title, newURL);
+    }
+
+    /**
+     * Loads a new page.
+     * @param {string} newURL
+     */
+    static newPage(newURL) {
+        location.assign(newURL);
+    }
+
+    /**
+     * Reloads a current page. If a parameter force is true then the page will be loaded from the server 
+     * otherwise from the browsers cache.
+     * @param {boolean} force
+     */
+    static reloadPage(force) {
+        location.reload(force);
+    }
+
+    /**
+     * Replaces a current page with a new one. If the page is replaced then it wont be possible to go back
+     * to the previous page from the history list.
+     * @param {string} newURL
+     */
+    static replacePage(newURL) {
+        location.replace(newURL);
+    }
+
+    /**
+     * @returns Anchor part of the url e.g. #heading2.
+     */
+    static getAnchorHash() {
+        return location.hash;
+    }
+
+    /**
+     * Sets a new anhorpart of the url e.g. #heading3.
+     * @param {string} hash
+     */
+    static setAnchorHash(hash) {
+        location.hash = hash;
+    }
+
+    /**
+     * @returns Hostname and port in host:port format.
+     */
+    static getHostnamePort() {
+        return location.host;
+    }
+
+    /**
+     * Set a hostname and port in format host:port.
+     * @param {string} hostPort
+     */
+    static setHostnamePort(hostPort) {
+        location.host = hostPort;
+    }
+
+    /**
+     * @returns Hostname e.g. www.google.com.
+     */
+    static getHostname() {
+        return location.hostname;
+    }
+
+    /**
+     * Set a hostname
+     * @param {string} hostname
+     */
+    static setHostname(hostname) {
+        location.hostname = hostname;
+    }
+
+    /**
+     * @returns Entire URL of the webpage.
+     */
+    static getURL() {
+        return location.href;
+    }
+
+    /**
+     * Set location of a current page to point to a new location e.g. http://some.url.test or #someAcnhor on the page.
+     * @param {string} newURL
+     */
+    static setURL(newURL) {
+        location.href = newURL;
+    }
+
+    /**
+     * @returns protocol, hostname and port e.g. https://www.example.com:443
+     */
+    static getOrigin() {
+        return location.origin;
+    }
+
+    /**
+     * @returns Part of the URL after the slash(/) e.g. /photos/
+     */
+    static getPathname() {
+        return location.pathname;
+    }
+
+    /**
+     * Sets a new pathname for this location.
+     * @param {string} pathname 
+     */
+    static setPathname(pathname) {
+        location.pathname = pathname;
+    }
+
+    /**
+     * @returns Port number of the connection between server and client.
+     */
+    static getPort() {
+        return location.port;
+    }
+
+    /**
+     * Sets a new port number for the connection between server and client.
+     * @param {number} portNumber 
+     */
+    static setPort(portNumber) {
+        location.port = portNumber;
+    }
+
+    /**
+     * @returns Protocol part of the URL e.g. http: or https:.
+     */
+    static getProtocol() {
+        return location.protocol;
+    }
+
+    /**
+     * Set a new protocol for this location to use.
+     * @param {string} protocol 
+     */
+    static setProtocol(protocol) {
+        location.protocol = protocol;
+    }
+
+    /**
+     * @returns Part of the URL after the question(?) mark. e.g. ?attr=value&abc=efg.
+     */
+    static getSearchString() {
+        return location.search;
+    }
+
+    /**
+     * Sets a new searchString into the URL
+     * @param {string} searchString 
+     */
+    static setSearchString(searchString) {
+        location.search = searchString;
+    }
+
+    /**
+     * @returns Codename of the browser.
+     */
+    static getCodename() {
+        return navigator.appCodeName;
+    }
+
+    /**
+     * @returns Name of the browser.
+     */
+    static getName() {
+        return navigator.appName;
+    }
+
+    /**
+     * @returns Version of the browser.
+     */
+    static getVersion() {
+        return navigator.appVersion;
+    }
+
+    /**
+     * @returns True if cookies are enabled otherwise false.
+     */
+    static isCookiesEnabled() {
+        return navigator.cookieEnabled;
+    }
+
+    /**
+     * @returns GeoLocation object.
+     */
+    static getGeoLocation() {
+        return navigator.geolocation;
+    }
+
+    /**
+     * @returns Language of the browser.
+     */
+    static getLanguage() {
+        return navigator.language;
+    }
+
+    /**
+     * @returns A platform name of which the browser is compiled on.
+     */
+    static getPlatform() {
+        return navigator.platform;
+    }
+
+    /**
+     * @returns A name of an engine of the browser.
+     */
+    static getProduct() {
+        return navigator.product;
+    }
+
+    /**
+     * @returns A header string sent to a server by the browser.
+     */
+    static getUserAgentHeader() {
+        return navigator.userAgent;
+    }
+
+    /**
+     * @returns Color depth of the current screen.
+     */
+    static getColorDepth() {
+        return screen.colorDepth;
+    }
+
+    /**
+     * @returns Total height of the current screen.
+     */
+    static getFullScreenHeight() {
+        return screen.height;
+    }
+
+    /**
+     * @returns Total width of the current screen.
+     */
+    static getFullScreenWidth() {
+        return screen.width;
+    }
+
+    /**
+     * @returns Height of the current screen excluding OS. taskbar.
+     */
+    static getAvailableScreenHeight() {
+        return screen.availHeight;
+    }
+
+    /**
+     * @returns Width of the current screen exluding OS. taskbar.
+     */
+    static getAvailableScreenWidth() {
+        return screen.availWidth;
+    }
+}
+
+
+
+let Cookie = (function() {
+    /**
+     * Cookie interface offers an easy way to get, set or remove cookies in application logic.
+     * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
+     * 
+     * {
+     *    name: "name",
+     *    value: "value",
+     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+     *    cookiePath: "cookiePath absolute dir",
+     *    cookieDomain: "cookieDomain e.g example.com",
+     *    setSecureBoolean: true|false
+     * }
+     * 
+     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+     */
+    class Cookie {
+        /**
+         * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
+         * 
+         * @param {String} name 
+         * @returns cookie object
+         */
+        static get(name) {
+            if(navigator.cookieEnabled) {
+                var retCookie = null;
+                var cookies = document.cookie.split(";");
+                var i = 0;
+                while(i < cookies.length) {
+                    var cookie = cookies[i];
+                    var eq = cookie.search("=");
+                    var cn = cookie.substr(0, eq).trim();
+                    var cv = cookie.substr(eq + 1, cookie.length).trim();
+                    if(cn === name) {
+                        retCookie = new CookieInstance(cn, cv);
+                        break;
+                    }
+                    i++;
+                }
+                return retCookie;
+            }
+        }
+        /**
+         * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
+         * 
+         * @param {string} name
+         * @param {string} value
+         * @param {string} expiresDate
+         * @param {string} cookiePath
+         * @param {string} cookieDomain
+         * @param {boolean} setSecureBoolean
+         */
+        static set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+            if(navigator.cookieEnabled) {
+                document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
+            }
+        }
+        /**
+         * Remove a cookie by name. Method will set the cookie expired and then remove it.
+         * @param {string} name
+         */
+        static remove(name) {
+            var co = Cookie.get(name);
+            if(!Util.isEmpty(co)) {
+                co.setExpired();
+                document.cookie = co.toString();
+            }
+        }
+    }
+
+    /**
+     * Cookie object may hold following values:
+     *
+     * {
+     *    name: "name",
+     *    value: "value",
+     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+     *    cookiePath: "cookiePath absolute dir",
+     *    cookieDomain: "cookieDomain e.g example.com",
+     *    setSecureBoolean: true|false
+     * }
+     * 
+     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+     */
+    class CookieInstance {
+        constructor(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+            this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
+            this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
+            this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
+            this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
+            this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
+            this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
+        }
+
+        setExpired() {
+            this.cookieExpires = new Date(1970,0,1).toString();
+        }
+
+        toString() {
+            return this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity;
+        }
+        static create(name, value, expires, cpath, cdomain, setSecure) {
+                return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
+        }
+    }
+
+    return Cookie;
+}());
+
+
+
+
 let Elem = (function() {
     /**
      * Elem class is a wrapper class for HTMLDocument element JavaScript object. This object constructor 
@@ -1045,8 +1711,10 @@ let Elem = (function() {
             if ((Util.isBoolean(boolean) && boolean === true)
                 || (Util.isString(boolean) && boolean === 'disabled')) {
                 this.setAttribute('disabled', 'disabled');
+                this.html.disabled = true;
             } else {
                 this.removeAttribute('disabled');
+                this.html.disabled = false;
             }
             return this;
         }
@@ -1070,8 +1738,10 @@ let Elem = (function() {
             if ((Util.isBoolean(boolean) && boolean === true)
             || (Util.isString(boolean) && boolean === 'checked')) {
                 this.setAttribute('checked', 'checked');
+                this.html.checked = true;
             } else {
                 this.removeAttribute('checked');
+                this.html.checked = false;
             }
             return this;
         }
@@ -2141,7 +2811,6 @@ let Elem = (function() {
 }());
 
 
-
 /**
  * RMEElemTemplater class is able to create a Template out of an Elem object.
  */
@@ -2473,668 +3142,360 @@ class RMEElemTemplater {
     }
 }
 
+
 /**
- * Browser class contains all the rest utility functions which JavaScript has to offer from Window, Navigator, Screen, History, Location objects.
+ * Before using this class you should also be familiar on how to use fetch since usage of this class
+ * will be quite similar to fetch except predefined candy that is added on a class.
+ *
+ * The class is added some predefined candy over the JavaScript Fetch interface.
+ * get|post|put|delete methods will automatically use JSON as a Content-Type
+ * and request methods will be predefined also.
+ *
+ * FOR Fetch
+ * A Config object supports following:
+ *  {
+ *      url: url,
+ *      method: method,
+ *      contentType: contentType,
+ *      init: init
+ *  }
+ *
+ *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
+ *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+ *
+ *  If a total custom request is desired you should use a method do({}) e.g.
+ *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
  */
-class Browser {
+class HttpFetchRequest {
+    constructor() {}
     /**
-     * Scroll once to a given location (xPos, yPos)
-     * @param {number} xPos
-     * @param {number} yPos
+     * Does Fetch GET request. Content-Type JSON is used by default.
+     * @param {stirng} url *Required
+     * @param {*} init 
      */
-    static scrollTo(xPos, yPos) {
-        window.scrollTo(xPos, yPos);
+    get(url, init) {
+        if(!init) init = {};
+        init.method = "GET";
+        return this.do({url: url, init: init, contentType: Http.JSON});
     }
-
     /**
-     * Scroll multiple times by given pixel amount (xPx, yPx)
-     * @param {number} xPx
-     * @param {number} yPx
+     * Does Fetch POST request. Content-Type JSON is used by default.
+     * @param {string} url *Required
+     * @param {*} body 
+     * @param {*} init 
      */
-    static scrollBy(xPx, yPx) {
-        window.scrollBy(xPx, yPx);
+    post(url, body, init) {
+        if(!init) init = {};
+        init.method = "POST";
+        init.body = body;
+        return this.do({url: url, init: init, contentType: Http.JSON});
     }
-
     /**
-     * Opens a new browser window.
-     * 
-     * Name pamareter can have following values: name or target value (name|_blank|_parent|_self|_top)
-     * 
-     * Specs parameter is defined as comma,separated,list,without,whitespace and it can have following values:
-     * channelmode=yes|no|1|0,
-     * direcotries=yes|no|1|0,
-     * fullscreen=yes|no|1|0,
-     * height=pixels,
-     * left=pixels,
-     * location=yes|no|1|0,
-     * menubar=yes|no|1|0,
-     * resizable=yes|no|1|0,
-     * scrollbars=yes|no|1|0,
-     * status=yes|no|1|0,
-     * titlebar=yes|no|1|0,
-     * toolbar|yes|no|1|0,
-     * top=pixels,
-     * width=pixels min 100
-     * 
-     * Replace parameter defines is a new history entry created or is current replaced with the new one.
-     * If true the current entry is replaced with the new one. If false a new history entry is created.
+     * Does Fetch PUT request. Content-Type JSON is used by default.
+     * @param {string} url *Required
+     * @param {*} body 
+     * @param {*} init 
+     */
+    put(url, body, init) {
+        if(!init) init = {};
+        init.method = "PUT";
+        init.body = body;
+        return this.do({url: url, init: init, contentType: Http.JSON});
+    }
+    /**
+     * Does Fetch DELETE request. Content-Type JSON is used by default.
      * @param {string} url 
-     * @param {string} name 
-     * @param {string} specs 
-     * @param {boolean} replace 
-     * @returns Reference to the opened window or null if opening the window failes.
+     * @param {*} init 
      */
-    static open(url, name, specs, replace) {
-        return window.open(url, name, specs, replace);
+    delete(url, init) {
+        if(!init) init = {};
+        init.method = "DELETE";
+        return this.do({url: url,  init: init, contentType: Http.JSON});
     }
-
     /**
-     * Closes a given opened window. Same as calling openedWindow.close();
-     * @param {*} openedWindow 
-     */
-    static close(openedWindow) {
-        openedWindow.close();
-    }
-
-    /**
-     * Opens a print webpage dialog.
-     */
-    static print() {
-        window.print();
-    }
-
-    /**
-     * Displays an alert dialog with a given message and an OK button.
-     * @param {string} message
-     */
-    static alert(message) {
-        window.alert(message);
-    }
-
-    /**
-     * Displays a confirm dialog with a given message, OK and Cancel button.
-     * @param {string} message
-     * @returns True if OK was pressed otherwise false.
-     */
-    static confirm(message) {
-        return window.confirm(message);
-    }
-
-    /**
-     * Displays a prompt dialog with a given message, a prefilled default text, OK and Cancel button.
-     * @param {string} message
-     * @param {string} defaultText
-     * @returns If OK was pressed and an input field has text then the text is returned. 
-     * If the input does not have text and OK was pressed then empty string is returned.
-     * If Cancel was pressed then null is returned.
-     */
-    static prompt(message, defaultText) {
-        return window.prompt(message, defaultText);
-    }
-
-    /**
-     * Method is used to make a media query to the viewport/screen object. The media query is done according to a given mediaString.
-     * Syntax of the media string would be (min-width: 300px) but using this method enables user to omit parentheses(). 
-     * Which then leads to syntax min-width: 300px.
+     * Does any Fetch request a given config object defines.
      * 
-     * Method returns a MediaQueryList object which has few neat properties. Matches and media in addition it has 
-     * two functions addListener and removeListener which can be used to query media in realtime. Usage could be something following:
-     * 
-     * var matcher = Browser.mediaMatcher("max-height: 300px");
-     * 
-     * matcher.addlistener(function(matcher) {
-     *  if(matcher.matches)
-     *      Tree.getBody().setStyles({backgroundColor: "red"});
-     *  else
-     *      Tree.getBody().setStyles({backgroundColor: "green"});
-     * });
-     * 
-     * matcher.media returns the media query string.
-     * 
-     * matcher.matches returns the boolean indicating does it does the query string match or not. True if it matches, otherwise false.
-     * 
-     * mathcer.addListener(function(matcher)) is used to track changes on the viewport/screen.
-     * 
-     * matcher.removeListener(listenerFunction) is used to remove a created listener.
-     * @param {string} mediaString 
-     * @returns MediaQueryList object.
-     */
-    static mediaMatcher(mediaString) {
-        if(mediaString.indexOf("(") !== 0)
-            mediaString = "("+mediaString;
-        if(mediaString.indexOf(")") !== mediaString.length -1)
-            mediaString = mediaString+")";
-        return window.matchMedia(mediaString);
-    }
-
-    /**
-     * Loads one page back in the browsers history list.
-     */
-    static pageBack() {
-        history.back();
-    }
-
-    /**
-     * Loads one page forward in the browsers history list.
-     */
-    static pageForward() {
-        history.forward();
-    }
-
-    /**
-     * Loads to specified page in the browsers history list. A parameter can either be a number or string.
-     * If the parameter is number then positive and negative values are allowed as positive values will go forward
-     * and negative values will go backward. 
-     * If the parameter is string then it must be partial or full url of the page in the history list.
-     * @param {string|number} numberOfPagesOrUrl
-     */
-    static pageGo(numberOfPagesOrUrl) {
-        history.go(numberOfPagesOrUrl)
-    }
-
-    /**
-     * Create a new history entry with given parameters without reloading the page. State object will be the state
-     * next history entry will be using. Title is ignored value by the history object at the time but it could be 
-     * the same title what the HTML Document page has at the moment of create the new history entry. New url must 
-     * be of the same origin (e.g. www.example.com) but the rest of url could be anything.
-     * @param {object} stateObject 
-     * @param {string} title 
-     * @param {string} newURL 
-     */
-    static pushState(stateObject, title, newURL) {
-        history.pushState(stateObject, title, newURL);
-    }
-
-    /**
-     * Replace a history entry with given parameters without reloading the page. State object will be the state
-     * next history entry will be using. Title is ignored value by the history object at the time but it could be 
-     * the same title what the HTML Document page has at the moment of create the new history entry. New url must 
-     * be of the same origin (e.g. www.example.com) but the rest of url could be anything.
-     * @param {object} stateObject 
-     * @param {string} title 
-     * @param {string} newURL 
-     */
-    static replaceState(stateObject, title, newURL) {
-        history.replaceState(stateObject, title, newURL);
-    }
-
-    /**
-     * Loads a new page.
-     * @param {string} newURL
-     */
-    static newPage(newURL) {
-        location.assign(newURL);
-    }
-
-    /**
-     * Reloads a current page. If a parameter force is true then the page will be loaded from the server 
-     * otherwise from the browsers cache.
-     * @param {boolean} force
-     */
-    static reloadPage(force) {
-        location.reload(force);
-    }
-
-    /**
-     * Replaces a current page with a new one. If the page is replaced then it wont be possible to go back
-     * to the previous page from the history list.
-     * @param {string} newURL
-     */
-    static replacePage(newURL) {
-        location.replace(newURL);
-    }
-
-    /**
-     * @returns Anchor part of the url e.g. #heading2.
-     */
-    static getAnchorHash() {
-        return location.hash;
-    }
-
-    /**
-     * Sets a new anhorpart of the url e.g. #heading3.
-     * @param {string} hash
-     */
-    static setAnchorHash(hash) {
-        location.hash = hash;
-    }
-
-    /**
-     * @returns Hostname and port in host:port format.
-     */
-    static getHostnamePort() {
-        return location.host;
-    }
-
-    /**
-     * Set a hostname and port in format host:port.
-     * @param {string} hostPort
-     */
-    static setHostnamePort(hostPort) {
-        location.host = hostPort;
-    }
-
-    /**
-     * @returns Hostname e.g. www.google.com.
-     */
-    static getHostname() {
-        return location.hostname;
-    }
-
-    /**
-     * Set a hostname
-     * @param {string} hostname
-     */
-    static setHostname(hostname) {
-        location.hostname = hostname;
-    }
-
-    /**
-     * @returns Entire URL of the webpage.
-     */
-    static getURL() {
-        return location.href;
-    }
-
-    /**
-     * Set location of a current page to point to a new location e.g. http://some.url.test or #someAcnhor on the page.
-     * @param {string} newURL
-     */
-    static setURL(newURL) {
-        location.href = newURL;
-    }
-
-    /**
-     * @returns protocol, hostname and port e.g. https://www.example.com:443
-     */
-    static getOrigin() {
-        return location.origin;
-    }
-
-    /**
-     * @returns Part of the URL after the slash(/) e.g. /photos/
-     */
-    static getPathname() {
-        return location.pathname;
-    }
-
-    /**
-     * Sets a new pathname for this location.
-     * @param {string} pathname 
-     */
-    static setPathname(pathname) {
-        location.pathname = pathname;
-    }
-
-    /**
-     * @returns Port number of the connection between server and client.
-     */
-    static getPort() {
-        return location.port;
-    }
-
-    /**
-     * Sets a new port number for the connection between server and client.
-     * @param {number} portNumber 
-     */
-    static setPort(portNumber) {
-        location.port = portNumber;
-    }
-
-    /**
-     * @returns Protocol part of the URL e.g. http: or https:.
-     */
-    static getProtocol() {
-        return location.protocol;
-    }
-
-    /**
-     * Set a new protocol for this location to use.
-     * @param {string} protocol 
-     */
-    static setProtocol(protocol) {
-        location.protocol = protocol;
-    }
-
-    /**
-     * @returns Part of the URL after the question(?) mark. e.g. ?attr=value&abc=efg.
-     */
-    static getSearchString() {
-        return location.search;
-    }
-
-    /**
-     * Sets a new searchString into the URL
-     * @param {string} searchString 
-     */
-    static setSearchString(searchString) {
-        location.search = searchString;
-    }
-
-    /**
-     * @returns Codename of the browser.
-     */
-    static getCodename() {
-        return navigator.appCodeName;
-    }
-
-    /**
-     * @returns Name of the browser.
-     */
-    static getName() {
-        return navigator.appName;
-    }
-
-    /**
-     * @returns Version of the browser.
-     */
-    static getVersion() {
-        return navigator.appVersion;
-    }
-
-    /**
-     * @returns True if cookies are enabled otherwise false.
-     */
-    static isCookiesEnabled() {
-        return navigator.cookieEnabled;
-    }
-
-    /**
-     * @returns GeoLocation object.
-     */
-    static getGeoLocation() {
-        return navigator.geolocation;
-    }
-
-    /**
-     * @returns Language of the browser.
-     */
-    static getLanguage() {
-        return navigator.language;
-    }
-
-    /**
-     * @returns A platform name of which the browser is compiled on.
-     */
-    static getPlatform() {
-        return navigator.platform;
-    }
-
-    /**
-     * @returns A name of an engine of the browser.
-     */
-    static getProduct() {
-        return navigator.product;
-    }
-
-    /**
-     * @returns A header string sent to a server by the browser.
-     */
-    static getUserAgentHeader() {
-        return navigator.userAgent;
-    }
-
-    /**
-     * @returns Color depth of the current screen.
-     */
-    static getColorDepth() {
-        return screen.colorDepth;
-    }
-
-    /**
-     * @returns Total height of the current screen.
-     */
-    static getFullScreenHeight() {
-        return screen.height;
-    }
-
-    /**
-     * @returns Total width of the current screen.
-     */
-    static getFullScreenWidth() {
-        return screen.width;
-    }
-
-    /**
-     * @returns Height of the current screen excluding OS. taskbar.
-     */
-    static getAvailableScreenHeight() {
-        return screen.availHeight;
-    }
-
-    /**
-     * @returns Width of the current screen exluding OS. taskbar.
-     */
-    static getAvailableScreenWidth() {
-        return screen.availWidth;
-    }
-}
-
-
-class RMEElemRenderer {
-    constructor(root) {
-        this.root = root;
-        this.mergedStage;
-        this.tobeRemoved = [];
-    }
-
-    /**
-     * Function merges a newStage to a oldStage. Merge rules are following.
-     * New stage has what old stage doesn't > add it.
-     * New stage has what old stage has > has it changed ? yes > change|update it : no > do nothing.
-     * New stage doesn't have what old stage has > remove it.
-     * @param {object} oldStage
-     * @param {object} newStage
-     * @returns The merged stage.
-     */
-    merge(oldStage, newStage) {
-        if (Util.isEmpty(this.root.getChildren())) {
-            this.root.append(newStage);
-            this.mergedStage = newStage;
-        } else {
-            this.render(this.root, oldStage, newStage, 0);
-            this.mergedStage = oldStage;
-            this.removeToBeRemoved();
-        }
-        return this.mergedStage;
-    }
-
-    /**
-     * Function is called recusively and goes through a oldStage and a newStage simultaneosly in recursion and comparing them and updating changed content.
-     * @param {object} parent 
-     * @param {object} oldNode 
-     * @param {object} newNode 
-     * @param {number} index 
-     */
-    render(parent, oldNode, newNode, index) {
-        if (!oldNode && newNode) {
-            parent.append(newNode.duplicate());
-        } else if (oldNode && !newNode) {
-            this.tobeRemoved.push({parent: parent, child: this.wrap(parent.dom().children[index])});
-        } else if (this.hasNodeChanged(oldNode, newNode)) {
-            if (oldNode.getTagName() !== newNode.getTagName() || (oldNode.dom().children.length > 0 || newNode.dom().children.length > 0)) {
-                this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
-            } else {
-                oldNode.setProps(newNode.getProps());
-            }
-        } else {
-            let i = 0;
-            let oldLength = oldNode ? oldNode.dom().children.length : 0;
-            let newLength = newNode ? newNode.dom().children.length : 0;
-            
-            while(i < newLength || i < oldLength) {
-                this.render(
-                    this.wrap(parent.dom().children[index]),
-                    oldNode ? this.wrap(oldNode.dom().children[i]) : null,
-                    newNode ? this.wrap(newNode.dom().children[i]) : null,
-                    i);
-                i++;
-            }
-        }
-    }
-
-    /**
-     * Fuction tests if a given node is inputable. The node is inputable in following cases:
-     *  - The node is a textarea
-     *  - The node is type of text, password, search, tel, url
-     *  - The node has an attribute contentEditable === true
-     * @param {*} node 
-     * @returns True if the node is inputable otherwise false.
-     */
-    isInputableNode(node) {
-        let tag = node.getTagName().toLowerCase();
-        return (tag === 'textarea')
-            || (tag === 'input' && ['text', 'password', 'search', 'tel', 'url'].indexOf(node.dom().type) > -1)
-            || (Util.isBoolean(node.dom().contentEditable) && node.dom().contentEditable === true)
-    }
-
-    /**
-     * Function removes all the marked as to be removed elements which did not come in the new stage by starting from the last to the first.
-     */
-    removeToBeRemoved() {
-        if(this.tobeRemoved.length > 0) {
-            let lastIdx = this.tobeRemoved.length - 1;
-            while (lastIdx >= 0) {
-                this.tobeRemoved[lastIdx].parent.remove(this.tobeRemoved[lastIdx].child);
-                lastIdx--;
-            }
-            this.tobeRemoved = [];
-        }
-    }
-
-    /**
-     * Function takes two Elem objects as parameter and compares them if they are equal or have some properties changed.
-     * @param {object} oldNode 
-     * @param {object} newNode 
-     * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
-     */
-    hasNodeChanged(oldNode, newNode) {
-        return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && oldNode.getProps(true) !== newNode.getProps(true);
-    }
-
-    /**
-     * Function takes DOM node as a parameter and wraps it to Elem object.
-     * @param {object} node 
-     * @returns the Wrapped Elem object.
-     */
-    wrap(node) {
-        if (!Util.isEmpty(node))
-            return Elem.wrap(node);
-    }
-
-}
-
-
-
-let Cookie = (function() {
-    /**
-     * Cookie interface offers an easy way to get, set or remove cookies in application logic.
-     * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
-     * 
+     * Config object can contain parameters:
      * {
-     *    name: "name",
-     *    value: "value",
-     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-     *    cookiePath: "cookiePath absolute dir",
-     *    cookieDomain: "cookieDomain e.g example.com",
-     *    setSecureBoolean: true|false
-     * }
-     * 
-     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+     *      url: url,
+     *      method: method,
+     *      contentType: contentType,
+     *      init: init
+     *  }
+     * @param {object} config 
      */
-    class Cookie {
+    do(config) {
+        if(!config.init) config.init = {};
+        if(config.contentType) {
+            if(!config.init.headers)
+                config.init.headers = new Headers({});
+            if(!config.init.headers.has("Content-Type"))
+                config.init.headers.set("Content-Type", config.contentType);
+        }
+        if(config.method) {
+            config.init.method = config.method;
+        }
+        return fetch(config.url, config.init);
+    }
+}
+
+
+let Http = (function() {
+    /**
+     * FOR XmlHttpRequest
+     * A config object supports following. More features could be added.
+     *  {
+     *    method: method,
+     *    url: url,
+     *    data: data,
+     *    contentType: contentType,
+     *    onProgress: function(event),
+     *    onTimeout: function(event),
+     *    headers: headersObject{"header": "value"},
+     *    useFetch: true|false **determines that is fetch used or not.
+     *  }
+     * 
+     * If contentType is not defined, application/json is used, if set to null, default is used, otherwise used defined is used.
+     * If contentType is application/json, data is automatically stringified with JSON.stringify()
+     * 
+     * Http class automatically tries to parse reuqest.responseText to JSON using JSON.parse().
+     * If parsing succeeds, parsed JSON will be set on request.responseJSON attribute.
+     */
+    class Http {
+        constructor(config) {
+            config.contentType = config.contentType === undefined ? Http.JSON : config.contentType;
+            if(config.useFetch) {
+                this.self = new HttpFetchRequest();
+            } else if(window.Promise) {
+                this.self = new HttpPromiseAjax(config).instance();
+            } else {
+                this.self = new HttpAjax(config);
+            }
+        }
+
+        instance() {
+            return this.self;
+        }
+
         /**
-         * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
-         * 
-         * @param {String} name 
-         * @returns cookie object
+         * Do GET XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+         * @param {string} url *Required
+         * @param {string} requestContentType 
          */
-        static get(name) {
-            if(navigator.cookieEnabled) {
-                var retCookie = null;
-                var cookies = document.cookie.split(";");
-                var i = 0;
-                while(i < cookies.length) {
-                    var cookie = cookies[i];
-                    var eq = cookie.search("=");
-                    var cn = cookie.substr(0, eq).trim();
-                    var cv = cookie.substr(eq + 1, cookie.length).trim();
-                    if(cn === name) {
-                        retCookie = new CookieInstance(cn, cv);
-                        break;
-                    }
-                    i++;
+        static get(url, requestContentType) {
+            return new Http({method: "GET", url: url, data: undefined, contentType: requestContentType}).instance();
+        }
+
+        /**
+         * Do POST XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+         * @param {string} url *Required
+         * @param {*} data 
+         * @param {string} requestContentType 
+         */
+        static post(url, data, requestContentType) {
+            return new Http({method: "POST", url: url, data: data, contentType: requestContentType}).instance();
+        }
+
+        /**
+         * Do PUT XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+         * @param {string} url *Required
+         * @param {*} data 
+         * @param {string} requestContentType 
+         */
+        static put(url, data, requestContentType) {
+            return new Http({method: "PUT", url: url, data: data, contentType: requestContentType}).instance();
+        }
+
+        /**
+         * Do DELETE XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+         * @param {string} url *Required
+         * @param {*} requestContentType 
+         */
+        static delete(url, requestContentType) {
+            return new Http({method: "DELETE", url: url, data: undefined, contentType: requestContentType}).instance();
+        }
+
+        /**
+         * Does any XMLHttpRequest that is defined by a given config object. Promise will be used if available.
+         * 
+         * Config object can contain parameters:
+         * {
+         *    method: method,
+         *    url: url,
+         *    data: data,
+         *    contentType: contentType,
+         *    onProgress: function(event),
+         *    onTimeout: function(event),
+         *    headers: headersObject{"header": "value"},
+         *    useFetch: true|false **determines that is fetch used or not.
+         *  }
+         * @param {object} config 
+         */
+        static do(config) {
+            return new Http(config).instance();
+        }
+
+        /**
+         * Uses Fetch interface to make a request to server.
+         * 
+         * Before using fetch you should also be familiar on how to use fetch since usage of this function
+         * will be quite similar to fetch except predefined candy that is added.
+         *
+         * The fetch interface adds some predefined candy over the JavaScript Fetch interface.
+         * get|post|put|delete methods will automatically use JSON as a Content-Type
+         * and request methods will be predefined also.
+         *
+         * FOR Fetch
+         * A Config object supports following:
+         *  {
+         *      url: url,
+         *      method: method,
+         *      contentType: contentType,
+         *      init: init
+         *  }
+         *
+         *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
+         *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+         *
+         *  If a total custom request is desired you should use a method do({}) e.g.
+         *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
+         */
+        static fetch() {
+            return new Http({useFetch: true}).instance();
+        }
+    }
+    /**
+     * Content-Type application/json;charset=UTF-8
+     */
+    Http.JSON = "application/json;charset=UTF-8";
+    /**
+     * Content-Type multipart/form-data
+     */
+    Http.FORM_DATA = "multipart/form-data";
+    /**
+     * Content-Type text/plain
+     */
+    Http.TEXT_PLAIN = "text/plain";
+
+    /**
+     * Old Fashion XMLHttpRequest made into the Promise pattern.
+     */
+    class HttpAjax {
+        constructor(config) {
+            this.progressHandler = config.onProgress ? config.onProgress : function(event) {};
+            this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
+            this.xhr = new XMLHttpRequest();
+            this.xhr.open(config.method, config.url);
+            if(config.contentType)
+                this.xhr.setRequestHeader("Content-Type", config.contentType);
+            if(config.headers)
+                setXhrHeaders(this.xhr, config.headers);
+        }
+        then(successHandler, errorHandler) {
+            this.xhr.onload = () => {
+                this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
+                isResponseOK(this.xhr.status) ? successHandler(resolveResponse(this.xhr.response), this.xhr) : errorHandler(this.xhr)
+            };
+            this.xhr.onprogress = (event) => {
+                if(this.progressHandler)
+                    this.progressHandler(event);
+            };
+            if(this.xhr.ontimeout && config.onTimeout) {
+                this.xhr.ontimeout = (event) => {
+                    config.onTimeout(event);
                 }
-                return retCookie;
             }
+            this.xhr.onerror = () => {
+                this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
+                if(errorHandler)
+                    errorHandler(this.xhr);
+            };
+            this.data ? this.xhr.send(this.data) : this.xhr.send();
+            return this;
         }
-        /**
-         * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
-         * 
-         * @param {string} name
-         * @param {string} value
-         * @param {string} expiresDate
-         * @param {string} cookiePath
-         * @param {string} cookieDomain
-         * @param {boolean} setSecureBoolean
-         */
-        static set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-            if(navigator.cookieEnabled) {
-                document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
-            }
-        }
-        /**
-         * Remove a cookie by name. Method will set the cookie expired and then remove it.
-         * @param {string} name
-         */
-        static remove(name) {
-            var co = Cookie.get(name);
-            if(!Util.isEmpty(co)) {
-                co.setExpired();
-                document.cookie = co.toString();
+        catch(errorHandler) {
+            this.xhr.onerror = () => {
+                this.xhr.responseJSON = tryParseJSON(this.xhr.responrenderseText);
+                if(errorHandler)
+                    errorHandler(this.xhr);
             }
         }
     }
 
     /**
-     * Cookie object may hold following values:
-     *
-     * {
-     *    name: "name",
-     *    value: "value",
-     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-     *    cookiePath: "cookiePath absolute dir",
-     *    cookieDomain: "cookieDomain e.g example.com",
-     *    setSecureBoolean: true|false
-     * }
-     * 
-     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+     * XMLHttpRequest using the Promise.
      */
-    class CookieInstance {
-        constructor(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-            this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
-            this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
-            this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
-            this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
-            this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
-            this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
+    class HttpPromiseAjax {
+        constructor(config) {
+            this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
+            this.promise = new Promise((resolve, reject) => {
+                var request = new XMLHttpRequest();
+                request.open(config.method, config.url);
+                if(config.contentType)
+                    request.setRequestHeader("Content-Type", config.contentType);
+                if(config.headers)
+                    setXhrHeaders(request, config.headers);
+                request.onload = () => {
+                    request.responseJSON = tryParseJSON(request.responseText);
+                    isResponseOK(request.status) ? resolve(resolveResponse(request.response)) : reject(request);
+                };
+                if(request.ontimeout && config.onTimeout) {
+                    request.ontimeout = (event) => {
+                        config.onTimeout(event);
+                    }
+                }
+                request.onprogress = (event) => {
+                    if(config.onProgress)
+                        config.onProgress(event);
+                }
+                request.onerror = () => {
+                    request.responseJSON = tryParseJSON(request.responseText);
+                    reject(request)
+                };
+                this.data ? request.send(this.data) : request.send();
+            });
         }
-
-        setExpired() {
-            this.cookieExpires = new Date(1970,0,1).toString();
-        }
-
-        toString() {
-            return this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity;
-        }
-        static create(name, value, expires, cpath, cdomain, setSecure) {
-                return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
+        instance() {
+            return this.promise;
         }
     }
 
-    return Cookie;
+    const resolveResponse = (response) => {
+        let resp = tryParseJSON(response);
+        if(Util.isEmpty(resp))
+            resp = response;
+        return resp;
+    }
+    
+    const setXhrHeaders = (xhr, headers) => {
+        for(let header in headers) {
+            if(headers.hasOwnProperty(header))
+                xhr.setRequestHeader(header, headers[header]);
+        }
+    }
+    
+    const isResponseOK = (status) => {
+        let okResponses = [200, 201, 202, 203, 204, 205, 206, 207, 208, 226];
+        let i = 0;
+        while(i < okResponses.length) {
+            if(okResponses[i] === status)
+                return true;
+            i++;
+        }
+        return false;
+    }
+    
+    const isContentTypeJson = (contentType) => {
+        return contentType === Http.JSON;
+    }
+    
+    const tryParseJSON = (text) => {
+        try {
+            return JSON.parse(text);
+        } catch(e) {}
+    }
+
+    return Http;
 }());
 
 
@@ -3833,1441 +4194,6 @@ let RME = (function() {
 
 
 
-/**
- * Before using this class you should also be familiar on how to use fetch since usage of this class
- * will be quite similar to fetch except predefined candy that is added on a class.
- *
- * The class is added some predefined candy over the JavaScript Fetch interface.
- * get|post|put|delete methods will automatically use JSON as a Content-Type
- * and request methods will be predefined also.
- *
- * FOR Fetch
- * A Config object supports following:
- *  {
- *      url: url,
- *      method: method,
- *      contentType: contentType,
- *      init: init
- *  }
- *
- *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
- *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
- *
- *  If a total custom request is desired you should use a method do({}) e.g.
- *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
- */
-class HttpFetchRequest {
-    constructor() {}
-    /**
-     * Does Fetch GET request. Content-Type JSON is used by default.
-     * @param {stirng} url *Required
-     * @param {*} init 
-     */
-    get(url, init) {
-        if(!init) init = {};
-        init.method = "GET";
-        return this.do({url: url, init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does Fetch POST request. Content-Type JSON is used by default.
-     * @param {string} url *Required
-     * @param {*} body 
-     * @param {*} init 
-     */
-    post(url, body, init) {
-        if(!init) init = {};
-        init.method = "POST";
-        init.body = body;
-        return this.do({url: url, init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does Fetch PUT request. Content-Type JSON is used by default.
-     * @param {string} url *Required
-     * @param {*} body 
-     * @param {*} init 
-     */
-    put(url, body, init) {
-        if(!init) init = {};
-        init.method = "PUT";
-        init.body = body;
-        return this.do({url: url, init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does Fetch DELETE request. Content-Type JSON is used by default.
-     * @param {string} url 
-     * @param {*} init 
-     */
-    delete(url, init) {
-        if(!init) init = {};
-        init.method = "DELETE";
-        return this.do({url: url,  init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does any Fetch request a given config object defines.
-     * 
-     * Config object can contain parameters:
-     * {
-     *      url: url,
-     *      method: method,
-     *      contentType: contentType,
-     *      init: init
-     *  }
-     * @param {object} config 
-     */
-    do(config) {
-        if(!config.init) config.init = {};
-        if(config.contentType) {
-            if(!config.init.headers)
-                config.init.headers = new Headers({});
-            if(!config.init.headers.has("Content-Type"))
-                config.init.headers.set("Content-Type", config.contentType);
-        }
-        if(config.method) {
-            config.init.method = config.method;
-        }
-        return fetch(config.url, config.init);
-    }
-}
-
-
-/**
- * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
- */
-class Session {
-    /**
-     * Save data into the Session.
-     * @param {string} key
-     * @param {*} value
-     */
-    static set(key, value) {
-        sessionStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the Session.
-     * @param {string} key
-     */
-    static get(key) {
-        return sessionStorage.getItem(key);
-    }
-    /**
-     * Remove data from the Session.
-     * @param {string} key
-     */
-    static remove(key) {
-        sessionStorage.removeItem(key);
-    }
-    /**
-     * Clears the Session.
-     */
-    static clear() {
-        sessionStorage.clear();
-    }
-}
-
-
-/**
- * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
- */
-class Storage {
-    /**
-     * Save data into the local storage. 
-     * @param {string} key
-     * @param {*} value
-     */
-    static set(key, value) {
-        localStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the local storage.
-     * @param {string} key
-     */
-    static get(key) {
-        return localStorage.getItem(key);
-    }
-    /**
-     * Remove data from the local storage.
-     * @param {string} key
-     */
-    static remove(key) {
-        localStorage.removeItem(key);
-    }
-    /**
-     * Clears the local storage.
-     */
-    static clear() {
-        localStorage.clear();
-    }
-}
-
-
-
-let Template = (function() {
-    /**
-     * Template class reads a JSON format notation and creates an element tree from it.
-     * The Template class has only one public method resolve that takes the template as parameter and returns 
-     * the created element tree.
-     */
-    class Template {
-        constructor() {
-            this.template = {};
-            this.root = null;
-        }
-
-        /**
-         * Method takes a template as parameter, starts resolving it and returns 
-         * a created element tree. 
-         * @param {object} template
-         * @returns Elem instance element tree.
-         */
-        setTemplateAndResolve(template, parent) {
-            this.template = template;
-            if (parent) {
-                this.root = parent;
-                this.resolve(this.template, this.root, 1);
-            } else {
-                this.resolve(this.template, this.root, 0);
-            }
-            return this.root;
-        }
-
-        /**
-         * Method resolves a given template recusively. The method and
-         * parameters are used internally.
-         * @param {object} template
-         * @param {object} parent
-         * @param {number} round
-         */
-        resolve(template, parent, round) {
-            for (var obj in template) {
-                if (template.hasOwnProperty(obj)) {
-                    if (round === 0) {
-                        ++round;
-                        this.root = this.resolveElement(obj, template[obj]);
-                        if (Util.isArray(template[obj]))
-                            this.resolveArray(template[obj], this.root, round);
-                        else if (!this.isComponent(obj) && Util.isObject(template[obj]))
-                            this.resolve(template[obj], this.root, round);
-                        else if (Util.isString(template[obj]) || Util.isNumber(template[obj]))
-                            this.resolveStringNumber(this.root, template[obj]);
-                        else if (Util.isFunction(template[obj]))
-                            this.resolveFunction(this.root, template[obj], round);
-                    } else {
-                        ++round;
-                        if (Template.isAttr(obj, parent)) {
-                            this.resolveAttributes(parent, obj, this.resolveFunctionBasedAttribute(template[obj]));
-                        } else if (this.isEventKeyVal(obj, template[obj])) {
-                            parent[obj].call(parent, template[obj]);
-                        } else {
-                            var child = this.resolveElement(obj, template[obj]);
-                            if (Template.isFragment(child)) {
-                                this.resolveFragment(child.fragment || template[obj], parent, round);
-                            } else {
-                                parent.append(child);
-                                if (Util.isArray(template[obj])) {
-                                    this.resolveArray(template[obj], child, round);
-                                } else if (!this.isComponent(obj) && Util.isObject(template[obj])) {
-                                    this.resolve(template[obj], child, round);
-                                } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
-                                    this.resolveStringNumber(child, template[obj]);
-                                } else if (Util.isFunction(template[obj])) {
-                                    this.resolveFunction(child, template[obj], round);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        /**
-         * Method receives three parameters that represent pieces of the HTML tree. Method resolves
-         * given parameters accordingly and eventually HTML nodes are appended into the HTML tree.
-         * @param {*} fragment 
-         * @param {*} parent 
-         * @param {*} round 
-         */
-        resolveFragment(fragment, parent, round) {
-            if (Util.isArray(fragment)) {
-                this.resolveArray(fragment, parent, round);
-            } else if (Util.isFunction(fragment)) {
-                const ret = fragment.call(parent, parent);
-                if (Util.isArray(ret))
-                    this.resolveArray(ret, parent, round);
-                else
-                    Template.resolveToParent(ret, parent);
-            } else {
-                this.resolve(fragment, parent, round);
-            }
-        }
-
-        /**
-         * Method resolves function based attribute values. If the given attribute value
-         * is type function then the function is invoked and its return value will be returned otherwise
-         * the given attribute value is returned.
-         * @param {*} attr 
-         * @returns Resolved attribute value.
-         */
-        resolveFunctionBasedAttribute(attrValue) {
-            return Util.isFunction(attrValue) ? attrValue.call() : attrValue;
-        }
-
-        /**
-         * Method resolves a given array template elements.
-         * @param {array} array
-         * @param {parent} parent
-         * @param {round}
-         */
-        resolveArray(array, parent, round) {
-            var i = 0;                
-            while(i < array.length) {
-                var o = array[i];
-                for(var key in o) {
-                    if(o.hasOwnProperty(key)) {
-                        if(Util.isObject(o[key])) {
-                            this.resolve(o, parent, round);
-                        } else if(Util.isString(o[key]) || Util.isNumber(o[key])) {
-                            var el = this.resolveElement(key);
-                            this.resolveStringNumber(el, o[key]);
-                            parent.append(el);
-                        } else if(Util.isFunction(o[key])) {
-                            var el = this.resolveElement(key);
-                            this.resolveFunction(el, o[key]);
-                            parent.append(el);
-                        }
-                    }
-                }
-                i++;
-            }
-        }
-
-        /**
-         * Function will set String or Number values for the given element.
-         * @param {object} elem 
-         * @param {*} value 
-         */
-        resolveStringNumber(elem, value) {
-            if(Util.isString(value) && this.isMessage(value))
-                this.resolveMessage(elem, value);
-            else
-                elem.setText(value);
-        }
-    
-        /**
-         * Resolves function based tempalte implementation.
-         * @param {object} elem
-         * @param {func} func
-         */
-        resolveFunction(elem, func, round) {
-            let ret = func.call(elem, elem);
-            if (!Util.isEmpty(ret)) {
-                if (Util.isString(ret) && this.isMessage(ret)) {
-                    this.resolveMessage(elem, ret);
-                } else if (Util.isString(ret) || Util.isNumber(ret)) {
-                    elem.setText(ret);
-                } else if(Util.isArray(ret)) {
-                    this.resolveArray(ret, elem, round)
-                } else if (Util.isObject(ret)) {
-                    this.resolve(ret, elem, round);
-                }
-            }
-        }
-
-        /**
-         * Function will check if the given message is actually a message or not. The function
-         * will return true if it is a message otherwise false is returned.
-         * @param {string} message 
-         * @returns True if the given message is actually a message otherwise returns false.
-         */
-        isMessage(message) {
-            let params = this.getMessageParams(message);
-            if(!Util.isEmpty(params))
-                message = message.replace(params.join(), "");
-            return !Util.isEmpty(Messages.message(message)) && Messages.message(message) != message;
-        }
-
-        /**
-         * Resolves an element and some basic attributes from a give tag. Method throws an exception if 
-         * the element could not be resolved.
-         * @param {string} tag
-         * @param {object} obj
-         * @returns Null or resolved Elem instance elemenet.
-         */
-        resolveElement(tag, obj) {
-            let resolved = null;
-            var match = [];
-            var el = this.getElementName(tag);
-            if (RME.hasComponent(el)) {
-                el = el.replace(/component:/, "");
-                resolved = RME.component(el, obj);
-                if (Util.isEmpty(resolved))
-                    return resolved;
-            } else if (Util.isEmpty(el)) {
-                throw `Template resolver could not find element: ${el} from the given tag: ${tag}`;
-            } else if (el.indexOf('fragment') === 0) {
-                return el.match(/fragment/).join();
-            } else {
-                resolved = new Elem(el);
-            }
-
-            match = tag.match(/[a-z0-9]+\#[a-zA-Z0-9\-]+/); //find id
-            if (!Util.isEmpty(match))
-                resolved.setId(match.join().replace(/[a-z0-9]+\#/g, ""));
-
-            match = this.cutAttributesIfFound(tag).match(/\.[a-zA-Z-0-9\-]+/g); //find classes
-            if (!Util.isEmpty(match)) 
-                resolved.addClasses(match.join(" ").replace(/\./g, ""));
-
-            match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_\/\.&%@!?£$+¤|;\\<\\>\\"]+\]/g); //find attributes
-            if (!Util.isEmpty(match))
-                resolved = this.addAttributes(resolved, match);
-
-            return resolved;
-        }
-
-        /**
-         * Function will cut off the element tag attributes if found.
-         * @param {string} tag 
-         * @returns Element tag without attributes.
-         */
-        cutAttributesIfFound(tag) {
-            const idx = tag.indexOf('[');
-            return tag.substring(0, idx > 0 ? idx : tag.length);
-        }
-
-        /**
-         * Function will try to parse an element name from the given string. If the given string
-         * is no empty a matched string is returned. If the given string is empty nothing is returned
-         * @param {string} str 
-         * @returns The matched string.
-         */
-        getElementName(str) {
-            if(!Util.isEmpty(str))
-                return str.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join();
-        }
-
-        /**
-         * Adds resolved attributes to an element.
-         * @param {object} elem
-         * @param {array} elem
-         * @returns The given elem instance.
-         */
-        addAttributes(elem, attrArray) {
-            let i = 0;
-            let start = "[";
-            let eq = "=";
-            let end = "]";
-            while(i < attrArray.length) {
-                var attr = attrArray[i];
-                let key = attr.substring(attr.indexOf(start) +1, attr.indexOf(eq));
-                let val = attr.substring(attr.indexOf(eq) +1, attr.indexOf(end));
-                elem.setAttribute(key, val);
-                i++;
-            }
-            return elem;
-        }
-
-        /**
-         * Method adds an attribute to an element.
-         * @param {object} elem
-         * @param {string} key
-         * @param {string} val
-         */
-        resolveAttributes(elem, key, val) {
-            switch(key) {
-                case "id":
-                    elem.setId(val);
-                    break;
-                case "class":
-                    elem.addClasses(val);
-                    break;
-                case "text":
-                    elem.setText(val);
-                    break;
-                case "content":
-                    this.resolveContent(elem, key, val);
-                    break;
-                case "tabIndex":
-                    elem.setTabIndex(val);
-                    break;
-                case "editable":
-                    elem.setEditable(val);
-                    break;
-                case "checked":
-                    elem.setChecked(val);
-                    break;
-                case "disabled":
-                    elem.setDisabled(val);
-                    break;
-                case "visible":
-                    elem.setVisible(val);
-                    break;
-                case "display":
-                    elem.display(val);
-                    break;
-                case "styles":
-                    elem.setStyles(val);
-                    break;
-                case "message":
-                    this.resolveMessage(elem, val);
-                    break;
-                case "click":
-                    elem.click();
-                    break;
-                case "focus":
-                    elem.focus();
-                    break;
-                case "blur":
-                    elem.blur();
-                    break;
-                case "maxLength":
-                    elem.setMaxLength(val);
-                    break;
-                case "minLength":
-                    elem.setMinLength(val);
-                    break;
-                default: 
-                    this.resolveDefault(elem, key, val);
-            }
-        }
-
-        /**
-         * Resolves the attribute that did not match on cases. Usually nothing needs to be done except when handling html dom data-* attributes. In such case
-         * this function will auto format the data-* attribute to a correct format.
-         * @param {object} elem 
-         * @param {string} key 
-         * @param {*} val 
-         */
-        resolveDefault(elem, key, val) {
-            if(key.indexOf("data") === 0 && key.length > "data".length)
-                elem.setData(key.replace(/[A-Z]/, key.charAt(4).toLowerCase()).replace("data", ""), val);
-            else
-                elem.setAttribute(key, val);
-        }
-
-        /**
-         * Function sets the content of the element according to the element.
-         * @param {object} elem 
-         * @param {string} key 
-         * @param {string} val 
-         */
-        resolveContent(elem, key, val) {
-            if(elem.getTagName().toLowerCase() === "meta")
-                elem.setAttribute(key, val);
-            else
-                elem.setContent(val);
-        }
-
-        /**
-         * Function sets a translated message to the element. If the message contains message parameters then the paramters
-         * are resolved first.
-         * @param {object} elem 
-         * @param {string} message 
-         */
-        resolveMessage(elem, message) {
-            if(Util.isEmpty(message))
-                throw "message must not be empty";
-
-            let matches = this.getMessageParams(message);
-            if(Util.isEmpty(matches)) {
-                elem.message(message);
-            } else {
-                Util.setTimeout(function() {
-                    let end = message.indexOf(":") > 0 ? message.indexOf(":") : message.indexOf("{");
-                    message = message.substring(0, end);
-                    matches = matches.join().match(/([^\{\}\:\;]*)/g);
-                    let params = [];
-                    let i = 0;
-                    while(i < matches.length) {
-                        if(!Util.isEmpty(matches[i]))
-                            params.push(matches[i]);
-                        i++;
-                    }
-                    elem.message(message, params);
-                });
-            }
-        }
-
-        /**
-         * Function will return message parameters if found.
-         * @param {string} message 
-         * @returns Message params in a match array if found.
-         */
-        getMessageParams(message) {
-            return message.match(/\:?(\{.*\}\;?)/g);
-        }
-
-        /**
-         * Checks is a given key val an event listener key val.
-         * @param {string} key
-         * @param {function} val
-         * @returns True if the given key val is event listener key val.
-         */
-        isEventKeyVal(key, val) {
-            return key.indexOf("on") === 0 && Util.isFunction(val);
-        }
-
-        /**
-         * Checks that the given component exist with the given key or the key starts with component keyword and the component exist. 
-         * @param {string} key
-         * @returns True if the component exist or the key contains component keyword and exist, otherwise false.
-         */
-        isComponent(key) {
-            return RME.hasComponent(this.getElementName(key));
-        }
-
-        /**
-         * Method takes a template as parameter, starts resolving it and 
-         * returns a created element tree.
-         * @param {object} template
-         * @returns Elem instance element tree.
-         */
-        static resolveTemplate(template) {
-            return Template.create().setTemplateAndResolve(template);
-        }
-
-        /**
-         * Method takes a template and a parent element as parameter and it resolves the given template
-         * into the given parent.
-         * @param {*} template
-         * @param {*} parent
-         * @returns Elem instance element tree.
-         */
-        static resolveToParent(template, parent) {
-            return Template.create().setTemplateAndResolve(template, parent);
-        }
-
-        /**
-         * Method takes a parameter and checks if the parameter is type fragment. 
-         * If the parameter is type fragment the method will return true
-         * otherwise false is returned.
-         * @param {*} child 
-         * @returns True if the parameter is type fragment otherwise false is returned.
-         */
-        static isFragment(child) {
-            return !Util.isEmpty(child) && (child === 'fragment' || !Util.isEmpty(child.fragment))
-        }
-
-        /**
-         * Method will apply the properties given to the element. Old properties are overridden.
-         * @param {object} elem 
-         * @param {object} props 
-         * @param {object} oldProps
-         */
-        static updateElemProps(elem, props, oldProps) {
-            let mashed = Template.mashElemProps(props, oldProps);
-            const templater = Template.create();
-            for (let p in mashed) {
-                if (mashed.hasOwnProperty(p)) {
-                    if (templater.isEventKeyVal(p, mashed[p]))
-                        elem[p].call(elem, mashed[p]); //element event attribute -> elem, event function
-                    else if (p === 'class')
-                        elem.updateClasses(mashed[p]);
-                    else
-                        templater.resolveAttributes(elem, p, mashed[p]);
-                }
-            }
-        }
-
-        static mashElemProps(newProps, oldProps) {
-            let props = {};
-            for (let p in oldProps) {
-                if (oldProps.hasOwnProperty(p)) {
-                    if (!newProps[p] && oldProps[p]) {
-                        props[p] = p === 'style' ? '' : undefined
-                    }
-                }
-            }
-            props = {
-                ...props,
-                ...newProps
-            }
-            return props;
-        }
-
-        static create() {
-            return new Template();
-        }
-
-        /**
-         * Method checks if the given object is an unresolved JSON template.
-         * @param {object} object 
-         * @returns True if the given object is an unresolved JSON template, otherwise false.
-         */
-        static isTemplate(object) {
-            let isTemplate = false;
-            if(Util.isObject(object) && !Util.isArray(object) && !(object instanceof Elem)) {
-                for(var p in object) {
-                    isTemplate = object.hasOwnProperty(p) && Template.isTagOrComponent(p);
-                    if(isTemplate)
-                        break;
-                }
-            }
-            return isTemplate;
-        }
-        
-        /**
-         * Method takes a string and returns true if the given string is a html tag or a component, otherwise returns false.
-         * @param {string} tag 
-         * @returns True if the given tag is a HTML tag otherwise false.
-         */
-        static isTagOrComponent(tag) {
-            tag = tag.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join().replace("component:", "");
-            if(RME.hasComponent(tag))
-                return true;
-            
-            return Template.isTag(tag);
-        }
-
-        /**
-         * Method takes a string and returns true if the given string is a html tag, otherwise returns false.
-         * @param {string} tag 
-         * @returns True if the given tag is a HTML tag otherwise false.
-         */
-        static isTag(tag) {
-            let tags = {
-                a: ["a", "abbr", "acronym", "address", "applet", "area", "article", "aside", "audio"],
-                b: ["button", "br", "b", "base", "basefont", "bdi", "bdo", "big", "blockquote", "body"],
-                c: ["canvas", "caption", "center", "cite", "code", "col", "colgroup"],
-                d: ["div", "dd", "dl", "dt", "data", "datalist", "del", "details", "dfn", "dialog"],
-                e: ["em", "embed"],
-                f: ["form", "fieldset", "figcaption", "figure", "font", "footer", "frame", "frameset"],
-                h: ["h1", "h2", "h3", "h4", "h5", "h6", "head", "header", "hr", "html"],
-                i: ["i", "input", "img", "iframe", "ins"],
-                k: ["kbd"],
-                l: ["label", "li", "legend", "link"],
-                m: ["main", "meta", "map", "mark", "meter"],
-                n: ["nav", "noframes", "noscript"],
-                o: ["option", "object", "ol", "optgroup", "output"],
-                p: ["p", "pre", "param", "picture", "progress"],
-                q: ["q"],
-                r: ["rp", "rt", "ruby"],
-                s: ["span", "select", "s", "samp", "script", "section", "small", "source", "strike", "strong", "style", "sub", "summary", "sup", "svg"],
-                t: ["table", "textarea", "td","tr", "tt", "th", "thead", "tbody", "tfoot", "template", "time", "title", "track"],
-                u: ["u", "ul"],
-                v: ["var", "video"],
-                w: ["wbr"],
-            }
-            let i = 0;
-            let tagArray = tags[tag.charAt(0)];
-            if (tagArray) {
-                while (i < tagArray.length) {
-                    if (tagArray[i] === tag)
-                        return true;
-                    i++;
-                }
-            }
-            return false;
-        }
-
-
-        /**
-         * Function checks if the given key is an attribute and returns true if it is otherwise false.
-         * @param {string} key 
-         * @param {object} elem 
-         * @returns True if the given key as an attribute otherwise false.
-         */
-        static isAttr(key, elem) {
-            /**
-             * special cases below.
-             */
-            if(key === "span" && (Template.isElem(elem.getTagName(), ["col", "colgroup"]))) //special case, span might be an attribute also for these two elements.
-                return true;
-            else if(key === "label" && (Template.isElem(elem.getTagName(), ["track", "option", "optgroup"])))
-                return true;
-            else if(key === "title" && (elem.parent() === null || elem.parent().getTagName().toLowerCase() !== "head"))
-                return true;
-            else if(key === "cite" && (Template.isElem(elem.getTagName(), ["blockquote", "del", "ins", "q"])))
-                return true;
-            else if(key === "form" && (Template.isElem(elem.getTagName(), ["button", "fieldset", "input", "label", "meter", "object", "output", "select", "textarea"])))
-                return true;
-            else if(key.indexOf("data") === 0 && (!RME.hasComponent(key) && !Template.isElem(elem.getTagName(), ["data"]) || Template.isElem(elem.getTagName(), ["object"])))
-                return true;
-
-            let attrs = {
-                a: ["alt", "async", "autocomplete", "autofocus", "autoplay", "accept", "accept-charset", "accpetCharset", "accesskey", "action"],
-                b: ["blur"],
-                c: ["class", "checked", "content", "contenteditable", "click", "charset", "cols", "colspan", "controls", "coords"],
-                d: ["disabled", "display", "draggable", "dropzone", "datetime", "default", "defer", "dir", "dirname", "download"],
-                e: ["editable", "enctype"],
-                f: ["for", "focus", "formaction"],
-                h: ["href", "height", "hidden", "high", "hreflang", "headers", "http-equiv", "httpEquiv"],
-                i: ["id", "ismap"],
-                k: ["kind"],
-                l: ["lang", "list", "loop", "low"],
-                m: ["message", "max", "maxlength", "maxLength", "min", "minlength", "minLength", "multiple", "media", "method", "muted"],
-                n: ["name", "novalidate"],
-                o: ["open", "optimum"],
-                p: ["placeholder", "pattern", "poster", "preload"],
-                r: ["rel", "readonly", "required", "reversed", "rows", "rowspan"],
-                s: ["src", "size", "selected", "step", "style", "styles", "shape", "sandbox", "scope", "sizes", "spellcheck", "srcdoc", "srclang", "srcset", "start"],
-                t: ["text", "type", "target", "tabindex", "tabIndex", "translate"],
-                u: ["usemap"],
-                v: ["value", "visible"],
-                w: ["width", "wrap"]
-            }
-
-            let i = 0;
-            let keys = attrs[key.substring(0, 1)];
-            if(keys) {
-                while(i < keys.length) {
-                    if(keys[i] === key)
-                        return true
-                    i++;
-                }
-            }
-            return false;
-        }
-
-        /**
-         * Internal use.
-         * Function checks if a given element tag is in a given array of tag names.
-         * @param {string} elemTag 
-         * @param {array} array 
-         * @returns True if the tag is in the given array otherwise false.
-         */
-        static isElem(elemTag, array) {
-            let i = 0;
-            while(i < array.length) {
-                if(array[i] === elemTag.toLowerCase())
-                    return true;
-                i++;
-            }
-            return false;
-        }
-
-    }
-    return {
-        resolve: Template.resolveTemplate,
-        isTemplate: Template.isTemplate,
-        isTag: Template.isTag,
-        updateElemProps: Template.updateElemProps,
-        isFragment: Template.isFragment,
-        resolveToParent: Template.resolveToParent
-    }
-}());
-
-
-
-/**
- * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
- * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
- * 
- * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
- * operation functionalities.
- */
-class Tree {
-    /**
-     * Uses CSS selector to find elements on the HTML Document Tree. 
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} selector 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    static get(selector) {
-        try {
-            return Elem.wrapElems(document.querySelectorAll(selector));
-        } catch (e) {}
-    }
-
-    /**
-     * Uses CSS selector to find the first match element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} selector 
-     * @returns An Elem instance.
-     */
-    static getFirst(selector) {
-        try {
-            return Elem.wrap(document.querySelector(selector));
-        } catch (e) {}
-    }
-
-    /**
-     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
-     * @param {string} tag 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    static getByTag(tag) {
-        try {
-            return Elem.wrapElems(document.getElementsByTagName(tag));
-        } catch (e) {}
-    }
-
-    /**
-     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
-     * Found elements will be wrappedn in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} name 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    static getByName(name) {
-        try {
-            return Elem.wrapElems(document.getElementsByName(name));
-        } catch (e) {}
-    }
-
-    /**
-     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} id 
-     * @returns Elem instance.
-     */
-    static getById(id) {
-        try {
-            return Elem.wrap(document.getElementById(id));
-        } catch (e) {}
-    }
-
-    /**
-     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
-     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} classname 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    static getByClass(classname) {
-        try {
-            return Elem.wrapElems(document.getElementsByClassName(classname));
-        } catch (e) {}
-    }
-
-    /**
-     * @returns body wrapped in an Elem instance.
-     */
-    static getBody() {
-        try {
-            return Elem.wrap(document.body);
-        } catch (e) {}
-    }
-
-    /**
-     * @returns head wrapped in an Elem instance.
-     */
-    static getHead() {
-        try {
-            return Elem.wrap(document.head);
-        } catch (e) {}
-    }
-
-    /**
-     * @returns title of the html document page.
-     */
-    static getTitle() {
-        return document.title;
-    }
-
-    /**
-     * Set an new title for html document page.
-     * @param {string} title 
-     */
-    static setTitle(title) {
-        document.title = title;
-    }
-
-    /**
-     * @returns active element wrapped in an Elem instance.
-     */
-    static getActiveElement() {
-        try {
-            return Elem.wrap(document.activeElement);
-        } catch (e) {}
-    }
-
-    /**
-     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
-     */
-    static getAnchors() {
-        try {
-            return Elem.wrapElems(document.anchors);
-        } catch (e) {}
-    }
-
-    /**
-     * @returns <html> element.
-     */
-    static getHtmlElement() {
-        return document.documentElement;
-    }
-
-    /**
-     * @returns <!DOCTYPE> element.
-     */
-    static getDoctype() {
-        return document.doctype;
-    }
-
-    /**
-     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
-     */
-    static getEmbeds() {
-        try {
-            return Elem.wrapElems(document.embeds);
-        } catch (e) {}
-    }
-
-    /**
-     * @returns an array of image elements (<img>) wrapped in an Elem instance.
-     */
-    static getImages() {
-        try {
-            return Elem.wrapElems(document.images);
-        } catch (e) {}
-    }
-
-    /**
-     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
-     */
-    static getLinks() {
-        try {
-            return Elem.wrapElems(document.links);
-        } catch (e) {}
-    }
-
-    /**
-     * @returns an array of scripts wrapped in an Elem instance.
-     */
-    static getScripts() {
-        try {
-            return Elem.wrapElems(document.scripts);
-        } catch (e) {}
-    }
-
-    /**
-     * @returns an array of form elements wrapped in an Elem instance.
-     */
-    static getForms() {
-        try {
-            return Elem.wrapElems(document.forms);
-        } catch (e) {}
-    }
-}
-
-
-/**
- * General Utility methods.
- */
-class Util {
-    /**
-     * Checks is a given value empty.
-     * @param {*} value
-     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
-     */
-    static isEmpty(value) {
-        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
-    }
-
-    /**
-     * Get the type of the given value.
-     * @param {*} value
-     * @returns The type of the given value.
-     */
-    static getType(value) {
-        return typeof value;
-    }
-
-    /**
-     * Checks is a given value is a given type.
-     * @param {*} value
-     * @param {string} type
-     * @returns True if the given value is the given type otherwise false.
-     */
-    static isType(value, type) {
-        return (Util.getType(value) === type);
-    }
-
-    /**
-     * Checks is a given parameter a function.
-     * @param {*} func 
-     * @returns True if the given parameter is fuction otherwise false.
-     */
-    static isFunction(func) {
-        return Util.isType(func, "function");
-    }
-
-    /**
-     * Checks is a given parameter a boolean.
-     * @param {*} boolean
-     * @returns True if the given parameter is boolean otherwise false.
-     */
-    static isBoolean(boolean) {
-        return Util.isType(boolean, "boolean");
-    }
-
-    /**
-     * Checks is a given parameter a string.
-     * @param {*} string
-     * @returns True if the given parameter is string otherwise false.
-     */
-    static isString(string) {
-        return Util.isType(string, "string");
-    }
-
-    /**
-     * Checks is a given parameter a number.
-     * @param {*} number
-     * @returns True if the given parameter is number otherwise false.
-     */
-    static isNumber(number) {
-        return Util.isType(number, "number");
-    }
-
-    /**
-     * Checks is a given parameter a symbol.
-     * @param {*} symbol
-     * @returns True if the given parameter is symbol otherwise false.
-     */
-    static isSymbol(symbol) {
-        return Util.isType(symbol, "symbol");
-    }
-
-    /**
-     * Checks is a given parameter a object.
-     * @param {*} object
-     * @returns True if the given parameter is object otherwise false.
-     */
-    static isObject(object) {
-        return Util.isType(object, "object");
-    }
-
-    /**
-     * Checks is a given parameter an array.
-     * @param {*} array
-     * @returns True if the given parameter is array otherwise false.
-     */
-    static isArray(array) {
-        return Array.isArray(array);
-    }
-
-    /**
-     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The timeout object.
-     */
-    static setTimeout(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setTimeout(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes a timeout that was created by setTimeout method.
-     * @param {object} timeoutObject
-     */
-    static clearTimeout(timeoutObject) {
-        window.clearTimeout(timeoutObject);
-    }
-
-    /**
-     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The interval object.
-     */
-    static setInterval(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setInterval(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes an interval that was created by setInterval method.
-     */
-    static clearInterval(intervalObject) {
-        window.clearInterval(intervalObject);
-    }
-
-    /**
-     * Encodes a string to Base64.
-     * @param {string} string
-     * @returns The base64 encoded string.
-     */
-    static encodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.btoa(string);
-    }
-
-    /**
-     * Decodes a base 64 encoded string.
-     * @param {string} string
-     * @returns The base64 decoded string.
-     */
-    static decodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.atob(string);
-    }
-}
-
-
-
-let Http = (function() {
-    /**
-     * FOR XmlHttpRequest
-     * A config object supports following. More features could be added.
-     *  {
-     *    method: method,
-     *    url: url,
-     *    data: data,
-     *    contentType: contentType,
-     *    onProgress: function(event),
-     *    onTimeout: function(event),
-     *    headers: headersObject{"header": "value"},
-     *    useFetch: true|false **determines that is fetch used or not.
-     *  }
-     * 
-     * If contentType is not defined, application/json is used, if set to null, default is used, otherwise used defined is used.
-     * If contentType is application/json, data is automatically stringified with JSON.stringify()
-     * 
-     * Http class automatically tries to parse reuqest.responseText to JSON using JSON.parse().
-     * If parsing succeeds, parsed JSON will be set on request.responseJSON attribute.
-     */
-    class Http {
-        constructor(config) {
-            config.contentType = config.contentType === undefined ? Http.JSON : config.contentType;
-            if(config.useFetch) {
-                this.self = new HttpFetchRequest();
-            } else if(window.Promise) {
-                this.self = new HttpPromiseAjax(config).instance();
-            } else {
-                this.self = new HttpAjax(config);
-            }
-        }
-
-        instance() {
-            return this.self;
-        }
-
-        /**
-         * Do GET XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-         * @param {string} url *Required
-         * @param {string} requestContentType 
-         */
-        static get(url, requestContentType) {
-            return new Http({method: "GET", url: url, data: undefined, contentType: requestContentType}).instance();
-        }
-
-        /**
-         * Do POST XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-         * @param {string} url *Required
-         * @param {*} data 
-         * @param {string} requestContentType 
-         */
-        static post(url, data, requestContentType) {
-            return new Http({method: "POST", url: url, data: data, contentType: requestContentType}).instance();
-        }
-
-        /**
-         * Do PUT XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-         * @param {string} url *Required
-         * @param {*} data 
-         * @param {string} requestContentType 
-         */
-        static put(url, data, requestContentType) {
-            return new Http({method: "PUT", url: url, data: data, contentType: requestContentType}).instance();
-        }
-
-        /**
-         * Do DELETE XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
-         * @param {string} url *Required
-         * @param {*} requestContentType 
-         */
-        static delete(url, requestContentType) {
-            return new Http({method: "DELETE", url: url, data: undefined, contentType: requestContentType}).instance();
-        }
-
-        /**
-         * Does any XMLHttpRequest that is defined by a given config object. Promise will be used if available.
-         * 
-         * Config object can contain parameters:
-         * {
-         *    method: method,
-         *    url: url,
-         *    data: data,
-         *    contentType: contentType,
-         *    onProgress: function(event),
-         *    onTimeout: function(event),
-         *    headers: headersObject{"header": "value"},
-         *    useFetch: true|false **determines that is fetch used or not.
-         *  }
-         * @param {object} config 
-         */
-        static do(config) {
-            return new Http(config).instance();
-        }
-
-        /**
-         * Uses Fetch interface to make a request to server.
-         * 
-         * Before using fetch you should also be familiar on how to use fetch since usage of this function
-         * will be quite similar to fetch except predefined candy that is added.
-         *
-         * The fetch interface adds some predefined candy over the JavaScript Fetch interface.
-         * get|post|put|delete methods will automatically use JSON as a Content-Type
-         * and request methods will be predefined also.
-         *
-         * FOR Fetch
-         * A Config object supports following:
-         *  {
-         *      url: url,
-         *      method: method,
-         *      contentType: contentType,
-         *      init: init
-         *  }
-         *
-         *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
-         *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-         *
-         *  If a total custom request is desired you should use a method do({}) e.g.
-         *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
-         */
-        static fetch() {
-            return new Http({useFetch: true}).instance();
-        }
-    }
-    /**
-     * Content-Type application/json;charset=UTF-8
-     */
-    Http.JSON = "application/json;charset=UTF-8";
-    /**
-     * Content-Type multipart/form-data
-     */
-    Http.FORM_DATA = "multipart/form-data";
-    /**
-     * Content-Type text/plain
-     */
-    Http.TEXT_PLAIN = "text/plain";
-
-    /**
-     * Old Fashion XMLHttpRequest made into the Promise pattern.
-     */
-    class HttpAjax {
-        constructor(config) {
-            this.progressHandler = config.onProgress ? config.onProgress : function(event) {};
-            this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
-            this.xhr = new XMLHttpRequest();
-            this.xhr.open(config.method, config.url);
-            if(config.contentType)
-                this.xhr.setRequestHeader("Content-Type", config.contentType);
-            if(config.headers)
-                setXhrHeaders(this.xhr, config.headers);
-        }
-        then(successHandler, errorHandler) {
-            this.xhr.onload = () => {
-                this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
-                isResponseOK(this.xhr.status) ? successHandler(resolveResponse(this.xhr.response), this.xhr) : errorHandler(this.xhr)
-            };
-            this.xhr.onprogress = (event) => {
-                if(this.progressHandler)
-                    this.progressHandler(event);
-            };
-            if(this.xhr.ontimeout && config.onTimeout) {
-                this.xhr.ontimeout = (event) => {
-                    config.onTimeout(event);
-                }
-            }
-            this.xhr.onerror = () => {
-                this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
-                if(errorHandler)
-                    errorHandler(this.xhr);
-            };
-            this.data ? this.xhr.send(this.data) : this.xhr.send();
-            return this;
-        }
-        catch(errorHandler) {
-            this.xhr.onerror = () => {
-                this.xhr.responseJSON = tryParseJSON(this.xhr.responrenderseText);
-                if(errorHandler)
-                    errorHandler(this.xhr);
-            }
-        }
-    }
-
-    /**
-     * XMLHttpRequest using the Promise.
-     */
-    class HttpPromiseAjax {
-        constructor(config) {
-            this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
-            this.promise = new Promise((resolve, reject) => {
-                var request = new XMLHttpRequest();
-                request.open(config.method, config.url);
-                if(config.contentType)
-                    request.setRequestHeader("Content-Type", config.contentType);
-                if(config.headers)
-                    setXhrHeaders(request, config.headers);
-                request.onload = () => {
-                    request.responseJSON = tryParseJSON(request.responseText);
-                    isResponseOK(request.status) ? resolve(resolveResponse(request.response)) : reject(request);
-                };
-                if(request.ontimeout && config.onTimeout) {
-                    request.ontimeout = (event) => {
-                        config.onTimeout(event);
-                    }
-                }
-                request.onprogress = (event) => {
-                    if(config.onProgress)
-                        config.onProgress(event);
-                }
-                request.onerror = () => {
-                    request.responseJSON = tryParseJSON(request.responseText);
-                    reject(request)
-                };
-                this.data ? request.send(this.data) : request.send();
-            });
-        }
-        instance() {
-            return this.promise;
-        }
-    }
-
-    const resolveResponse = (response) => {
-        let resp = tryParseJSON(response);
-        if(Util.isEmpty(resp))
-            resp = response;
-        return resp;
-    }
-    
-    const setXhrHeaders = (xhr, headers) => {
-        for(let header in headers) {
-            if(headers.hasOwnProperty(header))
-                xhr.setRequestHeader(header, headers[header]);
-        }
-    }
-    
-    const isResponseOK = (status) => {
-        let okResponses = [200, 201, 202, 203, 204, 205, 206, 207, 208, 226];
-        let i = 0;
-        while(i < okResponses.length) {
-            if(okResponses[i] === status)
-                return true;
-            i++;
-        }
-        return false;
-    }
-    
-    const isContentTypeJson = (contentType) => {
-        return contentType === Http.JSON;
-    }
-    
-    const tryParseJSON = (text) => {
-        try {
-            return JSON.parse(text);
-        } catch(e) {}
-    }
-
-    return Http;
-}());
-
-
 let Router = (function() {
     /**
      * Router class handles and renders route elements that are given by Router.routes() method.
@@ -5733,4 +4659,1086 @@ let Router = (function() {
         setApp: Router.setApp,
     }
 }());
+
+
+/**
+ * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
+ */
+class Session {
+    /**
+     * Save data into the Session.
+     * @param {string} key
+     * @param {*} value
+     */
+    static set(key, value) {
+        sessionStorage.setItem(key, value);
+    }
+    /**
+     * Get the saved data from the Session.
+     * @param {string} key
+     */
+    static get(key) {
+        return sessionStorage.getItem(key);
+    }
+    /**
+     * Remove data from the Session.
+     * @param {string} key
+     */
+    static remove(key) {
+        sessionStorage.removeItem(key);
+    }
+    /**
+     * Clears the Session.
+     */
+    static clear() {
+        sessionStorage.clear();
+    }
+}
+
+
+/**
+ * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
+ */
+class Storage {
+    /**
+     * Save data into the local storage. 
+     * @param {string} key
+     * @param {*} value
+     */
+    static set(key, value) {
+        localStorage.setItem(key, value);
+    }
+    /**
+     * Get the saved data from the local storage.
+     * @param {string} key
+     */
+    static get(key) {
+        return localStorage.getItem(key);
+    }
+    /**
+     * Remove data from the local storage.
+     * @param {string} key
+     */
+    static remove(key) {
+        localStorage.removeItem(key);
+    }
+    /**
+     * Clears the local storage.
+     */
+    static clear() {
+        localStorage.clear();
+    }
+}
+
+
+
+
+let Template = (function() {
+    /**
+     * Template class reads a JSON format notation and creates an element tree from it.
+     * The Template class has only one public method resolve that takes the template as parameter and returns 
+     * the created element tree.
+     */
+    class Template {
+        constructor() {
+            this.template = {};
+            this.root = null;
+        }
+
+        /**
+         * Method takes a template as parameter, starts resolving it and returns 
+         * a created element tree. 
+         * @param {object} template
+         * @returns Elem instance element tree.
+         */
+        setTemplateAndResolve(template, parent) {
+            this.template = template;
+            if (parent) {
+                this.root = parent;
+                this.resolve(this.template, this.root, 1);
+            } else {
+                this.resolve(this.template, this.root, 0);
+            }
+            return this.root;
+        }
+
+        /**
+         * Method resolves a given template recusively. The method and
+         * parameters are used internally.
+         * @param {object} template
+         * @param {object} parent
+         * @param {number} round
+         */
+        resolve(template, parent, round) {
+            for (var obj in template) {
+                if (template.hasOwnProperty(obj)) {
+                    if (round === 0) {
+                        ++round;
+                        this.root = this.resolveElement(obj, template[obj]);
+                        if (Util.isArray(template[obj]))
+                            this.resolveArray(template[obj], this.root, round);
+                        else if (!this.isComponent(obj) && Util.isObject(template[obj]))
+                            this.resolve(template[obj], this.root, round);
+                        else if (Util.isString(template[obj]) || Util.isNumber(template[obj]))
+                            this.resolveStringNumber(this.root, template[obj]);
+                        else if (Util.isFunction(template[obj]))
+                            this.resolveFunction(this.root, template[obj], round);
+                    } else {
+                        ++round;
+                        if (Template.isAttr(obj, parent)) {
+                            this.resolveAttributes(parent, obj, this.resolveFunctionBasedAttribute(template[obj]));
+                        } else if (this.isEventKeyVal(obj, template[obj])) {
+                            parent[obj].call(parent, template[obj]);
+                        } else {
+                            var child = this.resolveElement(obj, template[obj]);
+                            if (Template.isFragment(child)) {
+                                this.resolveFragment(child.fragment || template[obj], parent, round);
+                            } else {
+                                parent.append(child);
+                                if (Util.isArray(template[obj])) {
+                                    this.resolveArray(template[obj], child, round);
+                                } else if (!this.isComponent(obj) && Util.isObject(template[obj])) {
+                                    this.resolve(template[obj], child, round);
+                                } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
+                                    this.resolveStringNumber(child, template[obj]);
+                                } else if (Util.isFunction(template[obj])) {
+                                    this.resolveFunction(child, template[obj], round);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /**
+         * Method receives three parameters that represent pieces of the HTML tree. Method resolves
+         * given parameters accordingly and eventually HTML nodes are appended into the HTML tree.
+         * @param {*} fragment 
+         * @param {*} parent 
+         * @param {*} round 
+         */
+        resolveFragment(fragment, parent, round) {
+            if (Util.isArray(fragment)) {
+                this.resolveArray(fragment, parent, round);
+            } else if (Util.isFunction(fragment)) {
+                const ret = fragment.call(parent, parent);
+                if (Util.isArray(ret))
+                    this.resolveArray(ret, parent, round);
+                else
+                    Template.resolveToParent(ret, parent);
+            } else {
+                this.resolve(fragment, parent, round);
+            }
+        }
+
+        /**
+         * Method resolves function based attribute values. If the given attribute value
+         * is type function then the function is invoked and its return value will be returned otherwise
+         * the given attribute value is returned.
+         * @param {*} attr 
+         * @returns Resolved attribute value.
+         */
+        resolveFunctionBasedAttribute(attrValue) {
+            return Util.isFunction(attrValue) ? attrValue.call() : attrValue;
+        }
+
+        /**
+         * Method resolves a given array template elements.
+         * @param {array} array
+         * @param {parent} parent
+         * @param {round}
+         */
+        resolveArray(array, parent, round) {
+            var i = 0;                
+            while(i < array.length) {
+                var o = array[i];
+                for(var key in o) {
+                    if(o.hasOwnProperty(key)) {
+                        if(Util.isObject(o[key])) {
+                            this.resolve(o, parent, round);
+                        } else if(Util.isString(o[key]) || Util.isNumber(o[key])) {
+                            var el = this.resolveElement(key);
+                            this.resolveStringNumber(el, o[key]);
+                            parent.append(el);
+                        } else if(Util.isFunction(o[key])) {
+                            var el = this.resolveElement(key);
+                            this.resolveFunction(el, o[key]);
+                            parent.append(el);
+                        }
+                    }
+                }
+                i++;
+            }
+        }
+
+        /**
+         * Function will set String or Number values for the given element.
+         * @param {object} elem 
+         * @param {*} value 
+         */
+        resolveStringNumber(elem, value) {
+            if(Util.isString(value) && this.isMessage(value))
+                this.resolveMessage(elem, value);
+            else
+                elem.setText(value);
+        }
+    
+        /**
+         * Resolves function based tempalte implementation.
+         * @param {object} elem
+         * @param {func} func
+         */
+        resolveFunction(elem, func, round) {
+            let ret = func.call(elem, elem);
+            if (!Util.isEmpty(ret)) {
+                if (Util.isString(ret) && this.isMessage(ret)) {
+                    this.resolveMessage(elem, ret);
+                } else if (Util.isString(ret) || Util.isNumber(ret)) {
+                    elem.setText(ret);
+                } else if(Util.isArray(ret)) {
+                    this.resolveArray(ret, elem, round)
+                } else if (Util.isObject(ret)) {
+                    this.resolve(ret, elem, round);
+                }
+            }
+        }
+
+        /**
+         * Function will check if the given message is actually a message or not. The function
+         * will return true if it is a message otherwise false is returned.
+         * @param {string} message 
+         * @returns True if the given message is actually a message otherwise returns false.
+         */
+        isMessage(message) {
+            let params = this.getMessageParams(message);
+            if(!Util.isEmpty(params))
+                message = message.replace(params.join(), "");
+            return !Util.isEmpty(Messages.message(message)) && Messages.message(message) != message;
+        }
+
+        /**
+         * Resolves an element and some basic attributes from a give tag. Method throws an exception if 
+         * the element could not be resolved.
+         * @param {string} tag
+         * @param {object} obj
+         * @returns Null or resolved Elem instance elemenet.
+         */
+        resolveElement(tag, obj) {
+            let resolved = null;
+            var match = [];
+            var el = this.getElementName(tag);
+            if (RME.hasComponent(el)) {
+                el = el.replace(/component:/, "");
+                resolved = RME.component(el, obj);
+                if (Util.isEmpty(resolved))
+                    return resolved;
+            } else if (Util.isEmpty(el)) {
+                throw `Template resolver could not find element: ${el} from the given tag: ${tag}`;
+            } else if (el.indexOf('fragment') === 0) {
+                return el.match(/fragment/).join();
+            } else {
+                resolved = new Elem(el);
+            }
+
+            match = tag.match(/[a-z0-9]+\#[a-zA-Z0-9\-]+/); //find id
+            if (!Util.isEmpty(match))
+                resolved.setId(match.join().replace(/[a-z0-9]+\#/g, ""));
+
+            match = this.cutAttributesIfFound(tag).match(/\.[a-zA-Z-0-9\-]+/g); //find classes
+            if (!Util.isEmpty(match)) 
+                resolved.addClasses(match.join(" ").replace(/\./g, ""));
+
+            match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_\/\.&%@!?£$+¤|;\\<\\>\\"]+\]/g); //find attributes
+            if (!Util.isEmpty(match))
+                resolved = this.addAttributes(resolved, match);
+
+            return resolved;
+        }
+
+        /**
+         * Function will cut off the element tag attributes if found.
+         * @param {string} tag 
+         * @returns Element tag without attributes.
+         */
+        cutAttributesIfFound(tag) {
+            const idx = tag.indexOf('[');
+            return tag.substring(0, idx > 0 ? idx : tag.length);
+        }
+
+        /**
+         * Function will try to parse an element name from the given string. If the given string
+         * is no empty a matched string is returned. If the given string is empty nothing is returned
+         * @param {string} str 
+         * @returns The matched string.
+         */
+        getElementName(str) {
+            if(!Util.isEmpty(str))
+                return str.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join();
+        }
+
+        /**
+         * Adds resolved attributes to an element.
+         * @param {object} elem
+         * @param {array} elem
+         * @returns The given elem instance.
+         */
+        addAttributes(elem, attrArray) {
+            let i = 0;
+            let start = "[";
+            let eq = "=";
+            let end = "]";
+            while(i < attrArray.length) {
+                var attr = attrArray[i];
+                let key = attr.substring(attr.indexOf(start) +1, attr.indexOf(eq));
+                let val = attr.substring(attr.indexOf(eq) +1, attr.indexOf(end));
+                elem.setAttribute(key, val);
+                i++;
+            }
+            return elem;
+        }
+
+        /**
+         * Method adds an attribute to an element.
+         * @param {object} elem
+         * @param {string} key
+         * @param {string} val
+         */
+        resolveAttributes(elem, key, val) {
+            switch(key) {
+                case "id":
+                    elem.setId(val);
+                    break;
+                case "class":
+                    elem.addClasses(val);
+                    break;
+                case "text":
+                    elem.setText(val);
+                    break;
+                case "content":
+                    this.resolveContent(elem, key, val);
+                    break;
+                case "tabIndex":
+                    elem.setTabIndex(val);
+                    break;
+                case "editable":
+                    elem.setEditable(val);
+                    break;
+                case "checked":
+                    elem.setChecked(val);
+                    break;
+                case "disabled":
+                    elem.setDisabled(val);
+                    break;
+                case "visible":
+                    elem.setVisible(val);
+                    break;
+                case "display":
+                    elem.display(val);
+                    break;
+                case "styles":
+                    elem.setStyles(val);
+                    break;
+                case "message":
+                    this.resolveMessage(elem, val);
+                    break;
+                case "click":
+                    elem.click();
+                    break;
+                case "focus":
+                    elem.focus();
+                    break;
+                case "blur":
+                    elem.blur();
+                    break;
+                case "maxLength":
+                    elem.setMaxLength(val);
+                    break;
+                case "minLength":
+                    elem.setMinLength(val);
+                    break;
+                default: 
+                    this.resolveDefault(elem, key, val);
+            }
+        }
+
+        /**
+         * Resolves the attribute that did not match on cases. Usually nothing needs to be done except when handling html dom data-* attributes. In such case
+         * this function will auto format the data-* attribute to a correct format.
+         * @param {object} elem 
+         * @param {string} key 
+         * @param {*} val 
+         */
+        resolveDefault(elem, key, val) {
+            if(key.indexOf("data") === 0 && key.length > "data".length)
+                elem.setData(key.replace(/[A-Z]/, key.charAt(4).toLowerCase()).replace("data", ""), val);
+            else
+                elem.setAttribute(key, val);
+        }
+
+        /**
+         * Function sets the content of the element according to the element.
+         * @param {object} elem 
+         * @param {string} key 
+         * @param {string} val 
+         */
+        resolveContent(elem, key, val) {
+            if(elem.getTagName().toLowerCase() === "meta")
+                elem.setAttribute(key, val);
+            else
+                elem.setContent(val);
+        }
+
+        /**
+         * Function sets a translated message to the element. If the message contains message parameters then the paramters
+         * are resolved first.
+         * @param {object} elem 
+         * @param {string} message 
+         */
+        resolveMessage(elem, message) {
+            if(Util.isEmpty(message))
+                throw "message must not be empty";
+
+            let matches = this.getMessageParams(message);
+            if(Util.isEmpty(matches)) {
+                elem.message(message);
+            } else {
+                Util.setTimeout(function() {
+                    let end = message.indexOf(":") > 0 ? message.indexOf(":") : message.indexOf("{");
+                    message = message.substring(0, end);
+                    matches = matches.join().match(/([^\{\}\:\;]*)/g);
+                    let params = [];
+                    let i = 0;
+                    while(i < matches.length) {
+                        if(!Util.isEmpty(matches[i]))
+                            params.push(matches[i]);
+                        i++;
+                    }
+                    elem.message(message, params);
+                });
+            }
+        }
+
+        /**
+         * Function will return message parameters if found.
+         * @param {string} message 
+         * @returns Message params in a match array if found.
+         */
+        getMessageParams(message) {
+            return message.match(/\:?(\{.*\}\;?)/g);
+        }
+
+        /**
+         * Checks is a given key val an event listener key val.
+         * @param {string} key
+         * @param {function} val
+         * @returns True if the given key val is event listener key val.
+         */
+        isEventKeyVal(key, val) {
+            return key.indexOf("on") === 0 && Util.isFunction(val);
+        }
+
+        /**
+         * Checks that the given component exist with the given key or the key starts with component keyword and the component exist. 
+         * @param {string} key
+         * @returns True if the component exist or the key contains component keyword and exist, otherwise false.
+         */
+        isComponent(key) {
+            return RME.hasComponent(this.getElementName(key));
+        }
+
+        /**
+         * Method takes a template as parameter, starts resolving it and 
+         * returns a created element tree.
+         * @param {object} template
+         * @returns Elem instance element tree.
+         */
+        static resolveTemplate(template) {
+            return Template.create().setTemplateAndResolve(template);
+        }
+
+        /**
+         * Method takes a template and a parent element as parameter and it resolves the given template
+         * into the given parent.
+         * @param {*} template
+         * @param {*} parent
+         * @returns Elem instance element tree.
+         */
+        static resolveToParent(template, parent) {
+            return Template.create().setTemplateAndResolve(template, parent);
+        }
+
+        /**
+         * Method takes a parameter and checks if the parameter is type fragment. 
+         * If the parameter is type fragment the method will return true
+         * otherwise false is returned.
+         * @param {*} child 
+         * @returns True if the parameter is type fragment otherwise false is returned.
+         */
+        static isFragment(child) {
+            return !Util.isEmpty(child) && (child === 'fragment' || !Util.isEmpty(child.fragment))
+        }
+
+        /**
+         * Method will apply the properties given to the element. Old properties are overridden.
+         * @param {object} elem 
+         * @param {object} props 
+         * @param {object} oldProps
+         */
+        static updateElemProps(elem, props, oldProps) {
+            let mashed = Template.mashElemProps(props, oldProps);
+            const templater = Template.create();
+            for (let p in mashed) {
+                if (mashed.hasOwnProperty(p)) {
+                    if (templater.isEventKeyVal(p, mashed[p])) {
+                        elem[p].call(elem, mashed[p]); //element event attribute -> elem, event function
+                    } else if (p === 'class') {
+                        elem.updateClasses(mashed[p]);
+                    } else if (p === 'value') {
+                        elem.setAttribute(p, mashed[p]);
+                        elem.setValue(mashed[p]);
+                    } else {
+                        templater.resolveAttributes(elem, p, mashed[p]);
+                    }
+                }
+            }
+        }
+
+        static mashElemProps(newProps, oldProps) {
+            let props = {};
+            for (let p in oldProps) {
+                if (oldProps.hasOwnProperty(p)) {
+                    if (!newProps[p] && oldProps[p]) {
+                        props[p] = p === 'style' ? '' : undefined
+                    }
+                }
+            }
+            props = {
+                ...props,
+                ...newProps
+            }
+            return props;
+        }
+
+        static create() {
+            return new Template();
+        }
+
+        /**
+         * Method checks if the given object is an unresolved JSON template.
+         * @param {object} object 
+         * @returns True if the given object is an unresolved JSON template, otherwise false.
+         */
+        static isTemplate(object) {
+            let isTemplate = false;
+            if(Util.isObject(object) && !Util.isArray(object) && !(object instanceof Elem)) {
+                for(var p in object) {
+                    isTemplate = object.hasOwnProperty(p) && Template.isTagOrComponent(p);
+                    if(isTemplate)
+                        break;
+                }
+            }
+            return isTemplate;
+        }
+        
+        /**
+         * Method takes a string and returns true if the given string is a html tag or a component, otherwise returns false.
+         * @param {string} tag 
+         * @returns True if the given tag is a HTML tag otherwise false.
+         */
+        static isTagOrComponent(tag) {
+            tag = tag.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join().replace("component:", "");
+            if(RME.hasComponent(tag))
+                return true;
+            
+            return Template.isTag(tag);
+        }
+
+        /**
+         * Method takes a string and returns true if the given string is a html tag, otherwise returns false.
+         * @param {string} tag 
+         * @returns True if the given tag is a HTML tag otherwise false.
+         */
+        static isTag(tag) {
+            let tags = {
+                a: ["a", "abbr", "acronym", "address", "applet", "area", "article", "aside", "audio"],
+                b: ["button", "br", "b", "base", "basefont", "bdi", "bdo", "big", "blockquote", "body"],
+                c: ["canvas", "caption", "center", "cite", "code", "col", "colgroup"],
+                d: ["div", "dd", "dl", "dt", "data", "datalist", "del", "details", "dfn", "dialog"],
+                e: ["em", "embed"],
+                f: ["form", "fieldset", "figcaption", "figure", "font", "footer", "frame", "frameset"],
+                h: ["h1", "h2", "h3", "h4", "h5", "h6", "head", "header", "hr", "html"],
+                i: ["i", "input", "img", "iframe", "ins"],
+                k: ["kbd"],
+                l: ["label", "li", "legend", "link"],
+                m: ["main", "meta", "map", "mark", "meter"],
+                n: ["nav", "noframes", "noscript"],
+                o: ["option", "object", "ol", "optgroup", "output"],
+                p: ["p", "pre", "param", "picture", "progress"],
+                q: ["q"],
+                r: ["rp", "rt", "ruby"],
+                s: ["span", "select", "s", "samp", "script", "section", "small", "source", "strike", "strong", "style", "sub", "summary", "sup", "svg"],
+                t: ["table", "textarea", "td","tr", "tt", "th", "thead", "tbody", "tfoot", "template", "time", "title", "track"],
+                u: ["u", "ul"],
+                v: ["var", "video"],
+                w: ["wbr"],
+            }
+            let i = 0;
+            let tagArray = tags[tag.charAt(0)];
+            if (tagArray) {
+                while (i < tagArray.length) {
+                    if (tagArray[i] === tag)
+                        return true;
+                    i++;
+                }
+            }
+            return false;
+        }
+
+
+        /**
+         * Function checks if the given key is an attribute and returns true if it is otherwise false.
+         * @param {string} key 
+         * @param {object} elem 
+         * @returns True if the given key as an attribute otherwise false.
+         */
+        static isAttr(key, elem) {
+            /**
+             * special cases below.
+             */
+            if(key === "span" && (Template.isElem(elem.getTagName(), ["col", "colgroup"]))) //special case, span might be an attribute also for these two elements.
+                return true;
+            else if(key === "label" && (Template.isElem(elem.getTagName(), ["track", "option", "optgroup"])))
+                return true;
+            else if(key === "title" && (elem.parent() === null || elem.parent().getTagName().toLowerCase() !== "head"))
+                return true;
+            else if(key === "cite" && (Template.isElem(elem.getTagName(), ["blockquote", "del", "ins", "q"])))
+                return true;
+            else if(key === "form" && (Template.isElem(elem.getTagName(), ["button", "fieldset", "input", "label", "meter", "object", "output", "select", "textarea"])))
+                return true;
+            else if(key.indexOf("data") === 0 && (!RME.hasComponent(key) && !Template.isElem(elem.getTagName(), ["data"]) || Template.isElem(elem.getTagName(), ["object"])))
+                return true;
+
+            let attrs = {
+                a: ["alt", "async", "autocomplete", "autofocus", "autoplay", "accept", "accept-charset", "accpetCharset", "accesskey", "action"],
+                b: ["blur"],
+                c: ["class", "checked", "content", "contenteditable", "click", "charset", "cols", "colspan", "controls", "coords"],
+                d: ["disabled", "display", "draggable", "dropzone", "datetime", "default", "defer", "dir", "dirname", "download"],
+                e: ["editable", "enctype"],
+                f: ["for", "focus", "formaction"],
+                h: ["href", "height", "hidden", "high", "hreflang", "headers", "http-equiv", "httpEquiv"],
+                i: ["id", "ismap"],
+                k: ["kind"],
+                l: ["lang", "list", "loop", "low"],
+                m: ["message", "max", "maxlength", "maxLength", "min", "minlength", "minLength", "multiple", "media", "method", "muted"],
+                n: ["name", "novalidate"],
+                o: ["open", "optimum"],
+                p: ["placeholder", "pattern", "poster", "preload"],
+                r: ["rel", "readonly", "required", "reversed", "rows", "rowspan"],
+                s: ["src", "size", "selected", "step", "style", "styles", "shape", "sandbox", "scope", "sizes", "spellcheck", "srcdoc", "srclang", "srcset", "start"],
+                t: ["text", "type", "target", "tabindex", "tabIndex", "translate"],
+                u: ["usemap"],
+                v: ["value", "visible"],
+                w: ["width", "wrap"]
+            }
+
+            let i = 0;
+            let keys = attrs[key.substring(0, 1)];
+            if(keys) {
+                while(i < keys.length) {
+                    if(keys[i] === key)
+                        return true
+                    i++;
+                }
+            }
+            return false;
+        }
+
+        /**
+         * Internal use.
+         * Function checks if a given element tag is in a given array of tag names.
+         * @param {string} elemTag 
+         * @param {array} array 
+         * @returns True if the tag is in the given array otherwise false.
+         */
+        static isElem(elemTag, array) {
+            let i = 0;
+            while(i < array.length) {
+                if(array[i] === elemTag.toLowerCase())
+                    return true;
+                i++;
+            }
+            return false;
+        }
+
+    }
+    return {
+        resolve: Template.resolveTemplate,
+        isTemplate: Template.isTemplate,
+        isTag: Template.isTag,
+        updateElemProps: Template.updateElemProps,
+        isFragment: Template.isFragment,
+        resolveToParent: Template.resolveToParent
+    }
+}());
+
+
+/**
+ * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
+ * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
+ * 
+ * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
+ * operation functionalities.
+ */
+class Tree {
+    /**
+     * Uses CSS selector to find elements on the HTML Document Tree. 
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} selector 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    static get(selector) {
+        try {
+            return Elem.wrapElems(document.querySelectorAll(selector));
+        } catch (e) {}
+    }
+
+    /**
+     * Uses CSS selector to find the first match element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} selector 
+     * @returns An Elem instance.
+     */
+    static getFirst(selector) {
+        try {
+            return Elem.wrap(document.querySelector(selector));
+        } catch (e) {}
+    }
+
+    /**
+     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
+     * @param {string} tag 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    static getByTag(tag) {
+        try {
+            return Elem.wrapElems(document.getElementsByTagName(tag));
+        } catch (e) {}
+    }
+
+    /**
+     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
+     * Found elements will be wrappedn in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} name 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    static getByName(name) {
+        try {
+            return Elem.wrapElems(document.getElementsByName(name));
+        } catch (e) {}
+    }
+
+    /**
+     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} id 
+     * @returns Elem instance.
+     */
+    static getById(id) {
+        try {
+            return Elem.wrap(document.getElementById(id));
+        } catch (e) {}
+    }
+
+    /**
+     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
+     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} classname 
+     * @returns An array of Elem instances or a single Elem instance.
+     */
+    static getByClass(classname) {
+        try {
+            return Elem.wrapElems(document.getElementsByClassName(classname));
+        } catch (e) {}
+    }
+
+    /**
+     * @returns body wrapped in an Elem instance.
+     */
+    static getBody() {
+        try {
+            return Elem.wrap(document.body);
+        } catch (e) {}
+    }
+
+    /**
+     * @returns head wrapped in an Elem instance.
+     */
+    static getHead() {
+        try {
+            return Elem.wrap(document.head);
+        } catch (e) {}
+    }
+
+    /**
+     * @returns title of the html document page.
+     */
+    static getTitle() {
+        return document.title;
+    }
+
+    /**
+     * Set an new title for html document page.
+     * @param {string} title 
+     */
+    static setTitle(title) {
+        document.title = title;
+    }
+
+    /**
+     * @returns active element wrapped in an Elem instance.
+     */
+    static getActiveElement() {
+        try {
+            return Elem.wrap(document.activeElement);
+        } catch (e) {}
+    }
+
+    /**
+     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
+     */
+    static getAnchors() {
+        try {
+            return Elem.wrapElems(document.anchors);
+        } catch (e) {}
+    }
+
+    /**
+     * @returns <html> element.
+     */
+    static getHtmlElement() {
+        return document.documentElement;
+    }
+
+    /**
+     * @returns <!DOCTYPE> element.
+     */
+    static getDoctype() {
+        return document.doctype;
+    }
+
+    /**
+     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
+     */
+    static getEmbeds() {
+        try {
+            return Elem.wrapElems(document.embeds);
+        } catch (e) {}
+    }
+
+    /**
+     * @returns an array of image elements (<img>) wrapped in an Elem instance.
+     */
+    static getImages() {
+        try {
+            return Elem.wrapElems(document.images);
+        } catch (e) {}
+    }
+
+    /**
+     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
+     */
+    static getLinks() {
+        try {
+            return Elem.wrapElems(document.links);
+        } catch (e) {}
+    }
+
+    /**
+     * @returns an array of scripts wrapped in an Elem instance.
+     */
+    static getScripts() {
+        try {
+            return Elem.wrapElems(document.scripts);
+        } catch (e) {}
+    }
+
+    /**
+     * @returns an array of form elements wrapped in an Elem instance.
+     */
+    static getForms() {
+        try {
+            return Elem.wrapElems(document.forms);
+        } catch (e) {}
+    }
+}
+
+
+/**
+ * General Utility methods.
+ */
+class Util {
+    /**
+     * Checks is a given value empty.
+     * @param {*} value
+     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
+     */
+    static isEmpty(value) {
+        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
+    }
+
+    /**
+     * Get the type of the given value.
+     * @param {*} value
+     * @returns The type of the given value.
+     */
+    static getType(value) {
+        return typeof value;
+    }
+
+    /**
+     * Checks is a given value is a given type.
+     * @param {*} value
+     * @param {string} type
+     * @returns True if the given value is the given type otherwise false.
+     */
+    static isType(value, type) {
+        return (Util.getType(value) === type);
+    }
+
+    /**
+     * Checks is a given parameter a function.
+     * @param {*} func 
+     * @returns True if the given parameter is fuction otherwise false.
+     */
+    static isFunction(func) {
+        return Util.isType(func, "function");
+    }
+
+    /**
+     * Checks is a given parameter a boolean.
+     * @param {*} boolean
+     * @returns True if the given parameter is boolean otherwise false.
+     */
+    static isBoolean(boolean) {
+        return Util.isType(boolean, "boolean");
+    }
+
+    /**
+     * Checks is a given parameter a string.
+     * @param {*} string
+     * @returns True if the given parameter is string otherwise false.
+     */
+    static isString(string) {
+        return Util.isType(string, "string");
+    }
+
+    /**
+     * Checks is a given parameter a number.
+     * @param {*} number
+     * @returns True if the given parameter is number otherwise false.
+     */
+    static isNumber(number) {
+        return Util.isType(number, "number");
+    }
+
+    /**
+     * Checks is a given parameter a symbol.
+     * @param {*} symbol
+     * @returns True if the given parameter is symbol otherwise false.
+     */
+    static isSymbol(symbol) {
+        return Util.isType(symbol, "symbol");
+    }
+
+    /**
+     * Checks is a given parameter a object.
+     * @param {*} object
+     * @returns True if the given parameter is object otherwise false.
+     */
+    static isObject(object) {
+        return Util.isType(object, "object");
+    }
+
+    /**
+     * Checks is a given parameter an array.
+     * @param {*} array
+     * @returns True if the given parameter is array otherwise false.
+     */
+    static isArray(array) {
+        return Array.isArray(array);
+    }
+
+    /**
+     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The timeout object.
+     */
+    static setTimeout(callback, milliseconds, ...params) {
+        if(!Util.isFunction(callback)) {
+            throw "callback not fuction";
+        }
+        return window.setTimeout(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes a timeout that was created by setTimeout method.
+     * @param {object} timeoutObject
+     */
+    static clearTimeout(timeoutObject) {
+        window.clearTimeout(timeoutObject);
+    }
+
+    /**
+     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The interval object.
+     */
+    static setInterval(callback, milliseconds, ...params) {
+        if(!Util.isFunction(callback)) {
+            throw "callback not fuction";
+        }
+        return window.setInterval(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes an interval that was created by setInterval method.
+     */
+    static clearInterval(intervalObject) {
+        window.clearInterval(intervalObject);
+    }
+
+    /**
+     * Encodes a string to Base64.
+     * @param {string} string
+     * @returns The base64 encoded string.
+     */
+    static encodeBase64String(string) {
+        if(!Util.isString(string)) {
+            throw "the given parameter is not a string: " +string;
+        }
+        return window.btoa(string);
+    }
+
+    /**
+     * Decodes a base 64 encoded string.
+     * @param {string} string
+     * @returns The base64 decoded string.
+     */
+    static decodeBase64String(string) {
+        if(!Util.isString(string)) {
+            throw "the given parameter is not a string: " +string;
+        }
+        return window.atob(string);
+    }
+}
 
