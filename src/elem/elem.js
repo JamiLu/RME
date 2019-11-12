@@ -595,8 +595,10 @@ let Elem = (function() {
             if ((Util.isBoolean(boolean) && boolean === true)
                 || (Util.isString(boolean) && boolean === 'disabled')) {
                 this.setAttribute('disabled', 'disabled');
+                this.html.disabled = true;
             } else {
                 this.removeAttribute('disabled');
+                this.html.disabled = false;
             }
             return this;
         }
@@ -620,8 +622,10 @@ let Elem = (function() {
             if ((Util.isBoolean(boolean) && boolean === true)
             || (Util.isString(boolean) && boolean === 'checked')) {
                 this.setAttribute('checked', 'checked');
+                this.html.checked = true;
             } else {
                 this.removeAttribute('checked');
+                this.html.checked = false;
             }
             return this;
         }

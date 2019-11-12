@@ -460,12 +460,16 @@ let Template = (function() {
             const templater = Template.create();
             for (let p in mashed) {
                 if (mashed.hasOwnProperty(p)) {
-                    if (templater.isEventKeyVal(p, mashed[p]))
+                    if (templater.isEventKeyVal(p, mashed[p])) {
                         elem[p].call(elem, mashed[p]); //element event attribute -> elem, event function
-                    else if (p === 'class')
+                    } else if (p === 'class') {
                         elem.updateClasses(mashed[p]);
-                    else
+                    } else if (p === 'value') {
+                        elem.setAttribute(p, mashed[p]);
+                        elem.setValue(mashed[p]);
+                    } else {
                         templater.resolveAttributes(elem, p, mashed[p]);
+                    }
                 }
             }
         }
