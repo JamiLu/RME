@@ -595,10 +595,8 @@ let Elem = (function() {
             if ((Util.isBoolean(boolean) && boolean === true)
                 || (Util.isString(boolean) && boolean === 'disabled')) {
                 this.setAttribute('disabled', 'disabled');
-                this.html.disabled = true;
             } else {
                 this.removeAttribute('disabled');
-                this.html.disabled = false;
             }
             return this;
         }
