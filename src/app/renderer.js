@@ -64,21 +64,6 @@ class RMEElemRenderer {
     }
 
     /**
-     * Fuction tests if a given node is inputable. The node is inputable in following cases:
-     *  - The node is a textarea
-     *  - The node is type of text, password, search, tel, url
-     *  - The node has an attribute contentEditable === true
-     * @param {*} node 
-     * @returns True if the node is inputable otherwise false.
-     */
-    isInputableNode(node) {
-        let tag = node.getTagName().toLowerCase();
-        return (tag === 'textarea')
-            || (tag === 'input' && ['text', 'password', 'search', 'tel', 'url'].indexOf(node.dom().type) > -1)
-            || (Util.isBoolean(node.dom().contentEditable) && node.dom().contentEditable === true)
-    }
-
-    /**
      * Function removes all the marked as to be removed elements which did not come in the new stage by starting from the last to the first.
      */
     removeToBeRemoved() {
