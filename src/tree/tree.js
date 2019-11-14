@@ -16,9 +16,7 @@ class Tree {
      * @returns An array of Elem instances or a single Elem instance.
      */
     static get(selector) {
-        try {
-            return Elem.wrapElems(document.querySelectorAll(selector));
-        } catch (e) {}
+        return Elem.wrapElems(document.querySelectorAll(selector));
     }
 
     /**
@@ -41,9 +39,7 @@ class Tree {
      * @returns An array of Elem instances or a single Elem instance.
      */
     static getByTag(tag) {
-        try {
-            return Elem.wrapElems(document.getElementsByTagName(tag));
-        } catch (e) {}
+        return Elem.wrapElems(document.getElementsByTagName(tag));
     }
 
     /**
@@ -54,9 +50,7 @@ class Tree {
      * @returns An array of Elem instances or a single Elem instance.
      */
     static getByName(name) {
-        try {
-            return Elem.wrapElems(document.getElementsByName(name));
-        } catch (e) {}
+        return Elem.wrapElems(document.getElementsByName(name));
     }
 
     /**
@@ -79,9 +73,7 @@ class Tree {
      * @returns An array of Elem instances or a single Elem instance.
      */
     static getByClass(classname) {
-        try {
-            return Elem.wrapElems(document.getElementsByClassName(classname));
-        } catch (e) {}
+        return Elem.wrapElems(document.getElementsByClassName(classname));
     }
 
     /**
@@ -130,9 +122,7 @@ class Tree {
      * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
      */
     static getAnchors() {
-        try {
-            return Elem.wrapElems(document.anchors);
-        } catch (e) {}
+        return Elem.wrapElems(document.anchors);
     }
 
     /**
@@ -153,45 +143,35 @@ class Tree {
      * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
      */
     static getEmbeds() {
-        try {
-            return Elem.wrapElems(document.embeds);
-        } catch (e) {}
+        return Elem.wrapElems(document.embeds);
     }
 
     /**
      * @returns an array of image elements (<img>) wrapped in an Elem instance.
      */
     static getImages() {
-        try {
-            return Elem.wrapElems(document.images);
-        } catch (e) {}
+        return Elem.wrapElems(document.images);
     }
 
     /**
      * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
      */
     static getLinks() {
-        try {
-            return Elem.wrapElems(document.links);
-        } catch (e) {}
+        return Elem.wrapElems(document.links);
     }
 
     /**
      * @returns an array of scripts wrapped in an Elem instance.
      */
     static getScripts() {
-        try {
-            return Elem.wrapElems(document.scripts);
-        } catch (e) {}
+        return Elem.wrapElems(document.scripts);
     }
 
     /**
      * @returns an array of form elements wrapped in an Elem instance.
      */
     static getForms() {
-        try {
-            return Elem.wrapElems(document.forms);
-        } catch (e) {}
+        return Elem.wrapElems(document.forms);
     }
 }
 
