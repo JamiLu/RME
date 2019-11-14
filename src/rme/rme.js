@@ -62,8 +62,10 @@ let RME = (function() {
                 let state = Util.isEmpty(props.key) ? name : `${name}${props.key}`
                 props["ref"] = state;
                 const newProps = comp.update.call()(state);
-                if (!props.shouldComponentUpdate || props.shouldComponentUpdate({...props, ...newProps}) !== false)
+                const nextProps = {...props, ...newProps};
+                if (!nextProps.shouldComponentUpdate || nextProps.shouldComponentUpdate(nextProps) !== false) {
                     props = this.extendProps(props, newProps);
+                }
             }
             if(Util.isEmpty(props))
                 props = {};

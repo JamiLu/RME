@@ -1,5 +1,6 @@
 import RME from './rme';
 import App from './app';
+import Component from './component';
 import Elem from './elem';
 import Tree from './tree';
 import Template from './template';
@@ -16,6 +17,7 @@ import Util from './util';
 export default RME;
 export {
     App,
+    Component,
     Elem,
     Tree,
     Template,
