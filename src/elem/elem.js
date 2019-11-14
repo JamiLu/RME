@@ -279,7 +279,9 @@ let Elem = (function() {
          * @returns An Elem instance.
          */
         getFirst(selector) {
-            return Elem.wrap(this.html.querySelector(selector));
+            try {
+                return Elem.wrap(this.html.querySelector(selector));
+            } catch (e) {}
         }
     
         /**
@@ -655,6 +657,11 @@ let Elem = (function() {
             return this;
         }
 
+        /**
+         * Update classes on this element. Previous classes are overridden.
+         * 
+         * @param {String} classes 
+         */
         updateClasses(classes) {
             this.addClasses(classes);
             let origClassName = this.getClasses();
