@@ -2,6 +2,12 @@ import Util from '../util';
 import RME from '../rme';
 import App from '../app';
 
+/**
+ * Component resolves comma separated list of components that may be function or class.
+ * Function component example: const Comp = props => ({h1: 'Hello'});
+ * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
+ * Resolve components Component(Comp, Comp2);
+ */
 const Component = (function() {
 
     const resolveComponent = component => {
@@ -28,7 +34,8 @@ const Component = (function() {
     }
 
     return (...components) => {
-        components.forEach(component => resolveComponent(component));
+        components.forEach(component => 
+            !Util.isEmpty(component.name) && resolveComponent(component));
     }
 
 })();
