@@ -32,7 +32,8 @@ const Component = (function() {
                 ...state,
                 ...comp.initialState
             }
-            App.get(comp.appName).setState(component.name, state, false);
+            const ref = comp.stateRef || state.stateRef || '';
+            App.get(comp.appName).setState(component.name+ref, state, false);
         }
     }
 
@@ -43,6 +44,14 @@ const Component = (function() {
 
 })();
 
+/**
+ * A bindState function transfers a function component to a stateful component just like it was created 
+ * using class or App class itself. The function receives three parameters. The function component,
+ * an optional state object and an optinal appName.
+ * Invoking examples:
+ * Component(bindState(StatefulComponent));
+ * Component(bindState(OtherComponent, { initialValue: 'initialText' }));
+ */
 const bindState = (function() {
 
     const getStateRef = state => {
