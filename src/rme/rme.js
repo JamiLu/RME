@@ -56,25 +56,30 @@ let RME = (function() {
 
         getComponent(name, props) {
             let comp = this.components[name];
-            if(!comp)
+            if (!comp)
                 throw "Cannot find a component: \""+name+"\"";
-            if(!Util.isEmpty(props) && Util.isFunction(comp.update)) {
-                let state = Util.isEmpty(props.key) ? name : `${name}${props.key}`
-                props["ref"] = state;
-                const newProps = comp.update.call()(state);
+            if (!Util.isEmpty(props) && Util.isFunction(comp.update)) {
+                let stateRef = props.stateRef;
+                if (Util.isEmpty(props.stateRef))
+                    stateRef = name;
+                else if (props.stateRef.search(name) === -1)
+                    stateRef = `${name}${props.stateRef}`;
+
+                props["stateRef"] = stateRef;
+                const newProps = comp.update.call()(stateRef);
                 const nextProps = {...props, ...newProps};
                 if (!nextProps.shouldComponentUpdate || nextProps.shouldComponentUpdate(nextProps) !== false) {
                     props = this.extendProps(props, newProps);
                 }
             }
-            if(Util.isEmpty(props))
+            if (Util.isEmpty(props))
                 props = {};
-            if(!Util.isEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate))
+            if (!Util.isEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate))
                 props.onBeforeCreate.call(props, props);
             let ret = comp.component.call(props, props);
-            if(Template.isTemplate(ret))
+            if (Template.isTemplate(ret))
                 ret = Template.resolve(ret);
-            if(!Util.isEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate))
+            if (!Util.isEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate))
                 props.onAfterCreate.call(props, ret, props);
             if (!Util.isEmpty(this.defaultApp) && !Util.isEmpty(props.onAfterRender) && Util.isFunction(props.onAfterRender))
                 this.defaultApp.addAfterRefreshCallback(props.onAfterRender.bind(ret, ret, props));

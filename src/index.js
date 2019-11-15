@@ -1,6 +1,6 @@
 import RME from './rme';
 import App from './app';
-import Component from './component';
+import Component, { bindState } from './component';
 import Elem from './elem';
 import Tree from './tree';
 import Template from './template';
@@ -18,6 +18,7 @@ export default RME;
 export {
     App,
     Component,
+    bindState,
     Elem,
     Tree,
     Template,

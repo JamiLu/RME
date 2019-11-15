@@ -11,7 +11,10 @@ import App from '../app';
 const Component = (function() {
 
     const resolveComponent = component => {
-        if (Util.isFunction(component) && Util.isEmpty(component.prototype)) {
+        if (Util.isObject(component)) {
+            App.component({[component.name]: component.comp})(component.appName);
+            App.setState(component.name+component.stateRef, component.initialState, false);
+        } else if (Util.isFunction(component) && Util.isEmpty(component.prototype)) {
             RME.component({[component.name]: component});
         } else if (Util.isFunction(component)) {
             const comp = new component();
@@ -40,4 +43,32 @@ const Component = (function() {
 
 })();
 
+const bindState = (function() {
+
+    const getStateRef = state => {
+        return state && state.stateRef ? state.stateRef : '';
+    }
+
+    const removeStateRef = state => {
+        let obj = {
+            ...state
+        }
+        delete obj.stateRef
+        return obj;
+    }
+
+    return (component, state, appName) => ({
+        comp: component,
+        name: component.name,
+        appName: appName,
+        stateRef: getStateRef(state),
+        initialState: {
+            ...removeStateRef(state)
+        }
+    })
+
+})();
+
 export default Component;
+
+export { bindState }
