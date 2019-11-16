@@ -1,6 +1,7 @@
 import RME from './rme';
 import App from './app';
 import Component, { bindState } from './component';
+import CSS from './css';
 import Elem from './elem';
 import Tree from './tree';
 import Template from './template';
@@ -19,6 +20,7 @@ export {
     App,
     Component,
     bindState,
+    CSS,
     Elem,
     Tree,
     Template,

@@ -7,6 +7,7 @@ import App from '../app';
  * Function component example: const Comp = props => ({h1: 'Hello'});
  * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
  * Resolve components Component(Comp, Comp2);
+ * @param {function} components commma separated list of components
  */
 const Component = (function() {
 
@@ -51,6 +52,9 @@ const Component = (function() {
  * Invoking examples:
  * Component(bindState(StatefulComponent));
  * Component(bindState(OtherComponent, { initialValue: 'initialText' }));
+ * @param {function} component
+ * @param {object} state
+ * @param {string} appName
  */
 const bindState = (function() {
 
