@@ -7,6 +7,7 @@ import Tree from './tree';
 import Template from './template';
 import Messages from './messages';
 import Router from './router';
+import EventPipe from './eventpipe';
 import Http from './http';
 import Cookie from './cookie';
 import Session from './session';
@@ -26,6 +27,7 @@ export {
     Template,
     Messages,
     Router,
+    EventPipe,
     Http,
     Cookie,
     Session,
