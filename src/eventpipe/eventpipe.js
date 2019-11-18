@@ -3,6 +3,10 @@ import Util from '../util';
 
 const EventPipe = (function() {
 
+    /**
+     * EventPipe class can be used to multicast and send custom events to registered listeners.
+     * Each event in an event queue will be sent to each registerd listener.
+     */
     class EventPipe {
         constructor() {
             this.eventsQueue = [];
