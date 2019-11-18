@@ -463,7 +463,7 @@ let Template = (function() {
                     if (templater.isEventKeyVal(p, mashed[p])) {
                         elem[p].call(elem, mashed[p]); //element event attribute -> elem, event function
                     } else if (p === 'class') {
-                        elem.updateClasses(mashed[p]);
+                        elem.updateClasses(mashed[p] || '');
                     } else if (p === 'value') {
                         elem.setAttribute(p, mashed[p]);
                         elem.setValue(mashed[p]);
