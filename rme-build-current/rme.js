@@ -516,21 +516,6 @@ class RMEElemRenderer {
     }
 
     /**
-     * Fuction tests if a given node is inputable. The node is inputable in following cases:
-     *  - The node is a textarea
-     *  - The node is type of text, password, search, tel, url
-     *  - The node has an attribute contentEditable === true
-     * @param {*} node 
-     * @returns True if the node is inputable otherwise false.
-     */
-    isInputableNode(node) {
-        let tag = node.getTagName().toLowerCase();
-        return (tag === 'textarea')
-            || (tag === 'input' && ['text', 'password', 'search', 'tel', 'url'].indexOf(node.dom().type) > -1)
-            || (Util.isBoolean(node.dom().contentEditable) && node.dom().contentEditable === true)
-    }
-
-    /**
      * Function removes all the marked as to be removed elements which did not come in the new stage by starting from the last to the first.
      */
     removeToBeRemoved() {
@@ -1005,6 +990,152 @@ class Browser {
 
 
 
+
+
+
+/**
+ * Component resolves comma separated list of components that may be function or class.
+ * Function component example: const Comp = props => ({h1: 'Hello'});
+ * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
+ * Resolve components Component(Comp, Comp2);
+ * @param {function} components commma separated list of components
+ */
+const Component = (function() {
+
+    const resolveComponent = component => {
+        if (Util.isObject(component)) {
+            App.component({[component.name]: component.comp})(component.appName);
+            App.setState(component.name+component.stateRef, component.initialState, false);
+        } else if (Util.isFunction(component) && Util.isEmpty(component.prototype)) {
+            RME.component({[component.name]: component});
+        } else if (Util.isFunction(component)) {
+            const comp = new component();
+            App.component({[component.name]: comp.render})(comp.appName);
+            let state = {};
+            if (!Util.isEmpty(comp.onBeforeCreate))
+                state.onBeforeCreate = comp.onBeforeCreate;
+            if (!Util.isEmpty(comp.shouldComponentUpdate))
+                state.shouldComponentUpdate = comp.shouldComponentUpdate;
+            if (!Util.isEmpty(comp.onAfterCreate))
+                state.onAfterCreate = comp.onAfterCreate;
+            if (!Util.isEmpty(comp.onAfterRender))
+                state.onAfterRender = comp.onAfterRender;
+            state = {
+                ...state,
+                ...comp.initialState
+            }
+            const ref = comp.stateRef || state.stateRef || '';
+            App.get(comp.appName).setState(component.name+ref, state, false);
+        }
+    }
+
+    return (...components) => {
+        components.forEach(component => 
+            !Util.isEmpty(component.name) && resolveComponent(component));
+    }
+
+})();
+
+/**
+ * A bindState function transfers a function component to a stateful component just like it was created 
+ * using class or App class itself. The function receives three parameters. The function component,
+ * an optional state object and an optinal appName.
+ * Invoking examples:
+ * Component(bindState(StatefulComponent));
+ * Component(bindState(OtherComponent, { initialValue: 'initialText' }));
+ * @param {function} component
+ * @param {object} state
+ * @param {string} appName
+ */
+const bindState = (function() {
+
+    const getStateRef = state => {
+        return state && state.stateRef ? state.stateRef : '';
+    }
+
+    const removeStateRef = state => {
+        let obj = {
+            ...state
+        }
+        delete obj.stateRef
+        return obj;
+    }
+
+    return (component, state, appName) => ({
+        comp: component,
+        name: component.name,
+        appName: appName,
+        stateRef: getStateRef(state),
+        initialState: {
+            ...removeStateRef(state)
+        }
+    })
+
+})();
+
+
+
+
+
+/**
+ * A CSS function will either create a new style element containing given css and other parameters 
+ * or it will append to a existing style element if the element is found by given parameters.
+ * @param {string} css string
+ * @param {object} config properties object of the style element
+ */
+const CSS = (function() {
+
+    const getStyles = config => {
+        const styles = Tree.getHead().getByTag('style');
+        if (Util.isEmpty(config) && !Util.isArray(styles)) {
+            return styles;
+        } else if (Util.isArray(styles)) {
+            return styles.find(style => arePropertiesSame(style.getProps(), config));
+        } else if (!Util.isEmpty(styles) && arePropertiesSame(styles.getProps(), config)) {
+            return styles;
+        }
+    };
+
+    const propsWithoutContent = props => {
+        let newProps = {
+            ...props
+        }
+        delete newProps.text;
+        return newProps;
+    }
+
+    const arePropertiesSame = (oldProps, newProps) => 
+        JSON.stringify(propsWithoutContent(oldProps)) === JSON.stringify(newProps || {});
+
+    const hasStyles = config => !Util.isEmpty(getStyles(config));
+
+    const hasContent = (content, config) => {
+        const styles = getStyles(config);
+        if (!Util.isEmpty(styles)) {
+            return styles.getContent().match(content) !== null
+        }
+    };
+
+    return (content, config) => {
+        if (!hasStyles(config)) {
+            Tree.getHead().append({
+                style: {
+                    content,
+                    ...config
+                }
+            });
+        } else if (!hasContent(content, config)) {
+            const style = getStyles(config);
+            if (!Util.isEmpty(style)) {
+                const prevContent = style.getContent();
+                style.setContent(prevContent+content);
+            }
+        }
+    }
+})();
+
+
+
 let Cookie = (function() {
     /**
      * Cookie interface offers an easy way to get, set or remove cookies in application logic.
@@ -1115,6 +1246,81 @@ let Cookie = (function() {
 
     return Cookie;
 }());
+
+
+
+
+const EventPipe = (function() {
+
+    /**
+     * EventPipe class can be used to multicast and send custom events to registered listeners.
+     * Each event in an event queue will be sent to each registerd listener.
+     */
+    class EventPipe {
+        constructor() {
+            this.eventsQueue = [];
+            this.callQueue = [];
+            this.loopTimeout;
+        }
+
+        containsEvent() {
+            return this.eventsQueue.find(ev => ev.type === event.type);
+        }
+
+        /**
+         * Function sends an event object though the EventPipe. The event must have a type attribute
+         * defined otherwise an error is thrown. 
+         * Example defintion of the event object. 
+         * { 
+         *   type: 'some event',
+         *   ...payload
+         * }
+         * If an event listener is defined the sent event will be received on the event listener.
+         * @param {object} event 
+         */
+        send(event) {
+            if (Util.isEmpty(event.type))
+                throw new Error('Event must have type attribute.');
+            
+            if (!this.containsEvent())
+                this.eventsQueue.push(event);
+
+            this.loopEvents();
+        }
+
+        loopEvents() {
+            if (this.loopTimeout)
+                Util.clearTimeout(this.loopTimeout);
+
+            this.loopTimeout = Util.setTimeout(() => {
+                this.callQueue.forEach(eventCallback => 
+                    this.eventsQueue.forEach(ev => eventCallback(ev)));
+
+                this.eventsQueue = [];
+                this.callQueue = [];
+            });
+        }
+
+        /**
+         * Function registers an event listener function that receives an event sent through the
+         * EventPipe. Each listener will receive each event that are in an event queue. The listener
+         * function receives the event as a parameter.
+         * @param {function} eventCallback 
+         */
+        receive(eventCallback) {
+            this.callQueue.push(eventCallback);
+        }
+
+    }
+
+    const eventPipe = new EventPipe();
+
+    return {
+        send: eventPipe.send.bind(eventPipe),
+        receive: eventPipe.receive.bind(eventPipe)
+    }
+
+})();
 
 
 
@@ -1395,7 +1601,9 @@ let Elem = (function() {
          * @returns An Elem instance.
          */
         getFirst(selector) {
-            return Elem.wrap(this.html.querySelector(selector));
+            try {
+                return Elem.wrap(this.html.querySelector(selector));
+            } catch (e) {}
         }
     
         /**
@@ -1771,6 +1979,11 @@ let Elem = (function() {
             return this;
         }
 
+        /**
+         * Update classes on this element. Previous classes are overridden.
+         * 
+         * @param {String} classes 
+         */
         updateClasses(classes) {
             this.addClasses(classes);
             let origClassName = this.getClasses();
@@ -3968,23 +4181,30 @@ let RME = (function() {
 
         getComponent(name, props) {
             let comp = this.components[name];
-            if(!comp)
+            if (!comp)
                 throw "Cannot find a component: \""+name+"\"";
-            if(!Util.isEmpty(props) && Util.isFunction(comp.update)) {
-                let state = Util.isEmpty(props.key) ? name : `${name}${props.key}`
-                props["ref"] = state;
-                const newProps = comp.update.call()(state);
-                if (!props.shouldComponentUpdate || props.shouldComponentUpdate({...props, ...newProps}) !== false)
+            if (!Util.isEmpty(props) && Util.isFunction(comp.update)) {
+                let stateRef = props.stateRef;
+                if (Util.isEmpty(props.stateRef))
+                    stateRef = name;
+                else if (props.stateRef.search(name) === -1)
+                    stateRef = `${name}${props.stateRef}`;
+
+                props["stateRef"] = stateRef;
+                const newProps = comp.update.call()(stateRef);
+                const nextProps = {...props, ...newProps};
+                if (!nextProps.shouldComponentUpdate || nextProps.shouldComponentUpdate(nextProps) !== false) {
                     props = this.extendProps(props, newProps);
+                }
             }
-            if(Util.isEmpty(props))
+            if (Util.isEmpty(props))
                 props = {};
-            if(!Util.isEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate))
+            if (!Util.isEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate))
                 props.onBeforeCreate.call(props, props);
             let ret = comp.component.call(props, props);
-            if(Template.isTemplate(ret))
+            if (Template.isTemplate(ret))
                 ret = Template.resolve(ret);
-            if(!Util.isEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate))
+            if (!Util.isEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate))
                 props.onAfterCreate.call(props, ret, props);
             if (!Util.isEmpty(this.defaultApp) && !Util.isEmpty(props.onAfterRender) && Util.isFunction(props.onAfterRender))
                 this.defaultApp.addAfterRefreshCallback(props.onAfterRender.bind(ret, ret, props));
@@ -4729,171 +4949,6 @@ class Storage {
 }
 
 
-/**
- * General Utility methods.
- */
-class Util {
-    /**
-     * Checks is a given value empty.
-     * @param {*} value
-     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
-     */
-    static isEmpty(value) {
-        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
-    }
-
-    /**
-     * Get the type of the given value.
-     * @param {*} value
-     * @returns The type of the given value.
-     */
-    static getType(value) {
-        return typeof value;
-    }
-
-    /**
-     * Checks is a given value is a given type.
-     * @param {*} value
-     * @param {string} type
-     * @returns True if the given value is the given type otherwise false.
-     */
-    static isType(value, type) {
-        return (Util.getType(value) === type);
-    }
-
-    /**
-     * Checks is a given parameter a function.
-     * @param {*} func 
-     * @returns True if the given parameter is fuction otherwise false.
-     */
-    static isFunction(func) {
-        return Util.isType(func, "function");
-    }
-
-    /**
-     * Checks is a given parameter a boolean.
-     * @param {*} boolean
-     * @returns True if the given parameter is boolean otherwise false.
-     */
-    static isBoolean(boolean) {
-        return Util.isType(boolean, "boolean");
-    }
-
-    /**
-     * Checks is a given parameter a string.
-     * @param {*} string
-     * @returns True if the given parameter is string otherwise false.
-     */
-    static isString(string) {
-        return Util.isType(string, "string");
-    }
-
-    /**
-     * Checks is a given parameter a number.
-     * @param {*} number
-     * @returns True if the given parameter is number otherwise false.
-     */
-    static isNumber(number) {
-        return Util.isType(number, "number");
-    }
-
-    /**
-     * Checks is a given parameter a symbol.
-     * @param {*} symbol
-     * @returns True if the given parameter is symbol otherwise false.
-     */
-    static isSymbol(symbol) {
-        return Util.isType(symbol, "symbol");
-    }
-
-    /**
-     * Checks is a given parameter a object.
-     * @param {*} object
-     * @returns True if the given parameter is object otherwise false.
-     */
-    static isObject(object) {
-        return Util.isType(object, "object");
-    }
-
-    /**
-     * Checks is a given parameter an array.
-     * @param {*} array
-     * @returns True if the given parameter is array otherwise false.
-     */
-    static isArray(array) {
-        return Array.isArray(array);
-    }
-
-    /**
-     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The timeout object.
-     */
-    static setTimeout(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setTimeout(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes a timeout that was created by setTimeout method.
-     * @param {object} timeoutObject
-     */
-    static clearTimeout(timeoutObject) {
-        window.clearTimeout(timeoutObject);
-    }
-
-    /**
-     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The interval object.
-     */
-    static setInterval(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setInterval(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes an interval that was created by setInterval method.
-     */
-    static clearInterval(intervalObject) {
-        window.clearInterval(intervalObject);
-    }
-
-    /**
-     * Encodes a string to Base64.
-     * @param {string} string
-     * @returns The base64 encoded string.
-     */
-    static encodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.btoa(string);
-    }
-
-    /**
-     * Decodes a base 64 encoded string.
-     * @param {string} string
-     * @returns The base64 decoded string.
-     */
-    static decodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.atob(string);
-    }
-}
-
-
-
 
 let Template = (function() {
     /**
@@ -5355,7 +5410,7 @@ let Template = (function() {
                     if (templater.isEventKeyVal(p, mashed[p])) {
                         elem[p].call(elem, mashed[p]); //element event attribute -> elem, event function
                     } else if (p === 'class') {
-                        elem.updateClasses(mashed[p]);
+                        elem.updateClasses(mashed[p] || '');
                     } else if (p === 'value') {
                         elem.setAttribute(p, mashed[p]);
                         elem.setValue(mashed[p]);
@@ -5545,6 +5600,7 @@ let Template = (function() {
 }());
 
 
+
 /**
  * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
  * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
@@ -5561,9 +5617,7 @@ class Tree {
      * @returns An array of Elem instances or a single Elem instance.
      */
     static get(selector) {
-        try {
-            return Elem.wrapElems(document.querySelectorAll(selector));
-        } catch (e) {}
+        return Elem.wrapElems(document.querySelectorAll(selector));
     }
 
     /**
@@ -5586,9 +5640,7 @@ class Tree {
      * @returns An array of Elem instances or a single Elem instance.
      */
     static getByTag(tag) {
-        try {
-            return Elem.wrapElems(document.getElementsByTagName(tag));
-        } catch (e) {}
+        return Elem.wrapElems(document.getElementsByTagName(tag));
     }
 
     /**
@@ -5599,9 +5651,7 @@ class Tree {
      * @returns An array of Elem instances or a single Elem instance.
      */
     static getByName(name) {
-        try {
-            return Elem.wrapElems(document.getElementsByName(name));
-        } catch (e) {}
+        return Elem.wrapElems(document.getElementsByName(name));
     }
 
     /**
@@ -5624,9 +5674,7 @@ class Tree {
      * @returns An array of Elem instances or a single Elem instance.
      */
     static getByClass(classname) {
-        try {
-            return Elem.wrapElems(document.getElementsByClassName(classname));
-        } catch (e) {}
+        return Elem.wrapElems(document.getElementsByClassName(classname));
     }
 
     /**
@@ -5675,9 +5723,7 @@ class Tree {
      * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
      */
     static getAnchors() {
-        try {
-            return Elem.wrapElems(document.anchors);
-        } catch (e) {}
+        return Elem.wrapElems(document.anchors);
     }
 
     /**
@@ -5698,45 +5744,199 @@ class Tree {
      * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
      */
     static getEmbeds() {
-        try {
-            return Elem.wrapElems(document.embeds);
-        } catch (e) {}
+        return Elem.wrapElems(document.embeds);
     }
 
     /**
      * @returns an array of image elements (<img>) wrapped in an Elem instance.
      */
     static getImages() {
-        try {
-            return Elem.wrapElems(document.images);
-        } catch (e) {}
+        return Elem.wrapElems(document.images);
     }
 
     /**
      * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
      */
     static getLinks() {
-        try {
-            return Elem.wrapElems(document.links);
-        } catch (e) {}
+        return Elem.wrapElems(document.links);
     }
 
     /**
      * @returns an array of scripts wrapped in an Elem instance.
      */
     static getScripts() {
-        try {
-            return Elem.wrapElems(document.scripts);
-        } catch (e) {}
+        return Elem.wrapElems(document.scripts);
     }
 
     /**
      * @returns an array of form elements wrapped in an Elem instance.
      */
     static getForms() {
-        try {
-            return Elem.wrapElems(document.forms);
-        } catch (e) {}
+        return Elem.wrapElems(document.forms);
+    }
+}
+
+
+/**
+ * General Utility methods.
+ */
+class Util {
+    /**
+     * Checks is a given value empty.
+     * @param {*} value
+     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
+     */
+    static isEmpty(value) {
+        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
+    }
+
+    /**
+     * Get the type of the given value.
+     * @param {*} value
+     * @returns The type of the given value.
+     */
+    static getType(value) {
+        return typeof value;
+    }
+
+    /**
+     * Checks is a given value is a given type.
+     * @param {*} value
+     * @param {string} type
+     * @returns True if the given value is the given type otherwise false.
+     */
+    static isType(value, type) {
+        return (Util.getType(value) === type);
+    }
+
+    /**
+     * Checks is a given parameter a function.
+     * @param {*} func 
+     * @returns True if the given parameter is fuction otherwise false.
+     */
+    static isFunction(func) {
+        return Util.isType(func, "function");
+    }
+
+    /**
+     * Checks is a given parameter a boolean.
+     * @param {*} boolean
+     * @returns True if the given parameter is boolean otherwise false.
+     */
+    static isBoolean(boolean) {
+        return Util.isType(boolean, "boolean");
+    }
+
+    /**
+     * Checks is a given parameter a string.
+     * @param {*} string
+     * @returns True if the given parameter is string otherwise false.
+     */
+    static isString(string) {
+        return Util.isType(string, "string");
+    }
+
+    /**
+     * Checks is a given parameter a number.
+     * @param {*} number
+     * @returns True if the given parameter is number otherwise false.
+     */
+    static isNumber(number) {
+        return Util.isType(number, "number");
+    }
+
+    /**
+     * Checks is a given parameter a symbol.
+     * @param {*} symbol
+     * @returns True if the given parameter is symbol otherwise false.
+     */
+    static isSymbol(symbol) {
+        return Util.isType(symbol, "symbol");
+    }
+
+    /**
+     * Checks is a given parameter a object.
+     * @param {*} object
+     * @returns True if the given parameter is object otherwise false.
+     */
+    static isObject(object) {
+        return Util.isType(object, "object");
+    }
+
+    /**
+     * Checks is a given parameter an array.
+     * @param {*} array
+     * @returns True if the given parameter is array otherwise false.
+     */
+    static isArray(array) {
+        return Array.isArray(array);
+    }
+
+    /**
+     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The timeout object.
+     */
+    static setTimeout(callback, milliseconds, ...params) {
+        if(!Util.isFunction(callback)) {
+            throw "callback not fuction";
+        }
+        return window.setTimeout(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes a timeout that was created by setTimeout method.
+     * @param {object} timeoutObject
+     */
+    static clearTimeout(timeoutObject) {
+        window.clearTimeout(timeoutObject);
+    }
+
+    /**
+     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The interval object.
+     */
+    static setInterval(callback, milliseconds, ...params) {
+        if(!Util.isFunction(callback)) {
+            throw "callback not fuction";
+        }
+        return window.setInterval(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes an interval that was created by setInterval method.
+     */
+    static clearInterval(intervalObject) {
+        window.clearInterval(intervalObject);
+    }
+
+    /**
+     * Encodes a string to Base64.
+     * @param {string} string
+     * @returns The base64 encoded string.
+     */
+    static encodeBase64String(string) {
+        if(!Util.isString(string)) {
+            throw "the given parameter is not a string: " +string;
+        }
+        return window.btoa(string);
+    }
+
+    /**
+     * Decodes a base 64 encoded string.
+     * @param {string} string
+     * @returns The base64 decoded string.
+     */
+    static decodeBase64String(string) {
+        if(!Util.isString(string)) {
+            throw "the given parameter is not a string: " +string;
+        }
+        return window.atob(string);
     }
 }
 

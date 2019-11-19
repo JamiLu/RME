@@ -574,21 +574,6 @@ function () {
       }
     }
     /**
-     * Fuction tests if a given node is inputable. The node is inputable in following cases:
-     *  - The node is a textarea
-     *  - The node is type of text, password, search, tel, url
-     *  - The node has an attribute contentEditable === true
-     * @param {*} node 
-     * @returns True if the node is inputable otherwise false.
-     */
-
-  }, {
-    key: "isInputableNode",
-    value: function isInputableNode(node) {
-      var tag = node.getTagName().toLowerCase();
-      return tag === 'textarea' || tag === 'input' && ['text', 'password', 'search', 'tel', 'url'].indexOf(node.dom().type) > -1 || Util.isBoolean(node.dom().contentEditable) && node.dom().contentEditable === true;
-    }
-    /**
      * Function removes all the marked as to be removed elements which did not come in the new stage by starting from the last to the first.
      */
 
@@ -1175,6 +1160,144 @@ function () {
 
   return Browser;
 }();
+/**
+ * Component resolves comma separated list of components that may be function or class.
+ * Function component example: const Comp = props => ({h1: 'Hello'});
+ * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
+ * Resolve components Component(Comp, Comp2);
+ * @param {function} components commma separated list of components
+ */
+
+
+var Component = function () {
+  var resolveComponent = function resolveComponent(component) {
+    if (Util.isObject(component)) {
+      App.component(_defineProperty({}, component.name, component.comp))(component.appName);
+      App.setState(component.name + component.stateRef, component.initialState, false);
+    } else if (Util.isFunction(component) && Util.isEmpty(component.prototype)) {
+      RME.component(_defineProperty({}, component.name, component));
+    } else if (Util.isFunction(component)) {
+      var comp = new component();
+      App.component(_defineProperty({}, component.name, comp.render))(comp.appName);
+      var state = {};
+      if (!Util.isEmpty(comp.onBeforeCreate)) state.onBeforeCreate = comp.onBeforeCreate;
+      if (!Util.isEmpty(comp.shouldComponentUpdate)) state.shouldComponentUpdate = comp.shouldComponentUpdate;
+      if (!Util.isEmpty(comp.onAfterCreate)) state.onAfterCreate = comp.onAfterCreate;
+      if (!Util.isEmpty(comp.onAfterRender)) state.onAfterRender = comp.onAfterRender;
+      state = _objectSpread({}, state, comp.initialState);
+      var ref = comp.stateRef || state.stateRef || '';
+      App.get(comp.appName).setState(component.name + ref, state, false);
+    }
+  };
+
+  return function () {
+    for (var _len = arguments.length, components = new Array(_len), _key = 0; _key < _len; _key++) {
+      components[_key] = arguments[_key];
+    }
+
+    components.forEach(function (component) {
+      return !Util.isEmpty(component.name) && resolveComponent(component);
+    });
+  };
+}();
+/**
+ * A bindState function transfers a function component to a stateful component just like it was created 
+ * using class or App class itself. The function receives three parameters. The function component,
+ * an optional state object and an optinal appName.
+ * Invoking examples:
+ * Component(bindState(StatefulComponent));
+ * Component(bindState(OtherComponent, { initialValue: 'initialText' }));
+ * @param {function} component
+ * @param {object} state
+ * @param {string} appName
+ */
+
+
+var bindState = function () {
+  var getStateRef = function getStateRef(state) {
+    return state && state.stateRef ? state.stateRef : '';
+  };
+
+  var removeStateRef = function removeStateRef(state) {
+    var obj = _objectSpread({}, state);
+
+    delete obj.stateRef;
+    return obj;
+  };
+
+  return function (component, state, appName) {
+    return {
+      comp: component,
+      name: component.name,
+      appName: appName,
+      stateRef: getStateRef(state),
+      initialState: _objectSpread({}, removeStateRef(state))
+    };
+  };
+}();
+/**
+ * A CSS function will either create a new style element containing given css and other parameters 
+ * or it will append to a existing style element if the element is found by given parameters.
+ * @param {string} css string
+ * @param {object} config properties object of the style element
+ */
+
+
+var CSS = function () {
+  var getStyles = function getStyles(config) {
+    var styles = Tree.getHead().getByTag('style');
+
+    if (Util.isEmpty(config) && !Util.isArray(styles)) {
+      return styles;
+    } else if (Util.isArray(styles)) {
+      return styles.find(function (style) {
+        return arePropertiesSame(style.getProps(), config);
+      });
+    } else if (!Util.isEmpty(styles) && arePropertiesSame(styles.getProps(), config)) {
+      return styles;
+    }
+  };
+
+  var propsWithoutContent = function propsWithoutContent(props) {
+    var newProps = _objectSpread({}, props);
+
+    delete newProps.text;
+    return newProps;
+  };
+
+  var arePropertiesSame = function arePropertiesSame(oldProps, newProps) {
+    return JSON.stringify(propsWithoutContent(oldProps)) === JSON.stringify(newProps || {});
+  };
+
+  var hasStyles = function hasStyles(config) {
+    return !Util.isEmpty(getStyles(config));
+  };
+
+  var hasContent = function hasContent(content, config) {
+    var styles = getStyles(config);
+
+    if (!Util.isEmpty(styles)) {
+      return styles.getContent().match(content) !== null;
+    }
+  };
+
+  return function (content, config) {
+    if (!hasStyles(config)) {
+      Tree.getHead().append({
+        style: _objectSpread({
+          content: content
+        }, config)
+      });
+    } else if (!hasContent(content, config)) {
+      var style = getStyles(config);
+
+      if (!Util.isEmpty(style)) {
+        var prevContent = style.getContent();
+        style.setContent(prevContent + content);
+      }
+    }
+  };
+}();
 
 var Cookie = function () {
   /**
@@ -1321,6 +1444,89 @@ var Cookie = function () {
   }();
 
   return Cookie;
+}();
+
+var EventPipe = function () {
+  /**
+   * EventPipe class can be used to multicast and send custom events to registered listeners.
+   * Each event in an event queue will be sent to each registerd listener.
+   */
+  var EventPipe =
+  /*#__PURE__*/
+  function () {
+    function EventPipe() {
+      _classCallCheck(this, EventPipe);
+
+      this.eventsQueue = [];
+      this.callQueue = [];
+      this.loopTimeout;
+    }
+
+    _createClass(EventPipe, [{
+      key: "containsEvent",
+      value: function containsEvent() {
+        return this.eventsQueue.find(function (ev) {
+          return ev.type === event.type;
+        });
+      }
+      /**
+       * Function sends an event object though the EventPipe. The event must have a type attribute
+       * defined otherwise an error is thrown. 
+       * Example defintion of the event object. 
+       * { 
+       *   type: 'some event',
+       *   ...payload
+       * }
+       * If an event listener is defined the sent event will be received on the event listener.
+       * @param {object} event 
+       */
+
+    }, {
+      key: "send",
+      value: function send(event) {
+        if (Util.isEmpty(event.type)) throw new Error('Event must have type attribute.');
+        if (!this.containsEvent()) this.eventsQueue.push(event);
+        this.loopEvents();
+      }
+    }, {
+      key: "loopEvents",
+      value: function loopEvents() {
+        var _this3 = this;
+
+        if (this.loopTimeout) Util.clearTimeout(this.loopTimeout);
+        this.loopTimeout = Util.setTimeout(function () {
+          _this3.callQueue.forEach(function (eventCallback) {
+            return _this3.eventsQueue.forEach(function (ev) {
+              return eventCallback(ev);
+            });
+          });
+
+          _this3.eventsQueue = [];
+          _this3.callQueue = [];
+        });
+      }
+      /**
+       * Function registers an event listener function that receives an event sent through the
+       * EventPipe. Each listener will receive each event that are in an event queue. The listener
+       * function receives the event as a parameter.
+       * @param {function} eventCallback 
+       */
+
+    }, {
+      key: "receive",
+      value: function receive(eventCallback) {
+        this.callQueue.push(eventCallback);
+      }
+    }]);
+
+    return EventPipe;
+  }();
+
+  var eventPipe = new EventPipe();
+  return {
+    send: eventPipe.send.bind(eventPipe),
+    receive: eventPipe.receive.bind(eventPipe)
+  };
 }();
 
 var Elem = function () {
@@ -1641,7 +1847,9 @@ var Elem = function () {
     }, {
       key: "getFirst",
       value: function getFirst(selector) {
-        return Elem.wrap(this.html.querySelector(selector));
+        try {
+          return Elem.wrap(this.html.querySelector(selector));
+        } catch (e) {}
       }
       /**
        * Uses a HTML Document tag name to find matching elements in this Element e.g. div, span, p.
@@ -2083,6 +2291,12 @@ var Elem = function () {
         this.html.className = origClassesArray.concat(addClassesArray).join(' ').trim();
         return this;
       }
+      /**
+       * Update classes on this element. Previous classes are overridden.
+       * 
+       * @param {String} classes 
+       */
+
     }, {
       key: "updateClasses",
       value: function updateClasses(classes) {
@@ -2252,10 +2466,10 @@ var Elem = function () {
     }, {
       key: "click",
       value: function click() {
-        var _this3 = this;
+        var _this4 = this;
 
         Util.setTimeout(function () {
-          return _this3.html.click();
+          return _this4.html.click();
         });
         return this;
       }
@@ -2267,10 +2481,10 @@ var Elem = function () {
     }, {
       key: "focus",
       value: function focus() {
-        var _this4 = this;
+        var _this5 = this;
 
         Util.setTimeout(function () {
-          return _this4.html.focus();
+          return _this5.html.focus();
         });
         return this;
       }
@@ -2282,10 +2496,10 @@ var Elem = function () {
     }, {
       key: "blur",
       value: function blur() {
-        var _this5 = this;
+        var _this6 = this;
 
         Util.setTimeout(function () {
-          return _this5.html.blur();
+          return _this6.html.blur();
         });
         return this;
       }
@@ -4103,15 +4317,15 @@ var Http = function () {
     _createClass(HttpAjax, [{
       key: "then",
       value: function then(successHandler, errorHandler) {
-        var _this6 = this;
+        var _this7 = this;
 
         this.xhr.onload = function () {
-          _this6.xhr.responseJSON = tryParseJSON(_this6.xhr.responseText);
-          isResponseOK(_this6.xhr.status) ? successHandler(resolveResponse(_this6.xhr.response), _this6.xhr) : errorHandler(_this6.xhr);
+          _this7.xhr.responseJSON = tryParseJSON(_this7.xhr.responseText);
+          isResponseOK(_this7.xhr.status) ? successHandler(resolveResponse(_this7.xhr.response), _this7.xhr) : errorHandler(_this7.xhr);
         };
 
         this.xhr.onprogress = function (event) {
-          if (_this6.progressHandler) _this6.progressHandler(event);
+          if (_this7.progressHandler) _this7.progressHandler(event);
         };
 
         if (this.xhr.ontimeout && config.onTimeout) {
@@ -4121,8 +4335,8 @@ var Http = function () {
         }
 
         this.xhr.onerror = function () {
-          _this6.xhr.responseJSON = tryParseJSON(_this6.xhr.responseText);
-          if (errorHandler) errorHandler(_this6.xhr);
+          _this7.xhr.responseJSON = tryParseJSON(_this7.xhr.responseText);
+          if (errorHandler) errorHandler(_this7.xhr);
         };
 
         this.data ? this.xhr.send(this.data) : this.xhr.send();
@@ -4131,11 +4345,11 @@ var Http = function () {
     }, {
       key: "catch",
       value: function _catch(errorHandler) {
-        var _this7 = this;
+        var _this8 = this;
 
         this.xhr.onerror = function () {
-          _this7.xhr.responseJSON = tryParseJSON(_this7.xhr.responrenderseText);
-          if (errorHandler) errorHandler(_this7.xhr);
+          _this8.xhr.responseJSON = tryParseJSON(_this8.xhr.responrenderseText);
+          if (errorHandler) errorHandler(_this8.xhr);
         };
       }
     }]);
@@ -4151,7 +4365,7 @@ var Http = function () {
   /*#__PURE__*/
   function () {
     function HttpPromiseAjax(config) {
-      var _this8 = this;
+      var _this9 = this;
 
       _classCallCheck(this, HttpPromiseAjax);
 
@@ -4182,7 +4396,7 @@ var Http = function () {
           reject(request);
         };
 
-        _this8.data ? request.send(_this8.data) : request.send();
+        _this9.data ? request.send(_this9.data) : request.send();
       });
     }
 
@@ -4516,13 +4730,13 @@ var Messages = function () {
     _createClass(Messages, [{
       key: "registerMessages",
       value: function registerMessages() {
-        var _this9 = this;
+        var _this10 = this;
 
         document.addEventListener("readystatechange", function () {
           if (document.readyState === "complete") {
-            _this9.ready = true;
+            _this10.ready = true;
 
-            _this9.runTranslated.call(_this9);
+            _this10.runTranslated.call(_this10);
           }
         });
       }
@@ -4552,8 +4766,8 @@ var Messages = function () {
     }, {
       key: "getMessage",
       value: function getMessage(text) {
-        for (var _len = arguments.length, params = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-          params[_key - 1] = arguments[_key];
+        for (var _len2 = arguments.length, params = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+          params[_key2 - 1] = arguments[_key2];
         }
 
         if (Util.isEmpty(params[0][0])) {
@@ -4675,14 +4889,14 @@ var Messages = function () {
     }, {
       key: "runTranslated",
       value: function runTranslated() {
-        var _this10 = this;
+        var _this11 = this;
 
         if (Util.isEmpty(this.app) && this.ready) {
           Util.setTimeout(function () {
             var i = 0;
 
-            while (i < _this10.translated.length) {
-              _this10.translated[i].obj.setText.call(_this10.translated[i].obj, Messages.message(_this10.translated[i].key, _this10.translated[i].params));
+            while (i < _this11.translated.length) {
+              _this11.translated[i].obj.setText.call(_this11.translated[i].obj, Messages.message(_this11.translated[i].key, _this11.translated[i].params));
 
               i++;
             }
@@ -4734,8 +4948,8 @@ var Messages = function () {
     }, {
       key: "message",
       value: function message(text) {
-        for (var _len2 = arguments.length, params = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-          params[_key2 - 1] = arguments[_key2];
+        for (var _len3 = arguments.length, params = new Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
+          params[_key3 - 1] = arguments[_key3];
         }
 
         return Messages.getInstance().getMessage(text, params);
@@ -4858,10 +5072,16 @@ var RME = function () {
         if (!comp) throw "Cannot find a component: \"" + name + "\"";
 
         if (!Util.isEmpty(props) && Util.isFunction(comp.update)) {
-          var state = Util.isEmpty(props.key) ? name : "".concat(name).concat(props.key);
-          props["ref"] = state;
-          var newProps = comp.update.call()(state);
-          if (!props.shouldComponentUpdate || props.shouldComponentUpdate(_objectSpread({}, props, newProps)) !== false) props = this.extendProps(props, newProps);
+          var stateRef = props.stateRef;
+          if (Util.isEmpty(props.stateRef)) stateRef = name;else if (props.stateRef.search(name) === -1) stateRef = "".concat(name).concat(props.stateRef);
+          props["stateRef"] = stateRef;
+          var newProps = comp.update.call()(stateRef);
+
+          var nextProps = _objectSpread({}, props, newProps);
+
+          if (!nextProps.shouldComponentUpdate || nextProps.shouldComponentUpdate(nextProps) !== false) {
+            props = this.extendProps(props, newProps);
+          }
         }
 
         if (Util.isEmpty(props)) props = {};
@@ -5088,7 +5308,7 @@ var Router = function () {
   /*#__PURE__*/
   function () {
     function Router() {
-      var _this11 = this;
+      var _this12 = this;
 
       _classCallCheck(this, Router);
 
@@ -5101,11 +5321,11 @@ var Router = function () {
       this.prevUrl = location.pathname;
 
       this.loadCall = function () {
-        return _this11.navigateUrl(location.pathname);
+        return _this12.navigateUrl(location.pathname);
       };
 
       this.hashCall = function () {
-        return _this11.navigateUrl(location.hash);
+        return _this12.navigateUrl(location.hash);
       };
 
       this.useHistory = true;
@@ -5123,17 +5343,17 @@ var Router = function () {
     _createClass(Router, [{
       key: "registerRouter",
       value: function registerRouter() {
-        var _this12 = this;
+        var _this13 = this;
 
         document.addEventListener("readystatechange", function () {
           if (document.readyState === "complete") {
             var check = Util.setInterval(function () {
-              var hasRoot = !Util.isEmpty(_this12.root.elem) ? document.querySelector(_this12.root.elem) : false;
+              var hasRoot = !Util.isEmpty(_this13.root.elem) ? document.querySelector(_this13.root.elem) : false;
 
               if (hasRoot) {
                 Util.clearInterval(check);
 
-                _this12.resolveRoutes();
+                _this13.resolveRoutes();
               }
             }, 50);
           }
@@ -5738,224 +5958,6 @@ function () {
 
   return Storage;
 }();
-/**
- * General Utility methods.
- */
-
-
-var Util =
-/*#__PURE__*/
-function () {
-  function Util() {
-    _classCallCheck(this, Util);
-  }
-
-  _createClass(Util, null, [{
-    key: "isEmpty",
-
-    /**
-     * Checks is a given value empty.
-     * @param {*} value
-     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
-     */
-    value: function isEmpty(value) {
-      return value === null || value === undefined || value === "" || Util.isArray(value) && value.length === 0;
-    }
-    /**
-     * Get the type of the given value.
-     * @param {*} value
-     * @returns The type of the given value.
-     */
-
-  }, {
-    key: "getType",
-    value: function getType(value) {
-      return _typeof(value);
-    }
-    /**
-     * Checks is a given value is a given type.
-     * @param {*} value
-     * @param {string} type
-     * @returns True if the given value is the given type otherwise false.
-     */
-
-  }, {
-    key: "isType",
-    value: function isType(value, type) {
-      return Util.getType(value) === type;
-    }
-    /**
-     * Checks is a given parameter a function.
-     * @param {*} func 
-     * @returns True if the given parameter is fuction otherwise false.
-     */
-
-  }, {
-    key: "isFunction",
-    value: function isFunction(func) {
-      return Util.isType(func, "function");
-    }
-    /**
-     * Checks is a given parameter a boolean.
-     * @param {*} boolean
-     * @returns True if the given parameter is boolean otherwise false.
-     */
-
-  }, {
-    key: "isBoolean",
-    value: function isBoolean(boolean) {
-      return Util.isType(boolean, "boolean");
-    }
-    /**
-     * Checks is a given parameter a string.
-     * @param {*} string
-     * @returns True if the given parameter is string otherwise false.
-     */
-
-  }, {
-    key: "isString",
-    value: function isString(string) {
-      return Util.isType(string, "string");
-    }
-    /**
-     * Checks is a given parameter a number.
-     * @param {*} number
-     * @returns True if the given parameter is number otherwise false.
-     */
-
-  }, {
-    key: "isNumber",
-    value: function isNumber(number) {
-      return Util.isType(number, "number");
-    }
-    /**
-     * Checks is a given parameter a symbol.
-     * @param {*} symbol
-     * @returns True if the given parameter is symbol otherwise false.
-     */
-
-  }, {
-    key: "isSymbol",
-    value: function isSymbol(symbol) {
-      return Util.isType(symbol, "symbol");
-    }
-    /**
-     * Checks is a given parameter a object.
-     * @param {*} object
-     * @returns True if the given parameter is object otherwise false.
-     */
-
-  }, {
-    key: "isObject",
-    value: function isObject(object) {
-      return Util.isType(object, "object");
-    }
-    /**
-     * Checks is a given parameter an array.
-     * @param {*} array
-     * @returns True if the given parameter is array otherwise false.
-     */
-
-  }, {
-    key: "isArray",
-    value: function isArray(array) {
-      return Array.isArray(array);
-    }
-    /**
-     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The timeout object.
-     */
-
-  }, {
-    key: "setTimeout",
-    value: function setTimeout(callback, milliseconds) {
-      if (!Util.isFunction(callback)) {
-        throw "callback not fuction";
-      }
-
-      for (var _len3 = arguments.length, params = new Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
-        params[_key3 - 2] = arguments[_key3];
-      }
-
-      return window.setTimeout(callback, milliseconds, params);
-    }
-    /**
-     * Removes a timeout that was created by setTimeout method.
-     * @param {object} timeoutObject
-     */
-
-  }, {
-    key: "clearTimeout",
-    value: function clearTimeout(timeoutObject) {
-      window.clearTimeout(timeoutObject);
-    }
-    /**
-     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The interval object.
-     */
-
-  }, {
-    key: "setInterval",
-    value: function setInterval(callback, milliseconds) {
-      if (!Util.isFunction(callback)) {
-        throw "callback not fuction";
-      }
-
-      for (var _len4 = arguments.length, params = new Array(_len4 > 2 ? _len4 - 2 : 0), _key4 = 2; _key4 < _len4; _key4++) {
-        params[_key4 - 2] = arguments[_key4];
-      }
-
-      return window.setInterval(callback, milliseconds, params);
-    }
-    /**
-     * Removes an interval that was created by setInterval method.
-     */
-
-  }, {
-    key: "clearInterval",
-    value: function clearInterval(intervalObject) {
-      window.clearInterval(intervalObject);
-    }
-    /**
-     * Encodes a string to Base64.
-     * @param {string} string
-     * @returns The base64 encoded string.
-     */
-
-  }, {
-    key: "encodeBase64String",
-    value: function encodeBase64String(string) {
-      if (!Util.isString(string)) {
-        throw "the given parameter is not a string: " + string;
-      }
-
-      return window.btoa(string);
-    }
-    /**
-     * Decodes a base 64 encoded string.
-     * @param {string} string
-     * @returns The base64 decoded string.
-     */
-
-  }, {
-    key: "decodeBase64String",
-    value: function decodeBase64String(string) {
-      if (!Util.isString(string)) {
-        throw "the given parameter is not a string: " + string;
-      }
-
-      return window.atob(string);
-    }
-  }]);
-
-  return Util;
-}();
 
 var Template = function () {
   /**
@@ -6473,7 +6475,7 @@ var Template = function () {
             if (templater.isEventKeyVal(p, mashed[p])) {
               elem[p].call(elem, mashed[p]); //element event attribute -> elem, event function
             } else if (p === 'class') {
-              elem.updateClasses(mashed[p]);
+              elem.updateClasses(mashed[p] || '');
             } else if (p === 'value') {
               elem.setAttribute(p, mashed[p]);
               elem.setValue(mashed[p]);
@@ -6691,9 +6693,7 @@ function () {
      * @returns An array of Elem instances or a single Elem instance.
      */
     value: function get(selector) {
-      try {
-        return Elem.wrapElems(document.querySelectorAll(selector));
-      } catch (e) {}
+      return Elem.wrapElems(document.querySelectorAll(selector));
     }
     /**
      * Uses CSS selector to find the first match element on the HTML Document Tree.
@@ -6720,9 +6720,7 @@ function () {
   }, {
     key: "getByTag",
     value: function getByTag(tag) {
-      try {
-        return Elem.wrapElems(document.getElementsByTagName(tag));
-      } catch (e) {}
+      return Elem.wrapElems(document.getElementsByTagName(tag));
     }
     /**
      * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
@@ -6735,9 +6733,7 @@ function () {
   }, {
     key: "getByName",
     value: function getByName(name) {
-      try {
-        return Elem.wrapElems(document.getElementsByName(name));
-      } catch (e) {}
+      return Elem.wrapElems(document.getElementsByName(name));
     }
     /**
      * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
@@ -6764,9 +6760,7 @@ function () {
   }, {
     key: "getByClass",
     value: function getByClass(classname) {
-      try {
-        return Elem.wrapElems(document.getElementsByClassName(classname));
-      } catch (e) {}
+      return Elem.wrapElems(document.getElementsByClassName(classname));
     }
     /**
      * @returns body wrapped in an Elem instance.
@@ -6827,9 +6821,7 @@ function () {
   }, {
     key: "getAnchors",
     value: function getAnchors() {
-      try {
-        return Elem.wrapElems(document.anchors);
-      } catch (e) {}
+      return Elem.wrapElems(document.anchors);
     }
     /**
      * @returns <html> element.
@@ -6856,9 +6848,7 @@ function () {
   }, {
     key: "getEmbeds",
     value: function getEmbeds() {
-      try {
-        return Elem.wrapElems(document.embeds);
-      } catch (e) {}
+      return Elem.wrapElems(document.embeds);
     }
     /**
      * @returns an array of image elements (<img>) wrapped in an Elem instance.
@@ -6867,9 +6857,7 @@ function () {
   }, {
     key: "getImages",
     value: function getImages() {
-      try {
-        return Elem.wrapElems(document.images);
-      } catch (e) {}
+      return Elem.wrapElems(document.images);
     }
     /**
      * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
@@ -6878,9 +6866,7 @@ function () {
   }, {
     key: "getLinks",
     value: function getLinks() {
-      try {
-        return Elem.wrapElems(document.links);
-      } catch (e) {}
+      return Elem.wrapElems(document.links);
     }
     /**
      * @returns an array of scripts wrapped in an Elem instance.
@@ -6889,9 +6875,7 @@ function () {
   }, {
     key: "getScripts",
     value: function getScripts() {
-      try {
-        return Elem.wrapElems(document.scripts);
-      } catch (e) {}
+      return Elem.wrapElems(document.scripts);
     }
     /**
      * @returns an array of form elements wrapped in an Elem instance.
@@ -6900,11 +6884,227 @@ function () {
   }, {
     key: "getForms",
     value: function getForms() {
-      try {
-        return Elem.wrapElems(document.forms);
-      } catch (e) {}
+      return Elem.wrapElems(document.forms);
     }
   }]);
 
   return Tree;
+}();
+/**
+ * General Utility methods.
+ */
+
+
+var Util =
+/*#__PURE__*/
+function () {
+  function Util() {
+    _classCallCheck(this, Util);
+  }
+
+  _createClass(Util, null, [{
+    key: "isEmpty",
+
+    /**
+     * Checks is a given value empty.
+     * @param {*} value
+     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
+     */
+    value: function isEmpty(value) {
+      return value === null || value === undefined || value === "" || Util.isArray(value) && value.length === 0;
+    }
+    /**
+     * Get the type of the given value.
+     * @param {*} value
+     * @returns The type of the given value.
+     */
+
+  }, {
+    key: "getType",
+    value: function getType(value) {
+      return _typeof(value);
+    }
+    /**
+     * Checks is a given value is a given type.
+     * @param {*} value
+     * @param {string} type
+     * @returns True if the given value is the given type otherwise false.
+     */
+
+  }, {
+    key: "isType",
+    value: function isType(value, type) {
+      return Util.getType(value) === type;
+    }
+    /**
+     * Checks is a given parameter a function.
+     * @param {*} func 
+     * @returns True if the given parameter is fuction otherwise false.
+     */
+
+  }, {
+    key: "isFunction",
+    value: function isFunction(func) {
+      return Util.isType(func, "function");
+    }
+    /**
+     * Checks is a given parameter a boolean.
+     * @param {*} boolean
+     * @returns True if the given parameter is boolean otherwise false.
+     */
+
+  }, {
+    key: "isBoolean",
+    value: function isBoolean(boolean) {
+      return Util.isType(boolean, "boolean");
+    }
+    /**
+     * Checks is a given parameter a string.
+     * @param {*} string
+     * @returns True if the given parameter is string otherwise false.
+     */
+
+  }, {
+    key: "isString",
+    value: function isString(string) {
+      return Util.isType(string, "string");
+    }
+    /**
+     * Checks is a given parameter a number.
+     * @param {*} number
+     * @returns True if the given parameter is number otherwise false.
+     */
+
+  }, {
+    key: "isNumber",
+    value: function isNumber(number) {
+      return Util.isType(number, "number");
+    }
+    /**
+     * Checks is a given parameter a symbol.
+     * @param {*} symbol
+     * @returns True if the given parameter is symbol otherwise false.
+     */
+
+  }, {
+    key: "isSymbol",
+    value: function isSymbol(symbol) {
+      return Util.isType(symbol, "symbol");
+    }
+    /**
+     * Checks is a given parameter a object.
+     * @param {*} object
+     * @returns True if the given parameter is object otherwise false.
+     */
+
+  }, {
+    key: "isObject",
+    value: function isObject(object) {
+      return Util.isType(object, "object");
+    }
+    /**
+     * Checks is a given parameter an array.
+     * @param {*} array
+     * @returns True if the given parameter is array otherwise false.
+     */
+
+  }, {
+    key: "isArray",
+    value: function isArray(array) {
+      return Array.isArray(array);
+    }
+    /**
+     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The timeout object.
+     */
+
+  }, {
+    key: "setTimeout",
+    value: function setTimeout(callback, milliseconds) {
+      if (!Util.isFunction(callback)) {
+        throw "callback not fuction";
+      }
+
+      for (var _len4 = arguments.length, params = new Array(_len4 > 2 ? _len4 - 2 : 0), _key4 = 2; _key4 < _len4; _key4++) {
+        params[_key4 - 2] = arguments[_key4];
+      }
+
+      return window.setTimeout(callback, milliseconds, params);
+    }
+    /**
+     * Removes a timeout that was created by setTimeout method.
+     * @param {object} timeoutObject
+     */
+
+  }, {
+    key: "clearTimeout",
+    value: function clearTimeout(timeoutObject) {
+      window.clearTimeout(timeoutObject);
+    }
+    /**
+     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The interval object.
+     */
+
+  }, {
+    key: "setInterval",
+    value: function setInterval(callback, milliseconds) {
+      if (!Util.isFunction(callback)) {
+        throw "callback not fuction";
+      }
+
+      for (var _len5 = arguments.length, params = new Array(_len5 > 2 ? _len5 - 2 : 0), _key5 = 2; _key5 < _len5; _key5++) {
+        params[_key5 - 2] = arguments[_key5];
+      }
+
+      return window.setInterval(callback, milliseconds, params);
+    }
+    /**
+     * Removes an interval that was created by setInterval method.
+     */
+
+  }, {
+    key: "clearInterval",
+    value: function clearInterval(intervalObject) {
+      window.clearInterval(intervalObject);
+    }
+    /**
+     * Encodes a string to Base64.
+     * @param {string} string
+     * @returns The base64 encoded string.
+     */
+
+  }, {
+    key: "encodeBase64String",
+    value: function encodeBase64String(string) {
+      if (!Util.isString(string)) {
+        throw "the given parameter is not a string: " + string;
+      }
+
+      return window.btoa(string);
+    }
+    /**
+     * Decodes a base 64 encoded string.
+     * @param {string} string
+     * @returns The base64 decoded string.
+     */
+
+  }, {
+    key: "decodeBase64String",
+    value: function decodeBase64String(string) {
+      if (!Util.isString(string)) {
+        throw "the given parameter is not a string: " + string;
+      }
+
+      return window.atob(string);
+    }
+  }]);
+
+  return Util;
 }();

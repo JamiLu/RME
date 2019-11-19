@@ -10,9 +10,9 @@ Links
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.4.3/rme.js](https://github.com/JamiLu/RME/releases/download/v1.4.3/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.4.3/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.4.3/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.4.3/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.4.3/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.0/rme.js](https://github.com/JamiLu/RME/releases/download/v1.5.0/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.0/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.5.0/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.0/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.5.0/rme.es5.min.js)
 
 NPM
 ---
@@ -53,7 +53,7 @@ Basics
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.4.3/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.5.0/rme.es5.min.js"></script>`
 
 __Or use NPM__
 
@@ -63,87 +63,77 @@ __Or use NPM__
 
 Then simply copy paste code clips below to your js file and voilà. 
 
-Start by creating a new application. Default application does not need to be named. If a root is not specified then the Document Body is used by automatic. This following line of code will create a single div element inside of the Body element. Inside the div there will be three components that we will take a closer look just below.
+Start by creating a new application. Default application does not need to be named. If a root is not specified then the Document Body is used by automatic. This following line of code will create a div element inside of the element with id app. Inside the div there are three components that we will take a closer look just below.
 ```javascript
-App.create({
+App.root('#app').create({
     div: [
-        {todoExample: {}},
+        {TodoExample: {}},
 
-        {formExample: {}},
+        {FormExample: {}},
         
-        {filterExample: {}}
+        {FilterExample: {}}
     ]
-}).setState({
-    lister: {list: [{li: 'What groceries should I buy?'}]}
 });
 ```
-Above you can see that after we have created the application by calling the App.create(...) function we can also call setState(..) function that will set state for the application. In the setState function we give it an object that in the first level tells which component the state is set to and next level will be name of the state property and the third level will be the given state value. After calling setState the Application will rerender itself. 
 
-Function setState can also take two parameters but then the first parameter is a component name that the state is set to and the next parameter is the state object that the component receives.
-
-Now we can create a component that contains other components and even a stateful component. The next component contains a div that contains h2, input and button elements. Below them there is a lister component that is explained below.
+Now lets create the TodoExample component that will contain other components. This component defines a fragment that contains h2, input, button and also a component named Lister. The Lister component is explained just below. But to mention about `fragment` elements that they are special grouping or encapsuling elements that are not rendered themselves but only their content will be rendered into their parent element.
 ```javascript
-RME.component({ todoExample: () => 
-    ({div: {
+const TodoExample = props => ({
+    fragment: {
         h2: 'Todo Example',
         'input[type=text][placeholder=Type & Press Enter to Add]': {
             onKeyDown: event => {
                 if(event.key === Key.ENTER) {
-                    App.mergeState({lister: {list: {li: {text: event.target.value}}}});
+                    App.mergeState(props.stateRef, {
+                        list: {li: event.target.value}
+                    });
                     event.target.value = '';
                 }
             }
         },
         button: {
             text: 'Clear list',
-            onClick: () => App.clearState('lister')
+            onClick: () => App.clearState(props.stateRef)
         },
-        lister: {}
-    }})
+        Lister: {
+            list: props.list
+        }
+    }
 });
-```
 
-The component below is our lister component that is a stateful component as it has its own state that can be updated. Each state property and other properties also are given to the template in a props object.
-```javascript
-App.component({ lister: props => ({ul: props.list}) })();
-```
+const Lister = props => ({ul: props.list});
 
-Lets create other example component that we will see in action later. This component also has couple of insteresting elements. A statefulHeader component actually only prints what user types on a form component. Because form is an HTML 5
-tag so we have to explicitly tell the RME that this form is actually our component that we want to use. Normally it is a good practise to name well own components that they wont get mixed with the HTML 5 tags and attributes.
+Component(bindState(TodoExample, {list: [{li: 'What groceries should I buy?'}] }), Lister);
+```
+The `Component` function above creates components out of the named functions and the `bindState` function will bind state to the component. An initial state object can be given as a second attribute of the function but it is not necessary.
+
+Next lets create the FormExample component. The component also defines a `fragment` that contains other elements and components. A TitleHeader component receives the state properties of the FormExample component. A Form component receives an input function that will be bound on input elements of the component. 
 ```javascript
-RME.component({ formExample: () => 
-    ({div: {
+const FormExample = props => ({
+    fragment: {
         h2: 'Form Example',
-        statefulHeader: {fname: '', lname: ''},
-        'component:form': {
+        TitleHeader: props,
+        Form: {
             input: event => {
-                App.setState('statefulHeader', state => ({
+                App.setState(props.stateRef, state => ({
                     ...state,
                     [event.target.name]: event.target.value
                 }));
             }
         }
-    }})
+    }
 });
-```
 
-This is the statefulHeader component that stores two values to the state of the component and then prints them as they are updated.
-```javascript
-App.component({ statefulHeader: props => 
-    ({h5: {text: `Welcome ${props.fname} ${props.lname}`}})
-})();
+const TitleHeader = props => ({h5: `Welcome ${props.fname || ''} ${props.lname || ''}`});
 ```
+Every component that has state bound to it also has a property `stateRef` which is reference to the state of the component. By default it is a name of the component but it may be altered if needed. 
 
-Here is our form component that has one property input which is actually onInput event action. Elements inside the component are on purposely typed a bit inconsistent fashion only to demonstrate possibilities of JSON templates.
+Here is the Form component that receives the input function in parameters that then is bound on the onInput property of the input fields.
 ```javascript
-RME.component({form: props => ({
+const Form = props => ({
     div: {
         'label[for=fname]': 'First name',
-        input: {
-            id: 'fname',
-            name: 'fname',
-            type: 'text',
-            placeholder: 'First name',
+        'input#fname[type=text][name=fname][placeholder=First name]': {
             onInput: props.input
         },
         br: {},
@@ -151,11 +141,13 @@ RME.component({form: props => ({
         'input#lname[type=text][name=lname][placeholder=Last name]': {
             onInput: props.input
         },
-    }})
+    }
 });
+
+Component(bindState(FormExample), TitleHeader, Form);
 ```
 
-Lets hard code dummy data for our next component and save it into the RME instance storage.
+Now we can save some dummy data into the RME instance storage for a next component.
 ```javascript
 RME.storage('countryList', [
     {country: 'Finland', capital: 'Helsinki'}, {country: 'Sweden', capital: 'Stockholm'}, {country: 'Norway', capital: 'Oslo'},
@@ -164,35 +156,45 @@ RME.storage('countryList', [
     {country: 'Japan', capital: 'Tokyo'}, {country: 'South Korea', capital: 'Seoul'}, {country: 'Malaysia', capital: 'Kuala Lumpur'}, {country: 'Namibia', capital: 'Windhoek'}, {country: 'South Africa', capital: 'Cape Town'}]);
 ```
 
-Now we add one more component. The component has an input that is used to filter the data and a table that shows the filtered data. Default values can be given as properties to components directly and they will be overridden by state properties if they are named equally and the component has state.
+The FilterExample component has an input field that is used to filter the data. The filtered data is then set into the state of the component. The `stateRef` is reference to the state of the stateful component. Default values are populated from the state of component. The default state is set using the `bindState` function with the initial state object as a second attribute.
 ```javascript
-RME.component({ filterExample: () => 
-    ({div: {
+const FilterExample = props => ({
+    fragment: {
         h2: 'Filter Example',
         'input[type=text][placeholder=Type to Filter Country]': {
-            onInput: event => App.setState({myTable: {rows: RME.storage('countryList').filter(row => row.country.toLowerCase().search(event.target.value) > -1)}})
+            onInput: event => 
+                App.setState(props.stateRef, {
+                    rows: RME.storage('countryList')
+                        .filter(row => row.country.toLowerCase().search(event.target.value) > -1)
+                })
         },
-        myTable: {rows: RME.storage('countryList')}
-    }})
+        MyTable: {rows: props.rows}
+    }
 });
 ```
 
-This is as simple as it gets when creating a table from the rows that come in the props object.
+The MyTable component receives rows in props and populates a table element from the given properties.
 ```javascript
-App.component({ myTable: props => 
-    ({table: props.rows.map((row) => ({
+const MyTable = props => ({
+    table: props.rows.map(row => ({
         tr: [
-            {td: () => row.country},
-            {td: () => row.capital}
+            {td: row.country},
+            {td: row.capital}
         ],
-    }))})
-})();
+    }))
+});
+
+Component(bindState(FilterExample, { rows: RME.storage('countryList') }), MyTable);
 ```
 
 Classes & Functions
 ----
 >Not comprehensive. Just to name few.
 
+* Special global functions
+  - Component(...components) **Component function receives a comma separate list of component functions.**
+  - bindState(component, initialState, appName) **bindState function binds state into the given component. InitialState and appName attributes are not necessary.**
+  - CSS(content, properties) **Creates a dynamic style component with content and optional properties if given.**
 * RME
   - run(runnable) **Runs application script type fuction _(runnable)_ immediately**
   - ready(runnable) **Runs application script type function _(runnable)_ when body is ready _MAX 1 ready per RME application_**
@@ -275,6 +277,9 @@ Classes & Functions
   - hash() **Use hash based routing**
   - url(manual) **Use URL based routing. If manual is true then use Router.navigate to navigate next route.**
   - scroll(auto) **Method sets default level behavior for route naviagation. A value true sets the browser to auto-scroll up when navigating to a new resource and a value false will not auto-scroll up. Default value is true.**
+* EventPipe **_This class is experimental and might be removed later_**
+- send(event) **Can be used to send a custom event through the EventPipe. Method takes one object paremter that must atleast have one attribute "type" otherwise error is thrown**
+- receive(event) **Is used to receive the sent event from the EventPipe. Method takes one paramter function which receives an event as parameter.**
 * Key
   - no methods, only **Key** constants for keyevent such as Key.ENTER
 * Cookie
