@@ -1161,6 +1161,58 @@ function () {
   return Browser;
 }();
 /**
+ * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
+ * instance might have not been created at the time when components are created so the queue will wait 
+ * until the application instance is created and then sets the state for the components in the queue.
+ */
+
+
+var AppSetInitialStateJob = function () {
+  var InitStateJob =
+  /*#__PURE__*/
+  function () {
+    function InitStateJob() {
+      _classCallCheck(this, InitStateJob);
+
+      this.updateQueue = [];
+      this.updateJob;
+    }
+
+    _createClass(InitStateJob, [{
+      key: "resolveUpdateJobs",
+      value: function resolveUpdateJobs(resolveCondition) {
+        var _this3 = this;
+
+        if (!this.updateJob) this.updateJob = Util.setInterval(function () {
+          if (resolveCondition()) {
+            _this3.updateQueue.forEach(function (job) {
+              return job();
+            });
+
+            _this3.updateQueue = [];
+            Util.clearInterval(_this3.updateJob);
+            _this3.updateJob = undefined;
+          }
+        });
+      }
+    }, {
+      key: "addToQueue",
+      value: function addToQueue(job) {
+        this.updateQueue.push(job);
+        return this;
+      }
+    }]);
+
+    return InitStateJob;
+  }();
+
+  var initStateJob = new InitStateJob();
+  return {
+    addToQueue: initStateJob.addToQueue.bind(initStateJob),
+    resolveUpdateJobs: initStateJob.resolveUpdateJobs.bind(initStateJob)
+  };
+}();
+/**
  * Component resolves comma separated list of components that may be function or class.
  * Function component example: const Comp = props => ({h1: 'Hello'});
  * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
@@ -1170,10 +1222,22 @@ function () {
 
 
 var Component = function () {
+  var resolveInitialState = function resolveInitialState(initialState, stateRef, appName) {
+    if (!Util.isEmpty(App.get(appName))) {
+      App.get(appName).setState(stateRef, initialState, false);
+    } else {
+      AppSetInitialStateJob.addToQueue(function () {
+        return App.get(appName).setState(stateRef, initialState);
+      }).resolveUpdateJobs(function () {
+        return !Util.isEmpty(App.get(appName));
+      });
+    }
+  };
+
   var resolveComponent = function resolveComponent(component) {
     if (Util.isObject(component)) {
       App.component(_defineProperty({}, component.name, component.comp))(component.appName);
-      App.setState(component.name + component.stateRef, component.initialState, false);
+      resolveInitialState(component.initialState, component.name + component.stateRef, component.appName);
     } else if (Util.isFunction(component) && Util.isEmpty(component.prototype)) {
       RME.component(_defineProperty({}, component.name, component));
     } else if (Util.isFunction(component)) {
@@ -1186,7 +1250,7 @@ var Component = function () {
       if (!Util.isEmpty(comp.onAfterRender)) state.onAfterRender = comp.onAfterRender;
       state = _objectSpread({}, state, comp.initialState);
       var ref = comp.stateRef || state.stateRef || '';
-      App.get(comp.appName).setState(component.name + ref, state, false);
+      resolveInitialState(state, component.name + ref, comp.appName);
     }
   };
 
@@ -1491,18 +1555,18 @@ var EventPipe = function () {
     }, {
       key: "loopEvents",
       value: function loopEvents() {
-        var _this3 = this;
+        var _this4 = this;
 
         if (this.loopTimeout) Util.clearTimeout(this.loopTimeout);
         this.loopTimeout = Util.setTimeout(function () {
-          _this3.callQueue.forEach(function (eventCallback) {
-            return _this3.eventsQueue.forEach(function (ev) {
+          _this4.callQueue.forEach(function (eventCallback) {
+            return _this4.eventsQueue.forEach(function (ev) {
               return eventCallback(ev);
             });
           });
 
-          _this3.eventsQueue = [];
-          _this3.callQueue = [];
+          _this4.eventsQueue = [];
+          _this4.callQueue = [];
         });
       }
       /**
@@ -2466,10 +2530,10 @@ var Elem = function () {
     }, {
       key: "click",
       value: function click() {
-        var _this4 = this;
+        var _this5 = this;
 
         Util.setTimeout(function () {
-          return _this4.html.click();
+          return _this5.html.click();
         });
         return this;
       }
@@ -2481,10 +2545,10 @@ var Elem = function () {
     }, {
       key: "focus",
       value: function focus() {
-        var _this5 = this;
+        var _this6 = this;
 
         Util.setTimeout(function () {
-          return _this5.html.focus();
+          return _this6.html.focus();
         });
         return this;
       }
@@ -2496,10 +2560,10 @@ var Elem = function () {
     }, {
       key: "blur",
       value: function blur() {
-        var _this6 = this;
+        var _this7 = this;
 
         Util.setTimeout(function () {
-          return _this6.html.blur();
+          return _this7.html.blur();
         });
         return this;
       }
@@ -4317,15 +4381,15 @@ var Http = function () {
     _createClass(HttpAjax, [{
       key: "then",
       value: function then(successHandler, errorHandler) {
-        var _this7 = this;
+        var _this8 = this;
 
         this.xhr.onload = function () {
-          _this7.xhr.responseJSON = tryParseJSON(_this7.xhr.responseText);
-          isResponseOK(_this7.xhr.status) ? successHandler(resolveResponse(_this7.xhr.response), _this7.xhr) : errorHandler(_this7.xhr);
+          _this8.xhr.responseJSON = tryParseJSON(_this8.xhr.responseText);
+          isResponseOK(_this8.xhr.status) ? successHandler(resolveResponse(_this8.xhr.response), _this8.xhr) : errorHandler(_this8.xhr);
         };
 
         this.xhr.onprogress = function (event) {
-          if (_this7.progressHandler) _this7.progressHandler(event);
+          if (_this8.progressHandler) _this8.progressHandler(event);
         };
 
         if (this.xhr.ontimeout && config.onTimeout) {
@@ -4335,8 +4399,8 @@ var Http = function () {
         }
 
         this.xhr.onerror = function () {
-          _this7.xhr.responseJSON = tryParseJSON(_this7.xhr.responseText);
-          if (errorHandler) errorHandler(_this7.xhr);
+          _this8.xhr.responseJSON = tryParseJSON(_this8.xhr.responseText);
+          if (errorHandler) errorHandler(_this8.xhr);
         };
 
         this.data ? this.xhr.send(this.data) : this.xhr.send();
@@ -4345,11 +4409,11 @@ var Http = function () {
     }, {
       key: "catch",
       value: function _catch(errorHandler) {
-        var _this8 = this;
+        var _this9 = this;
 
         this.xhr.onerror = function () {
-          _this8.xhr.responseJSON = tryParseJSON(_this8.xhr.responrenderseText);
-          if (errorHandler) errorHandler(_this8.xhr);
+          _this9.xhr.responseJSON = tryParseJSON(_this9.xhr.responrenderseText);
+          if (errorHandler) errorHandler(_this9.xhr);
         };
       }
     }]);
@@ -4365,7 +4429,7 @@ var Http = function () {
   /*#__PURE__*/
   function () {
     function HttpPromiseAjax(config) {
-      var _this9 = this;
+      var _this10 = this;
 
       _classCallCheck(this, HttpPromiseAjax);
 
@@ -4396,7 +4460,7 @@ var Http = function () {
           reject(request);
         };
 
-        _this9.data ? request.send(_this9.data) : request.send();
+        _this10.data ? request.send(_this10.data) : request.send();
       });
     }
 
@@ -4730,13 +4794,13 @@ var Messages = function () {
     _createClass(Messages, [{
       key: "registerMessages",
       value: function registerMessages() {
-        var _this10 = this;
+        var _this11 = this;
 
         document.addEventListener("readystatechange", function () {
           if (document.readyState === "complete") {
-            _this10.ready = true;
+            _this11.ready = true;
 
-            _this10.runTranslated.call(_this10);
+            _this11.runTranslated.call(_this11);
           }
         });
       }
@@ -4889,14 +4953,14 @@ var Messages = function () {
     }, {
       key: "runTranslated",
       value: function runTranslated() {
-        var _this11 = this;
+        var _this12 = this;
 
         if (Util.isEmpty(this.app) && this.ready) {
           Util.setTimeout(function () {
             var i = 0;
 
-            while (i < _this11.translated.length) {
-              _this11.translated[i].obj.setText.call(_this11.translated[i].obj, Messages.message(_this11.translated[i].key, _this11.translated[i].params));
+            while (i < _this12.translated.length) {
+              _this12.translated[i].obj.setText.call(_this12.translated[i].obj, Messages.message(_this12.translated[i].key, _this12.translated[i].params));
 
               i++;
             }
@@ -5296,6 +5360,62 @@ var RME = function () {
     use: RME.use
   };
 }();
+/**
+ * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
+ */
+
+
+var Session =
+/*#__PURE__*/
+function () {
+  function Session() {
+    _classCallCheck(this, Session);
+  }
+
+  _createClass(Session, null, [{
+    key: "set",
+
+    /**
+     * Save data into the Session.
+     * @param {string} key
+     * @param {*} value
+     */
+    value: function set(key, value) {
+      sessionStorage.setItem(key, value);
+    }
+    /**
+     * Get the saved data from the Session.
+     * @param {string} key
+     */
+
+  }, {
+    key: "get",
+    value: function get(key) {
+      return sessionStorage.getItem(key);
+    }
+    /**
+     * Remove data from the Session.
+     * @param {string} key
+     */
+
+  }, {
+    key: "remove",
+    value: function remove(key) {
+      sessionStorage.removeItem(key);
+    }
+    /**
+     * Clears the Session.
+     */
+
+  }, {
+    key: "clear",
+    value: function clear() {
+      sessionStorage.clear();
+    }
+  }]);
+
+  return Session;
+}();
 
 var Router = function () {
   /**
@@ -5308,7 +5428,7 @@ var Router = function () {
   /*#__PURE__*/
   function () {
     function Router() {
-      var _this12 = this;
+      var _this13 = this;
 
       _classCallCheck(this, Router);
 
@@ -5321,11 +5441,11 @@ var Router = function () {
       this.prevUrl = location.pathname;
 
       this.loadCall = function () {
-        return _this12.navigateUrl(location.pathname);
+        return _this13.navigateUrl(location.pathname);
       };
 
       this.hashCall = function () {
-        return _this12.navigateUrl(location.hash);
+        return _this13.navigateUrl(location.hash);
       };
 
       this.useHistory = true;
@@ -5343,17 +5463,17 @@ var Router = function () {
     _createClass(Router, [{
       key: "registerRouter",
       value: function registerRouter() {
-        var _this13 = this;
+        var _this14 = this;
 
         document.addEventListener("readystatechange", function () {
           if (document.readyState === "complete") {
             var check = Util.setInterval(function () {
-              var hasRoot = !Util.isEmpty(_this13.root.elem) ? document.querySelector(_this13.root.elem) : false;
+              var hasRoot = !Util.isEmpty(_this14.root.elem) ? document.querySelector(_this14.root.elem) : false;
 
               if (hasRoot) {
                 Util.clearInterval(check);
 
-                _this13.resolveRoutes();
+                _this14.resolveRoutes();
               }
             }, 50);
           }
@@ -5845,62 +5965,6 @@ var Router = function () {
     getCurrentState: Router.getCurrentState,
     setApp: Router.setApp
   };
-}();
-/**
- * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
- */
-
-
-var Session =
-/*#__PURE__*/
-function () {
-  function Session() {
-    _classCallCheck(this, Session);
-  }
-
-  _createClass(Session, null, [{
-    key: "set",
-
-    /**
-     * Save data into the Session.
-     * @param {string} key
-     * @param {*} value
-     */
-    value: function set(key, value) {
-      sessionStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the Session.
-     * @param {string} key
-     */
-
-  }, {
-    key: "get",
-    value: function get(key) {
-      return sessionStorage.getItem(key);
-    }
-    /**
-     * Remove data from the Session.
-     * @param {string} key
-     */
-
-  }, {
-    key: "remove",
-    value: function remove(key) {
-      sessionStorage.removeItem(key);
-    }
-    /**
-     * Clears the Session.
-     */
-
-  }, {
-    key: "clear",
-    value: function clear() {
-      sessionStorage.clear();
-    }
-  }]);
-
-  return Session;
 }();
 /**
  * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.

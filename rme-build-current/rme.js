@@ -991,7 +991,45 @@ class Browser {
 
 
 
+/**
+ * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
+ * instance might have not been created at the time when components are created so the queue will wait 
+ * until the application instance is created and then sets the state for the components in the queue.
+ */
+const AppSetInitialStateJob = (function () {
+    
+    class InitStateJob {
+        constructor() {
+            this.updateQueue = [];
+            this.updateJob;
+        }
 
+        resolveUpdateJobs(resolveCondition) {
+            if (!this.updateJob)
+                this.updateJob = Util.setInterval(() => {
+                    if (resolveCondition()) {
+                        this.updateQueue.forEach(job => job());
+                        this.updateQueue = [];
+                        Util.clearInterval(this.updateJob);
+                        this.updateJob = undefined;
+                    }
+                });
+        }
+
+        addToQueue(job) {
+            this.updateQueue.push(job);
+            return this;
+        }
+    }
+
+    const initStateJob = new InitStateJob();
+
+    return {
+        addToQueue: initStateJob.addToQueue.bind(initStateJob),
+        resolveUpdateJobs: initStateJob.resolveUpdateJobs.bind(initStateJob)
+    }
+
+})();
 
 /**
  * Component resolves comma separated list of components that may be function or class.
@@ -1002,10 +1040,20 @@ class Browser {
  */
 const Component = (function() {
 
+
+    const resolveInitialState = (initialState, stateRef, appName) => {
+        if (!Util.isEmpty(App.get(appName))) {
+            App.get(appName).setState(stateRef, initialState, false);
+        } else {
+            AppSetInitialStateJob.addToQueue(() => App.get(appName).setState(stateRef, initialState))
+                .resolveUpdateJobs(() => !Util.isEmpty(App.get(appName)));
+        }
+    }
+
     const resolveComponent = component => {
         if (Util.isObject(component)) {
             App.component({[component.name]: component.comp})(component.appName);
-            App.setState(component.name+component.stateRef, component.initialState, false);
+            resolveInitialState(component.initialState, component.name+component.stateRef, component.appName);
         } else if (Util.isFunction(component) && Util.isEmpty(component.prototype)) {
             RME.component({[component.name]: component});
         } else if (Util.isFunction(component)) {
@@ -1025,7 +1073,7 @@ const Component = (function() {
                 ...comp.initialState
             }
             const ref = comp.stateRef || state.stateRef || '';
-            App.get(comp.appName).setState(component.name+ref, state, false);
+            resolveInitialState(state, component.name+ref, comp.appName);
         }
     }
 
@@ -1072,6 +1120,9 @@ const bindState = (function() {
     })
 
 })();
+
+
+
 
 
 
@@ -4411,6 +4462,41 @@ let RME = (function() {
 }());
 
 
+/**
+ * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
+ */
+class Session {
+    /**
+     * Save data into the Session.
+     * @param {string} key
+     * @param {*} value
+     */
+    static set(key, value) {
+        sessionStorage.setItem(key, value);
+    }
+    /**
+     * Get the saved data from the Session.
+     * @param {string} key
+     */
+    static get(key) {
+        return sessionStorage.getItem(key);
+    }
+    /**
+     * Remove data from the Session.
+     * @param {string} key
+     */
+    static remove(key) {
+        sessionStorage.removeItem(key);
+    }
+    /**
+     * Clears the Session.
+     */
+    static clear() {
+        sessionStorage.clear();
+    }
+}
+
+
 
 let Router = (function() {
     /**
@@ -4877,41 +4963,6 @@ let Router = (function() {
         setApp: Router.setApp,
     }
 }());
-
-
-/**
- * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
- */
-class Session {
-    /**
-     * Save data into the Session.
-     * @param {string} key
-     * @param {*} value
-     */
-    static set(key, value) {
-        sessionStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the Session.
-     * @param {string} key
-     */
-    static get(key) {
-        return sessionStorage.getItem(key);
-    }
-    /**
-     * Remove data from the Session.
-     * @param {string} key
-     */
-    static remove(key) {
-        sessionStorage.removeItem(key);
-    }
-    /**
-     * Clears the Session.
-     */
-    static clear() {
-        sessionStorage.clear();
-    }
-}
 
 
 /**
