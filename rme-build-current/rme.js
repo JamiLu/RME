@@ -1054,9 +1054,9 @@ const Component = (function() {
         if (Util.isObject(component)) {
             App.component({[component.name]: component.comp})(component.appName);
             resolveInitialState(component.initialState, component.name+component.stateRef, component.appName);
-        } else if (Util.isFunction(component) && Util.isEmpty(component.prototype)) {
+        } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
             RME.component({[component.name]: component});
-        } else if (Util.isFunction(component)) {
+        } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
             const comp = new component();
             App.component({[component.name]: comp.render})(comp.appName);
             let state = {};
@@ -1124,66 +1124,6 @@ const bindState = (function() {
 
 
 
-
-
-
-
-/**
- * A CSS function will either create a new style element containing given css and other parameters 
- * or it will append to a existing style element if the element is found by given parameters.
- * @param {string} css string
- * @param {object} config properties object of the style element
- */
-const CSS = (function() {
-
-    const getStyles = config => {
-        const styles = Tree.getHead().getByTag('style');
-        if (Util.isEmpty(config) && !Util.isArray(styles)) {
-            return styles;
-        } else if (Util.isArray(styles)) {
-            return styles.find(style => arePropertiesSame(style.getProps(), config));
-        } else if (!Util.isEmpty(styles) && arePropertiesSame(styles.getProps(), config)) {
-            return styles;
-        }
-    };
-
-    const propsWithoutContent = props => {
-        let newProps = {
-            ...props
-        }
-        delete newProps.text;
-        return newProps;
-    }
-
-    const arePropertiesSame = (oldProps, newProps) => 
-        JSON.stringify(propsWithoutContent(oldProps)) === JSON.stringify(newProps || {});
-
-    const hasStyles = config => !Util.isEmpty(getStyles(config));
-
-    const hasContent = (content, config) => {
-        const styles = getStyles(config);
-        if (!Util.isEmpty(styles)) {
-            return styles.getContent().match(content) !== null
-        }
-    };
-
-    return (content, config) => {
-        if (!hasStyles(config)) {
-            Tree.getHead().append({
-                style: {
-                    content,
-                    ...config
-                }
-            });
-        } else if (!hasContent(content, config)) {
-            const style = getStyles(config);
-            if (!Util.isEmpty(style)) {
-                const prevContent = style.getContent();
-                style.setContent(prevContent+content);
-            }
-        }
-    }
-})();
 
 
 
@@ -1297,81 +1237,6 @@ let Cookie = (function() {
 
     return Cookie;
 }());
-
-
-
-
-const EventPipe = (function() {
-
-    /**
-     * EventPipe class can be used to multicast and send custom events to registered listeners.
-     * Each event in an event queue will be sent to each registerd listener.
-     */
-    class EventPipe {
-        constructor() {
-            this.eventsQueue = [];
-            this.callQueue = [];
-            this.loopTimeout;
-        }
-
-        containsEvent() {
-            return this.eventsQueue.find(ev => ev.type === event.type);
-        }
-
-        /**
-         * Function sends an event object though the EventPipe. The event must have a type attribute
-         * defined otherwise an error is thrown. 
-         * Example defintion of the event object. 
-         * { 
-         *   type: 'some event',
-         *   ...payload
-         * }
-         * If an event listener is defined the sent event will be received on the event listener.
-         * @param {object} event 
-         */
-        send(event) {
-            if (Util.isEmpty(event.type))
-                throw new Error('Event must have type attribute.');
-            
-            if (!this.containsEvent())
-                this.eventsQueue.push(event);
-
-            this.loopEvents();
-        }
-
-        loopEvents() {
-            if (this.loopTimeout)
-                Util.clearTimeout(this.loopTimeout);
-
-            this.loopTimeout = Util.setTimeout(() => {
-                this.callQueue.forEach(eventCallback => 
-                    this.eventsQueue.forEach(ev => eventCallback(ev)));
-
-                this.eventsQueue = [];
-                this.callQueue = [];
-            });
-        }
-
-        /**
-         * Function registers an event listener function that receives an event sent through the
-         * EventPipe. Each listener will receive each event that are in an event queue. The listener
-         * function receives the event as a parameter.
-         * @param {function} eventCallback 
-         */
-        receive(eventCallback) {
-            this.callQueue.push(eventCallback);
-        }
-
-    }
-
-    const eventPipe = new EventPipe();
-
-    return {
-        send: eventPipe.send.bind(eventPipe),
-        receive: eventPipe.receive.bind(eventPipe)
-    }
-
-})();
 
 
 
@@ -3405,6 +3270,141 @@ class RMEElemTemplater {
 }
 
 
+
+/**
+ * A CSS function will either create a new style element containing given css and other parameters 
+ * or it will append to a existing style element if the element is found by given parameters.
+ * @param {string} css string
+ * @param {object} config properties object of the style element
+ */
+const CSS = (function() {
+
+    const getStyles = config => {
+        const styles = Tree.getHead().getByTag('style');
+        if (Util.isEmpty(config) && !Util.isArray(styles)) {
+            return styles;
+        } else if (Util.isArray(styles)) {
+            return styles.find(style => arePropertiesSame(style.getProps(), config));
+        } else if (!Util.isEmpty(styles) && arePropertiesSame(styles.getProps(), config)) {
+            return styles;
+        }
+    };
+
+    const propsWithoutContent = props => {
+        let newProps = {
+            ...props
+        }
+        delete newProps.text;
+        return newProps;
+    }
+
+    const arePropertiesSame = (oldProps, newProps) => 
+        JSON.stringify(propsWithoutContent(oldProps)) === JSON.stringify(newProps || {});
+
+    const hasStyles = config => !Util.isEmpty(getStyles(config));
+
+    const hasContent = (content, config) => {
+        const styles = getStyles(config);
+        if (!Util.isEmpty(styles)) {
+            return styles.getContent().match(content) !== null
+        }
+    };
+
+    return (content, config) => {
+        if (!hasStyles(config)) {
+            Tree.getHead().append({
+                style: {
+                    content,
+                    ...config
+                }
+            });
+        } else if (!hasContent(content, config)) {
+            const style = getStyles(config);
+            if (!Util.isEmpty(style)) {
+                const prevContent = style.getContent();
+                style.setContent(prevContent+content);
+            }
+        }
+    }
+})();
+
+
+
+
+const EventPipe = (function() {
+
+    /**
+     * EventPipe class can be used to multicast and send custom events to registered listeners.
+     * Each event in an event queue will be sent to each registerd listener.
+     */
+    class EventPipe {
+        constructor() {
+            this.eventsQueue = [];
+            this.callQueue = [];
+            this.loopTimeout;
+        }
+
+        containsEvent() {
+            return this.eventsQueue.find(ev => ev.type === event.type);
+        }
+
+        /**
+         * Function sends an event object though the EventPipe. The event must have a type attribute
+         * defined otherwise an error is thrown. 
+         * Example defintion of the event object. 
+         * { 
+         *   type: 'some event',
+         *   ...payload
+         * }
+         * If an event listener is defined the sent event will be received on the event listener.
+         * @param {object} event 
+         */
+        send(event) {
+            if (Util.isEmpty(event.type))
+                throw new Error('Event must have type attribute.');
+            
+            if (!this.containsEvent())
+                this.eventsQueue.push(event);
+
+            this.loopEvents();
+        }
+
+        loopEvents() {
+            if (this.loopTimeout)
+                Util.clearTimeout(this.loopTimeout);
+
+            this.loopTimeout = Util.setTimeout(() => {
+                this.callQueue.forEach(eventCallback => 
+                    this.eventsQueue.forEach(ev => eventCallback(ev)));
+
+                this.eventsQueue = [];
+                this.callQueue = [];
+            });
+        }
+
+        /**
+         * Function registers an event listener function that receives an event sent through the
+         * EventPipe. Each listener will receive each event that are in an event queue. The listener
+         * function receives the event as a parameter.
+         * @param {function} eventCallback 
+         */
+        receive(eventCallback) {
+            this.callQueue.push(eventCallback);
+        }
+
+    }
+
+    const eventPipe = new EventPipe();
+
+    return {
+        send: eventPipe.send.bind(eventPipe),
+        receive: eventPipe.receive.bind(eventPipe)
+    }
+
+})();
+
+
+
 /**
  * Before using this class you should also be familiar on how to use fetch since usage of this class
  * will be quite similar to fetch except predefined candy that is added on a class.
@@ -3762,422 +3762,6 @@ let Http = (function() {
 
 
 
-/**
- * Key class does not have any methods as it only contains key mappings for keyevent. For example:
- * 
- * onKeyDown(function(event) {
- *  if(event.key === Key.ENTER)
- *    //do something.
- * });
- */
-class Key {}
-/** Enter */
-Key.ENTER = "Enter";
-/** Escape */
-Key.ESC = "Escape";
-/** Tab */
-Key.TAB = "Tab";
-/** F1 */
-Key.F1 = "F1";
-/** F2 */
-Key.F2 = "F2";
-/** F3 */
-Key.F3 = "F3";
-/** F4 */
-Key.F4 = "F4";
-/** F5 */
-Key.F5 = "F5";
-/** F6 */
-Key.F6 = "F6";
-/** F7 */
-Key.F7 = "F7";
-/** F8 */
-Key.F8 = "F8";
-/** F9 */
-Key.F9 = "F9";
-/** F10 */
-Key.F10 = "F10";
-/** F11 */
-Key.F11 = "F11";
-/** F12 */
-Key.F12 = "F12";
-/** a */
-Key.A = "a";
-/** b */
-Key.B = "b";
-/** c */
-Key.C = "c";
-/** d */
-Key.D = "d";
-/** e */
-Key.E = "e";
-/** f */
-Key.F = "f";
-/** g */
-Key.G = "g";
-/** h */
-Key.H = "h";
-/** i */
-Key.I = "i";
-/** j */
-Key.J = "j";
-/** l */
-Key.L = "l";
-/** m */
-Key.M = "m";
-/** n */
-Key.N = "n";
-/** o */
-Key.O = "o";
-/** p */
-Key.P = "p";
-/** q */
-Key.Q = "q";
-/** r */
-Key.R = "r";
-/**s */
-Key.S = "s";
-/** t */
-Key.T = "t";
-/** u */
-Key.U = "u";
-/** v */
-Key.V = "v";
-/** w */
-Key.W = "w";
-/** x */
-Key.X = "x";
-/** y */
-Key.Y = "y";
-/** z */
-Key.Z = "z";
-/** CapsLock */
-Key.CAPS_LOCK = "CapsLock";
-/** NumLock */
-Key.NUM_LOCK = "NumLock";
-/** ScrollLock */
-Key.SCROLL_LOCK = "ScrollLock";
-/** Pause */
-Key.PAUSE = "Pause";
-/** PrintScreen */
-Key.PRINT_SCREEN = "PrintScreen";
-/** PageUp */
-Key.PAGE_UP = "PageUp";
-/** PageDown */
-Key.PAGE_DOWN = "PageDown";
-/** End */
-Key.END = "End";
-/** Home */
-Key.HOME = "Home";
-/** Delete */
-Key.DELETE = "Delete";
-/** Insert */
-Key.INSERT = "Insert";
-/** Alt */
-Key.ALT = "Alt";
-/** Control */
-Key.CTRL = "Control";
-/** ContextMenu */
-Key.CONTEXT_MENU = "ContextMenu";
-/** OS or Metakey */
-Key.OS = "OS"; // META
-/** AltGraph */
-Key.ALTGR = "AltGraph";
-/** Shift */
-Key.SHIFT = "Shift";
-/** Backspace */
-Key.BACKSPACE = "Backspace";
-/** § */
-Key.SECTION = "§";
-/** 1 */
-Key.ONE = "1";
-/** 2 */
-Key.TWO = "2";
-/** 3 */
-Key.THREE = "3";
-/** 4 */
-Key.FOUR = "4";
-/** 5 */
-Key.FIVE = "5";
-/** 6 */
-Key.SIX = "6";
-/** 7 */
-Key.SEVEN = "7";
-/** 8 */
-Key.EIGHT = "8";
-/** 9 */
-Key.NINE = "9";
-/** 0 */
-Key.ZERO = "0";
-/** + */
-Key.PLUS = "+";
-/** + */
-Key.MINUS = "-";
-/** * */
-Key.STAR = "*";
-/** / */
-Key.SLASH = "/";
-/** ArrowUp */
-Key.ARROW_UP = "ArrowUp";
-/** ArrowRight */
-Key.ARROW_RIGHT = "ArrowRight";
-/** ArrowDown */
-Key.ARROW_DOWN = "ArrowDown";
-/** ArrowLeft */
-Key.ARROW_LEFT = "ArrowLeft";
-/** , */
-Key.COMMA = ",";
-/** . */
-Key.DOT = ".";
-
-
-
-let Messages = (function() {
-    /**
-     * Messages class handles internationalization. The class offers public methods that enable easy 
-     * using of translated content.
-     */
-    class Messages {
-        constructor() {
-            this.instance = this;
-            this.messages = [];
-            this.locale = "";
-            this.translated = [];
-            this.load = function() {};
-            this.messagesType;
-            this.app;
-            this.ready = false;
-            this.registerMessages();
-        }
-
-        /**
-         * Initializes the Messages
-         */
-        registerMessages() {
-            document.addEventListener("readystatechange", () => {
-                if(document.readyState === "complete") {
-                    this.ready = true;
-                    this.runTranslated.call(this);
-                }
-            });
-        }
-
-        setLoad(loader) {
-            this.load = loader;
-        }
-
-        setAppInstance(appInstance) {
-            this.app = appInstance;
-        }
-
-        setLocale(locale) {
-            this.locale = locale;
-            return this;
-        }
-
-        setMessages(messages) {
-            if(Util.isArray(messages))
-                this.messagesType = "array";
-            else if(Util.isObject(messages))
-                this.messagesType = "map";
-            else
-                throw "messages must be type array or object";
-            this.messages = messages;
-            this.runTranslated.call(this);
-        }
-
-        getMessage(text, ...params) {
-            if(Util.isEmpty(params[0][0])) {
-                return this.resolveMessage(text);
-            } else {
-                this.getTranslatedElemIfExist(text, params[0][0]);
-                let msg = this.resolveMessage(text);
-                return this.resolveParams(msg, params[0][0]);
-            }
-        }
-
-        /**
-         * Resolves translated message key and returns a resolved message if exist
-         * otherwise returns the given key.
-         * @param {string} text 
-         * @returns A resolved message if exist otherwise the given key.
-         */
-        resolveMessage(text) {
-            if(this.messagesType === "array") {
-                return this.resolveMessagesArray(text);
-            } else if(this.messagesType === "map") {
-                return this.resolveMessagesMap(text);
-            }
-        }
-
-        /**
-         * Resolves a translated message key from the map. Returns a resolved message 
-         * if found otherwise returns the key.
-         * @param {string} text 
-         * @returns A resolved message
-         */
-        resolveMessagesMap(text) {
-            let msg = text;
-            for(let i in this.messages) {
-                if(i === text) {
-                    msg = this.messages[i];
-                    break;
-                }
-            }
-            return msg;
-        }
-
-        /**
-         * Resolves a translated message key from the array. Returns a resolved message
-         * if found otherwise returns the key.
-         * @param {string} text 
-         * @returns A resolved message
-         */
-        resolveMessagesArray(text) {
-            let i = 0;
-            let msg = text;
-            while(i < this.messages.length) {
-                if(!Util.isEmpty(this.messages[i][text])) {
-                    msg = this.messages[i][text];
-                    break;
-                }
-                i++;
-            }
-            return msg;
-        }
-
-        /**
-         * Resolves the message parameters if exist otherwise does nothing.
-         * @param {string} msg 
-         * @param {*} params 
-         * @returns The message with resolved message parameteres if parameters exist.
-         */
-        resolveParams(msg, params) {
-            if(!Util.isEmpty(msg)) {
-                let i = 0;
-                while(i < params.length) {
-                    msg = msg.replace("{"+i+"}", params[i]);
-                    i++;
-                }
-                return msg;
-            }
-        }
-
-        /**
-         * Function gets a Elem object and inserts it into a translated object array if it exists.
-         * @param {string} key 
-         * @param {*} params 
-         */
-        getTranslatedElemIfExist(key, params) {
-            if(Util.isEmpty(this.app)) {
-                let last = params[params.length - 1];
-                if(Util.isObject(last) && last instanceof Elem) {
-                    last = params.pop();
-                    this.translated.push({key: key, params: params, obj: last});
-                }
-            }
-        }
-
-        /**
-         * Function goes through the translated objects array and sets a translated message to the translated elements.
-         */
-        runTranslated() {
-            if(Util.isEmpty(this.app) && this.ready) {
-                Util.setTimeout(() => {
-                    let i = 0;
-                    while(i < this.translated.length) {
-                        this.translated[i].obj.setText.call(this.translated[i].obj, Messages.message(this.translated[i].key, this.translated[i].params));
-                        i++;
-                    }
-                });
-            } else if(this.ready) {
-                this.app.refresh();
-            }
-        }
-
-        /**
-         * Function returns current locale of the Messages
-         * @returns Current locale
-         */
-        static locale() {
-            return Messages.getInstance().locale;
-        }
-
-        /**
-         * Lang function is used to change or set the current locale to be the given locale. After calling this method
-         * the Messages.load function will be automatically invoked.
-         * @param {string} locale String
-         * @param {object} locale Event
-         */
-        static lang(locale) {
-            let loc;
-            if(Util.isObject(locale) && locale instanceof Event) {
-                locale.preventDefault();
-                let el = Elem.wrap(locale.target);
-                loc = el.getHref();
-                if(Util.isEmpty(loc))
-                    loc = el.getValue();
-                if(Util.isEmpty(loc))
-                    loc = el.getText();
-            } else if(Util.isString(locale))
-                loc = locale;
-            else
-                throw "Given parameter must be type string or instance of Event, given value: " + locale;
-            if(!Util.isEmpty(loc))
-                Messages.getInstance().setLocale(loc).load.call(null, 
-                    Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
-        }
-
-        /**
-         * Message function is used to retrieve translated messages. The function also supports message parameters
-         * that can be given as a comma separeted list. 
-         * @param {string} text 
-         * @param {*} params 
-         * @returns A resolved message or the given key if the message is not found.
-         */
-        static message(text, ...params) {
-            return Messages.getInstance().getMessage(text, params);
-        }
-
-        /**
-         * Load function is used to load new messages or change already loaded messages.
-         * Implementation of the function receives two parameters. The one of the parameters is the changed locale and 
-         * the other is setMessages(messagesArrayOrObject) function that is used to change the translated messages.
-         * This function is called automatically when language is changed by calling the Messages.lang() function.
-         * @param {function} loader 
-         */
-        static load(loader) {
-            if(!Util.isFunction(loader))
-                throw "loader must be type function " + Util.getType(loader);
-            Messages.getInstance().setLoad(loader);
-        }
-
-        /**
-         * Set the app instance to be invoked on the Messages update.
-         * @param {object} appInstance 
-         */
-        static setApp(appInstance) {
-            Messages.getInstance().setAppInstance(appInstance);
-            return Messages;
-        }
-
-        static getInstance() {
-            if(!this.instance)
-                this.instance = new Messages();
-            return this.instance;
-        }
-    }
-
-    return {
-        lang: Messages.lang,
-        message: Messages.message,
-        load: Messages.load,
-        locale: Messages.locale,
-        setApp: Messages.setApp
-    };
-}());
-
-
 
 let RME = (function() {
     /**
@@ -4462,39 +4046,421 @@ let RME = (function() {
 }());
 
 
+
+let Messages = (function() {
+    /**
+     * Messages class handles internationalization. The class offers public methods that enable easy 
+     * using of translated content.
+     */
+    class Messages {
+        constructor() {
+            this.instance = this;
+            this.messages = [];
+            this.locale = "";
+            this.translated = [];
+            this.load = function() {};
+            this.messagesType;
+            this.app;
+            this.ready = false;
+            this.registerMessages();
+        }
+
+        /**
+         * Initializes the Messages
+         */
+        registerMessages() {
+            document.addEventListener("readystatechange", () => {
+                if(document.readyState === "complete") {
+                    this.ready = true;
+                    this.runTranslated.call(this);
+                }
+            });
+        }
+
+        setLoad(loader) {
+            this.load = loader;
+        }
+
+        setAppInstance(appInstance) {
+            this.app = appInstance;
+        }
+
+        setLocale(locale) {
+            this.locale = locale;
+            return this;
+        }
+
+        setMessages(messages) {
+            if(Util.isArray(messages))
+                this.messagesType = "array";
+            else if(Util.isObject(messages))
+                this.messagesType = "map";
+            else
+                throw "messages must be type array or object";
+            this.messages = messages;
+            this.runTranslated.call(this);
+        }
+
+        getMessage(text, ...params) {
+            if(Util.isEmpty(params[0][0])) {
+                return this.resolveMessage(text);
+            } else {
+                this.getTranslatedElemIfExist(text, params[0][0]);
+                let msg = this.resolveMessage(text);
+                return this.resolveParams(msg, params[0][0]);
+            }
+        }
+
+        /**
+         * Resolves translated message key and returns a resolved message if exist
+         * otherwise returns the given key.
+         * @param {string} text 
+         * @returns A resolved message if exist otherwise the given key.
+         */
+        resolveMessage(text) {
+            if(this.messagesType === "array") {
+                return this.resolveMessagesArray(text);
+            } else if(this.messagesType === "map") {
+                return this.resolveMessagesMap(text);
+            }
+        }
+
+        /**
+         * Resolves a translated message key from the map. Returns a resolved message 
+         * if found otherwise returns the key.
+         * @param {string} text 
+         * @returns A resolved message
+         */
+        resolveMessagesMap(text) {
+            let msg = text;
+            for(let i in this.messages) {
+                if(i === text) {
+                    msg = this.messages[i];
+                    break;
+                }
+            }
+            return msg;
+        }
+
+        /**
+         * Resolves a translated message key from the array. Returns a resolved message
+         * if found otherwise returns the key.
+         * @param {string} text 
+         * @returns A resolved message
+         */
+        resolveMessagesArray(text) {
+            let i = 0;
+            let msg = text;
+            while(i < this.messages.length) {
+                if(!Util.isEmpty(this.messages[i][text])) {
+                    msg = this.messages[i][text];
+                    break;
+                }
+                i++;
+            }
+            return msg;
+        }
+
+        /**
+         * Resolves the message parameters if exist otherwise does nothing.
+         * @param {string} msg 
+         * @param {*} params 
+         * @returns The message with resolved message parameteres if parameters exist.
+         */
+        resolveParams(msg, params) {
+            if(!Util.isEmpty(msg)) {
+                let i = 0;
+                while(i < params.length) {
+                    msg = msg.replace("{"+i+"}", params[i]);
+                    i++;
+                }
+                return msg;
+            }
+        }
+
+        /**
+         * Function gets a Elem object and inserts it into a translated object array if it exists.
+         * @param {string} key 
+         * @param {*} params 
+         */
+        getTranslatedElemIfExist(key, params) {
+            if(Util.isEmpty(this.app)) {
+                let last = params[params.length - 1];
+                if(Util.isObject(last) && last instanceof Elem) {
+                    last = params.pop();
+                    this.translated.push({key: key, params: params, obj: last});
+                }
+            }
+        }
+
+        /**
+         * Function goes through the translated objects array and sets a translated message to the translated elements.
+         */
+        runTranslated() {
+            if(Util.isEmpty(this.app) && this.ready) {
+                Util.setTimeout(() => {
+                    let i = 0;
+                    while(i < this.translated.length) {
+                        this.translated[i].obj.setText.call(this.translated[i].obj, Messages.message(this.translated[i].key, this.translated[i].params));
+                        i++;
+                    }
+                });
+            } else if(this.ready) {
+                this.app.refresh();
+            }
+        }
+
+        /**
+         * Function returns current locale of the Messages
+         * @returns Current locale
+         */
+        static locale() {
+            return Messages.getInstance().locale;
+        }
+
+        /**
+         * Lang function is used to change or set the current locale to be the given locale. After calling this method
+         * the Messages.load function will be automatically invoked.
+         * @param {string} locale String
+         * @param {object} locale Event
+         */
+        static lang(locale) {
+            let loc;
+            if(Util.isObject(locale) && locale instanceof Event) {
+                locale.preventDefault();
+                let el = Elem.wrap(locale.target);
+                loc = el.getHref();
+                if(Util.isEmpty(loc))
+                    loc = el.getValue();
+                if(Util.isEmpty(loc))
+                    loc = el.getText();
+            } else if(Util.isString(locale))
+                loc = locale;
+            else
+                throw "Given parameter must be type string or instance of Event, given value: " + locale;
+            if(!Util.isEmpty(loc))
+                Messages.getInstance().setLocale(loc).load.call(null, 
+                    Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
+        }
+
+        /**
+         * Message function is used to retrieve translated messages. The function also supports message parameters
+         * that can be given as a comma separeted list. 
+         * @param {string} text 
+         * @param {*} params 
+         * @returns A resolved message or the given key if the message is not found.
+         */
+        static message(text, ...params) {
+            return Messages.getInstance().getMessage(text, params);
+        }
+
+        /**
+         * Load function is used to load new messages or change already loaded messages.
+         * Implementation of the function receives two parameters. The one of the parameters is the changed locale and 
+         * the other is setMessages(messagesArrayOrObject) function that is used to change the translated messages.
+         * This function is called automatically when language is changed by calling the Messages.lang() function.
+         * @param {function} loader 
+         */
+        static load(loader) {
+            if(!Util.isFunction(loader))
+                throw "loader must be type function " + Util.getType(loader);
+            Messages.getInstance().setLoad(loader);
+        }
+
+        /**
+         * Set the app instance to be invoked on the Messages update.
+         * @param {object} appInstance 
+         */
+        static setApp(appInstance) {
+            Messages.getInstance().setAppInstance(appInstance);
+            return Messages;
+        }
+
+        static getInstance() {
+            if(!this.instance)
+                this.instance = new Messages();
+            return this.instance;
+        }
+    }
+
+    return {
+        lang: Messages.lang,
+        message: Messages.message,
+        load: Messages.load,
+        locale: Messages.locale,
+        setApp: Messages.setApp
+    };
+}());
+
+
 /**
- * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
+ * Key class does not have any methods as it only contains key mappings for keyevent. For example:
+ * 
+ * onKeyDown(function(event) {
+ *  if(event.key === Key.ENTER)
+ *    //do something.
+ * });
  */
-class Session {
-    /**
-     * Save data into the Session.
-     * @param {string} key
-     * @param {*} value
-     */
-    static set(key, value) {
-        sessionStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the Session.
-     * @param {string} key
-     */
-    static get(key) {
-        return sessionStorage.getItem(key);
-    }
-    /**
-     * Remove data from the Session.
-     * @param {string} key
-     */
-    static remove(key) {
-        sessionStorage.removeItem(key);
-    }
-    /**
-     * Clears the Session.
-     */
-    static clear() {
-        sessionStorage.clear();
-    }
-}
+class Key {}
+/** Enter */
+Key.ENTER = "Enter";
+/** Escape */
+Key.ESC = "Escape";
+/** Tab */
+Key.TAB = "Tab";
+/** F1 */
+Key.F1 = "F1";
+/** F2 */
+Key.F2 = "F2";
+/** F3 */
+Key.F3 = "F3";
+/** F4 */
+Key.F4 = "F4";
+/** F5 */
+Key.F5 = "F5";
+/** F6 */
+Key.F6 = "F6";
+/** F7 */
+Key.F7 = "F7";
+/** F8 */
+Key.F8 = "F8";
+/** F9 */
+Key.F9 = "F9";
+/** F10 */
+Key.F10 = "F10";
+/** F11 */
+Key.F11 = "F11";
+/** F12 */
+Key.F12 = "F12";
+/** a */
+Key.A = "a";
+/** b */
+Key.B = "b";
+/** c */
+Key.C = "c";
+/** d */
+Key.D = "d";
+/** e */
+Key.E = "e";
+/** f */
+Key.F = "f";
+/** g */
+Key.G = "g";
+/** h */
+Key.H = "h";
+/** i */
+Key.I = "i";
+/** j */
+Key.J = "j";
+/** l */
+Key.L = "l";
+/** m */
+Key.M = "m";
+/** n */
+Key.N = "n";
+/** o */
+Key.O = "o";
+/** p */
+Key.P = "p";
+/** q */
+Key.Q = "q";
+/** r */
+Key.R = "r";
+/**s */
+Key.S = "s";
+/** t */
+Key.T = "t";
+/** u */
+Key.U = "u";
+/** v */
+Key.V = "v";
+/** w */
+Key.W = "w";
+/** x */
+Key.X = "x";
+/** y */
+Key.Y = "y";
+/** z */
+Key.Z = "z";
+/** CapsLock */
+Key.CAPS_LOCK = "CapsLock";
+/** NumLock */
+Key.NUM_LOCK = "NumLock";
+/** ScrollLock */
+Key.SCROLL_LOCK = "ScrollLock";
+/** Pause */
+Key.PAUSE = "Pause";
+/** PrintScreen */
+Key.PRINT_SCREEN = "PrintScreen";
+/** PageUp */
+Key.PAGE_UP = "PageUp";
+/** PageDown */
+Key.PAGE_DOWN = "PageDown";
+/** End */
+Key.END = "End";
+/** Home */
+Key.HOME = "Home";
+/** Delete */
+Key.DELETE = "Delete";
+/** Insert */
+Key.INSERT = "Insert";
+/** Alt */
+Key.ALT = "Alt";
+/** Control */
+Key.CTRL = "Control";
+/** ContextMenu */
+Key.CONTEXT_MENU = "ContextMenu";
+/** OS or Metakey */
+Key.OS = "OS"; // META
+/** AltGraph */
+Key.ALTGR = "AltGraph";
+/** Shift */
+Key.SHIFT = "Shift";
+/** Backspace */
+Key.BACKSPACE = "Backspace";
+/** § */
+Key.SECTION = "§";
+/** 1 */
+Key.ONE = "1";
+/** 2 */
+Key.TWO = "2";
+/** 3 */
+Key.THREE = "3";
+/** 4 */
+Key.FOUR = "4";
+/** 5 */
+Key.FIVE = "5";
+/** 6 */
+Key.SIX = "6";
+/** 7 */
+Key.SEVEN = "7";
+/** 8 */
+Key.EIGHT = "8";
+/** 9 */
+Key.NINE = "9";
+/** 0 */
+Key.ZERO = "0";
+/** + */
+Key.PLUS = "+";
+/** + */
+Key.MINUS = "-";
+/** * */
+Key.STAR = "*";
+/** / */
+Key.SLASH = "/";
+/** ArrowUp */
+Key.ARROW_UP = "ArrowUp";
+/** ArrowRight */
+Key.ARROW_RIGHT = "ArrowRight";
+/** ArrowDown */
+Key.ARROW_DOWN = "ArrowDown";
+/** ArrowLeft */
+Key.ARROW_LEFT = "ArrowLeft";
+/** , */
+Key.COMMA = ",";
+/** . */
+Key.DOT = ".";
+
 
 
 
@@ -4963,6 +4929,40 @@ let Router = (function() {
         setApp: Router.setApp,
     }
 }());
+
+/**
+ * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
+ */
+class Session {
+    /**
+     * Save data into the Session.
+     * @param {string} key
+     * @param {*} value
+     */
+    static set(key, value) {
+        sessionStorage.setItem(key, value);
+    }
+    /**
+     * Get the saved data from the Session.
+     * @param {string} key
+     */
+    static get(key) {
+        return sessionStorage.getItem(key);
+    }
+    /**
+     * Remove data from the Session.
+     * @param {string} key
+     */
+    static remove(key) {
+        sessionStorage.removeItem(key);
+    }
+    /**
+     * Clears the Session.
+     */
+    static clear() {
+        sessionStorage.clear();
+    }
+}
 
 
 /**
@@ -5651,6 +5651,170 @@ let Template = (function() {
 }());
 
 
+/**
+ * General Utility methods.
+ */
+class Util {
+    /**
+     * Checks is a given value empty.
+     * @param {*} value
+     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
+     */
+    static isEmpty(value) {
+        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
+    }
+
+    /**
+     * Get the type of the given value.
+     * @param {*} value
+     * @returns The type of the given value.
+     */
+    static getType(value) {
+        return typeof value;
+    }
+
+    /**
+     * Checks is a given value is a given type.
+     * @param {*} value
+     * @param {string} type
+     * @returns True if the given value is the given type otherwise false.
+     */
+    static isType(value, type) {
+        return (Util.getType(value) === type);
+    }
+
+    /**
+     * Checks is a given parameter a function.
+     * @param {*} func 
+     * @returns True if the given parameter is fuction otherwise false.
+     */
+    static isFunction(func) {
+        return Util.isType(func, "function");
+    }
+
+    /**
+     * Checks is a given parameter a boolean.
+     * @param {*} boolean
+     * @returns True if the given parameter is boolean otherwise false.
+     */
+    static isBoolean(boolean) {
+        return Util.isType(boolean, "boolean");
+    }
+
+    /**
+     * Checks is a given parameter a string.
+     * @param {*} string
+     * @returns True if the given parameter is string otherwise false.
+     */
+    static isString(string) {
+        return Util.isType(string, "string");
+    }
+
+    /**
+     * Checks is a given parameter a number.
+     * @param {*} number
+     * @returns True if the given parameter is number otherwise false.
+     */
+    static isNumber(number) {
+        return Util.isType(number, "number");
+    }
+
+    /**
+     * Checks is a given parameter a symbol.
+     * @param {*} symbol
+     * @returns True if the given parameter is symbol otherwise false.
+     */
+    static isSymbol(symbol) {
+        return Util.isType(symbol, "symbol");
+    }
+
+    /**
+     * Checks is a given parameter a object.
+     * @param {*} object
+     * @returns True if the given parameter is object otherwise false.
+     */
+    static isObject(object) {
+        return Util.isType(object, "object");
+    }
+
+    /**
+     * Checks is a given parameter an array.
+     * @param {*} array
+     * @returns True if the given parameter is array otherwise false.
+     */
+    static isArray(array) {
+        return Array.isArray(array);
+    }
+
+    /**
+     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The timeout object.
+     */
+    static setTimeout(callback, milliseconds, ...params) {
+        if(!Util.isFunction(callback)) {
+            throw "callback not fuction";
+        }
+        return window.setTimeout(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes a timeout that was created by setTimeout method.
+     * @param {object} timeoutObject
+     */
+    static clearTimeout(timeoutObject) {
+        window.clearTimeout(timeoutObject);
+    }
+
+    /**
+     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The interval object.
+     */
+    static setInterval(callback, milliseconds, ...params) {
+        if(!Util.isFunction(callback)) {
+            throw "callback not fuction";
+        }
+        return window.setInterval(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes an interval that was created by setInterval method.
+     */
+    static clearInterval(intervalObject) {
+        window.clearInterval(intervalObject);
+    }
+
+    /**
+     * Encodes a string to Base64.
+     * @param {string} string
+     * @returns The base64 encoded string.
+     */
+    static encodeBase64String(string) {
+        if(!Util.isString(string)) {
+            throw "the given parameter is not a string: " +string;
+        }
+        return window.btoa(string);
+    }
+
+    /**
+     * Decodes a base 64 encoded string.
+     * @param {string} string
+     * @returns The base64 decoded string.
+     */
+    static decodeBase64String(string) {
+        if(!Util.isString(string)) {
+            throw "the given parameter is not a string: " +string;
+        }
+        return window.atob(string);
+    }
+}
+
+
 
 /**
  * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
@@ -5824,170 +5988,6 @@ class Tree {
      */
     static getForms() {
         return Elem.wrapElems(document.forms);
-    }
-}
-
-
-/**
- * General Utility methods.
- */
-class Util {
-    /**
-     * Checks is a given value empty.
-     * @param {*} value
-     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
-     */
-    static isEmpty(value) {
-        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
-    }
-
-    /**
-     * Get the type of the given value.
-     * @param {*} value
-     * @returns The type of the given value.
-     */
-    static getType(value) {
-        return typeof value;
-    }
-
-    /**
-     * Checks is a given value is a given type.
-     * @param {*} value
-     * @param {string} type
-     * @returns True if the given value is the given type otherwise false.
-     */
-    static isType(value, type) {
-        return (Util.getType(value) === type);
-    }
-
-    /**
-     * Checks is a given parameter a function.
-     * @param {*} func 
-     * @returns True if the given parameter is fuction otherwise false.
-     */
-    static isFunction(func) {
-        return Util.isType(func, "function");
-    }
-
-    /**
-     * Checks is a given parameter a boolean.
-     * @param {*} boolean
-     * @returns True if the given parameter is boolean otherwise false.
-     */
-    static isBoolean(boolean) {
-        return Util.isType(boolean, "boolean");
-    }
-
-    /**
-     * Checks is a given parameter a string.
-     * @param {*} string
-     * @returns True if the given parameter is string otherwise false.
-     */
-    static isString(string) {
-        return Util.isType(string, "string");
-    }
-
-    /**
-     * Checks is a given parameter a number.
-     * @param {*} number
-     * @returns True if the given parameter is number otherwise false.
-     */
-    static isNumber(number) {
-        return Util.isType(number, "number");
-    }
-
-    /**
-     * Checks is a given parameter a symbol.
-     * @param {*} symbol
-     * @returns True if the given parameter is symbol otherwise false.
-     */
-    static isSymbol(symbol) {
-        return Util.isType(symbol, "symbol");
-    }
-
-    /**
-     * Checks is a given parameter a object.
-     * @param {*} object
-     * @returns True if the given parameter is object otherwise false.
-     */
-    static isObject(object) {
-        return Util.isType(object, "object");
-    }
-
-    /**
-     * Checks is a given parameter an array.
-     * @param {*} array
-     * @returns True if the given parameter is array otherwise false.
-     */
-    static isArray(array) {
-        return Array.isArray(array);
-    }
-
-    /**
-     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The timeout object.
-     */
-    static setTimeout(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setTimeout(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes a timeout that was created by setTimeout method.
-     * @param {object} timeoutObject
-     */
-    static clearTimeout(timeoutObject) {
-        window.clearTimeout(timeoutObject);
-    }
-
-    /**
-     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The interval object.
-     */
-    static setInterval(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setInterval(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes an interval that was created by setInterval method.
-     */
-    static clearInterval(intervalObject) {
-        window.clearInterval(intervalObject);
-    }
-
-    /**
-     * Encodes a string to Base64.
-     * @param {string} string
-     * @returns The base64 encoded string.
-     */
-    static encodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.btoa(string);
-    }
-
-    /**
-     * Decodes a base 64 encoded string.
-     * @param {string} string
-     * @returns The base64 decoded string.
-     */
-    static decodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.atob(string);
     }
 }
 
