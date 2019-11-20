@@ -66,9 +66,9 @@ const Component = (function() {
         if (Util.isObject(component)) {
             App.component({[component.name]: component.comp})(component.appName);
             resolveInitialState(component.initialState, component.name+component.stateRef, component.appName);
-        } else if (Util.isFunction(component) && Util.isEmpty(component.prototype)) {
+        } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
             RME.component({[component.name]: component});
-        } else if (Util.isFunction(component)) {
+        } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
             const comp = new component();
             App.component({[component.name]: comp.render})(comp.appName);
             let state = {};
