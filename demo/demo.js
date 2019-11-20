@@ -5,12 +5,10 @@ import '../demo/filterExample/filterComponents';
 
 App.root('#app').create({
     'div.w3-container': [
-        {todoExample: {}},
+        {TodoExample: {}},
 
-        {formExample: {}},
+        {FormExample: {}},
         
-        {filterExample: {}}
+        {FilterExample: {}}
     ]
-}).setState({
-    lister: {list: [{li: () => 'What groceries should I buy?'}]}
 });
