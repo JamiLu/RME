@@ -12,25 +12,38 @@ const AppSetInitialStateJob = (function () {
     
     class InitStateJob {
         constructor() {
-            this.updateQueue = [];
             this.updateJob;
+            this.updateJobMap = {};
+            this.appNameList = [];
         }
 
-        resolveUpdateJobs(resolveCondition) {
+        resolveUpdateJobs() {
             if (!this.updateJob)
                 this.updateJob = Util.setInterval(() => {
-                    if (resolveCondition()) {
-                        this.updateQueue.forEach(job => job());
-                        this.updateQueue = [];
-                        Util.clearInterval(this.updateJob);
-                        this.updateJob = undefined;
+                    const appName = this.getAppNameIfPresent();
+                    if (!Util.isEmpty(appName)) {
+                        this.updateJobMap[appName].forEach(job => job());
+                        this.updateJobMap[appName] = [];
+                        this.appNameList = this.appNameList.filter(app => app !== appName);
+
+                        if (this.appNameList.length === 0) {
+                            Util.clearInterval(this.updateJob);
+                            this.updateJob = undefined;
+                        }
                     }
                 });
         }
 
-        addToQueue(job) {
-            this.updateQueue.push(job);
-            return this;
+        getAppNameIfPresent() {
+            return this.appNameList.find(appName => App.get(appName === "undefined" ? undefined : appName));
+        }
+
+        addToQueue(appName, job) {
+            let updateQueue = this.updateJobMap[appName] || [];
+            updateQueue.push(job);
+            this.updateJobMap[appName] = updateQueue;
+            this.appNameList = Object.keys(this.updateJobMap);
+            this.resolveUpdateJobs();
         }
     }
 
@@ -52,13 +65,11 @@ const AppSetInitialStateJob = (function () {
  */
 const Component = (function() {
 
-
     const resolveInitialState = (initialState, stateRef, appName) => {
         if (!Util.isEmpty(App.get(appName))) {
             App.get(appName).setState(stateRef, initialState, false);
         } else {
-            AppSetInitialStateJob.addToQueue(() => App.get(appName).setState(stateRef, initialState))
-                .resolveUpdateJobs(() => !Util.isEmpty(App.get(appName)));
+            AppSetInitialStateJob.addToQueue(appName, () => App.get(appName).setState(stateRef, initialState));
         }
     }
 
