@@ -7,6 +7,7 @@ JavaScript.
 Links
 -----
  - [https://jamilu.github.io/RME/](https://jamilu.github.io/RME/) (Online documentation PRIMARY)
+ - [https://jamilu.github.io/RME/#howto](https://jamilu.github.io/RME/#howto) Examples online
 
 Download
 -----
@@ -63,7 +64,7 @@ __Or use NPM__
 
 `npm i rme.js`
 
-`import RME, { App } from 'rme.js'`
+`import RME, { App, Component, bindState } from 'rme.js'`
 
 Then simply copy paste code clips below to your js file and voilà. 
 
