@@ -58,7 +58,7 @@ let Template = (function() {
                         if (Template.isAttr(obj, parent)) {
                             this.resolveAttributes(parent, obj, this.resolveFunctionBasedAttribute(template[obj]));
                         } else if (this.isEventKeyVal(obj, template[obj])) {
-                            parent[obj].call(parent, template[obj]);
+                            this.bindEventToElement(parent, template[obj], parent[obj]);
                         } else {
                             var child = this.resolveElement(obj, template[obj]);
                             if (Template.isFragment(child)) {
@@ -79,6 +79,10 @@ let Template = (function() {
                     }
                 }
             }
+        }
+
+        bindEventToElement(elemInstance, sourceFunction, targetFunction) {
+            targetFunction.call(elemInstance, sourceFunction);
         }
 
         /**

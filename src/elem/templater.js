@@ -107,8 +107,8 @@ class RMEElemTemplater {
      */
     resolveAttrs(tag, props) {
         let tagName = tag;
-        for(let p in props) {
-            if(props.hasOwnProperty(p) && p !== "id" && p !== "class") {
+        for (let p in props) {
+            if (props.hasOwnProperty(p) && p !== 'id' && p !== 'class' && p.indexOf('on') !== 0) {
                 tagName += `[${p}=${props[p]}]`
             }
         }
@@ -305,6 +305,14 @@ class RMEElemTemplater {
         }
     }
 
+    toLiteralString(elem) {
+        const props = this.resolveProps(elem);
+        let string = this.resolveId(elem.getTagName().toLowerCase(), props);
+        string = this.resolveClass(string, props);
+        string = this.resolveAttrs(string, props);
+        return string;
+    }
+
     /**
      * Function by default resolves a given element and its' children and returns template representation of the element.
      * @param {object} elem 
@@ -322,6 +330,10 @@ class RMEElemTemplater {
      */
     static getElementProps(elem) {
         return RMEElemTemplater.getInstance().resolveProps(elem);
+    }
+
+    static toLiteralString(elem) {
+        return RMEElemTemplater.getInstance().toLiteralString(elem);
     }
 
     static getInstance() {

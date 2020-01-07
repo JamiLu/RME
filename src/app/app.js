@@ -246,7 +246,7 @@ let App = (function() {
                             let element = state.current;
                             if (Template.isFragment(element)) {
                                 const fragment = {};
-                                fragment[state.rootElem.getTagName().toLowerCase()+selector] = {
+                                fragment[state.rootElem.toLiteralString()] = {
                                     ...element.fragment
                                 };
                                 freshStage.getFirst(selector).replace(Template.resolve(fragment));

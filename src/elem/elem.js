@@ -182,6 +182,10 @@ let Elem = (function() {
             return "<"+this.getTagName().toLowerCase()+">"+this.getContent()+"</"+this.getTagName().toLowerCase()+">";
         }
 
+        toLiteralString() {
+            return RMEElemTemplater.toLiteralString(this);
+        }
+
         /**
          * Converts this Elem object to JSON template object.
          * @param {boolean} deep default true if true children will also be templated.
