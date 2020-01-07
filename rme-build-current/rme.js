@@ -244,7 +244,7 @@ let App = (function() {
                             let element = state.current;
                             if (Template.isFragment(element)) {
                                 const fragment = {};
-                                fragment[state.rootElem.getTagName().toLowerCase()+selector] = {
+                                fragment[state.rootElem.toLiteralString()] = {
                                     ...element.fragment
                                 };
                                 freshStage.getFirst(selector).replace(Template.resolve(fragment));
@@ -990,119 +990,6 @@ class Browser {
 
 
 
-let Cookie = (function() {
-    /**
-     * Cookie interface offers an easy way to get, set or remove cookies in application logic.
-     * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
-     * 
-     * {
-     *    name: "name",
-     *    value: "value",
-     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-     *    cookiePath: "cookiePath absolute dir",
-     *    cookieDomain: "cookieDomain e.g example.com",
-     *    setSecureBoolean: true|false
-     * }
-     * 
-     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-     */
-    class Cookie {
-        /**
-         * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
-         * 
-         * @param {String} name 
-         * @returns cookie object
-         */
-        static get(name) {
-            if(navigator.cookieEnabled) {
-                var retCookie = null;
-                var cookies = document.cookie.split(";");
-                var i = 0;
-                while(i < cookies.length) {
-                    var cookie = cookies[i];
-                    var eq = cookie.search("=");
-                    var cn = cookie.substr(0, eq).trim();
-                    var cv = cookie.substr(eq + 1, cookie.length).trim();
-                    if(cn === name) {
-                        retCookie = new CookieInstance(cn, cv);
-                        break;
-                    }
-                    i++;
-                }
-                return retCookie;
-            }
-        }
-        /**
-         * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
-         * 
-         * @param {string} name
-         * @param {string} value
-         * @param {string} expiresDate
-         * @param {string} cookiePath
-         * @param {string} cookieDomain
-         * @param {boolean} setSecureBoolean
-         */
-        static set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-            if(navigator.cookieEnabled) {
-                document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
-            }
-        }
-        /**
-         * Remove a cookie by name. Method will set the cookie expired and then remove it.
-         * @param {string} name
-         */
-        static remove(name) {
-            var co = Cookie.get(name);
-            if(!Util.isEmpty(co)) {
-                co.setExpired();
-                document.cookie = co.toString();
-            }
-        }
-    }
-
-    /**
-     * Cookie object may hold following values:
-     *
-     * {
-     *    name: "name",
-     *    value: "value",
-     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-     *    cookiePath: "cookiePath absolute dir",
-     *    cookieDomain: "cookieDomain e.g example.com",
-     *    setSecureBoolean: true|false
-     * }
-     * 
-     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-     */
-    class CookieInstance {
-        constructor(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-            this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
-            this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
-            this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
-            this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
-            this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
-            this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
-        }
-
-        setExpired() {
-            this.cookieExpires = new Date(1970,0,1).toString();
-        }
-
-        toString() {
-            return this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity;
-        }
-        static create(name, value, expires, cpath, cdomain, setSecure) {
-                return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
-        }
-    }
-
-    return Cookie;
-}());
-
-
-
 
 /**
  * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
@@ -1251,6 +1138,118 @@ const bindState = (function() {
 
 
 
+let Cookie = (function() {
+    /**
+     * Cookie interface offers an easy way to get, set or remove cookies in application logic.
+     * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
+     * 
+     * {
+     *    name: "name",
+     *    value: "value",
+     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+     *    cookiePath: "cookiePath absolute dir",
+     *    cookieDomain: "cookieDomain e.g example.com",
+     *    setSecureBoolean: true|false
+     * }
+     * 
+     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+     */
+    class Cookie {
+        /**
+         * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
+         * 
+         * @param {String} name 
+         * @returns cookie object
+         */
+        static get(name) {
+            if(navigator.cookieEnabled) {
+                var retCookie = null;
+                var cookies = document.cookie.split(";");
+                var i = 0;
+                while(i < cookies.length) {
+                    var cookie = cookies[i];
+                    var eq = cookie.search("=");
+                    var cn = cookie.substr(0, eq).trim();
+                    var cv = cookie.substr(eq + 1, cookie.length).trim();
+                    if(cn === name) {
+                        retCookie = new CookieInstance(cn, cv);
+                        break;
+                    }
+                    i++;
+                }
+                return retCookie;
+            }
+        }
+        /**
+         * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
+         * 
+         * @param {string} name
+         * @param {string} value
+         * @param {string} expiresDate
+         * @param {string} cookiePath
+         * @param {string} cookieDomain
+         * @param {boolean} setSecureBoolean
+         */
+        static set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+            if(navigator.cookieEnabled) {
+                document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
+            }
+        }
+        /**
+         * Remove a cookie by name. Method will set the cookie expired and then remove it.
+         * @param {string} name
+         */
+        static remove(name) {
+            var co = Cookie.get(name);
+            if(!Util.isEmpty(co)) {
+                co.setExpired();
+                document.cookie = co.toString();
+            }
+        }
+    }
+
+    /**
+     * Cookie object may hold following values:
+     *
+     * {
+     *    name: "name",
+     *    value: "value",
+     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+     *    cookiePath: "cookiePath absolute dir",
+     *    cookieDomain: "cookieDomain e.g example.com",
+     *    setSecureBoolean: true|false
+     * }
+     * 
+     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+     */
+    class CookieInstance {
+        constructor(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+            this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
+            this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
+            this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
+            this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
+            this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
+            this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
+        }
+
+        setExpired() {
+            this.cookieExpires = new Date(1970,0,1).toString();
+        }
+
+        toString() {
+            return this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity;
+        }
+        static create(name, value, expires, cpath, cdomain, setSecure) {
+                return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
+        }
+    }
+
+    return Cookie;
+}());
+
+
 
 
 /**
@@ -1310,6 +1309,351 @@ const CSS = (function() {
     }
 })();
 
+
+
+
+/**
+ * RMEElemTemplater class is able to create a Template out of an Elem object.
+ */
+class RMEElemTemplater {
+    constructor() {
+        this.instance;
+        this.template = {};
+        this.deep = true;
+    }
+
+    toTemplate(elem, deep) {
+        if(!Util.isEmpty(deep))
+            this.deep = deep;
+        this.resolve(elem, this.template);
+        return this.template;
+    }
+
+    /**
+     * Function is called recursively and resolves an Elem object and its children in recursion
+     * @param {object} elem 
+     * @param {object} parent 
+     */
+    resolve(elem, parent) {
+        let resolved = this.resolveElem(elem, this.resolveProps(elem));
+        for(let p in parent) {
+            if(parent.hasOwnProperty(p)) {
+                if(Util.isArray(parent[p]))
+                    parent[p].push(resolved);
+                else
+                    this.extendMap(parent[p], resolved);
+            }
+        }
+
+        let i = 0;
+        let children = Util.isArray(elem.getChildren()) ? elem.getChildren() : [elem.getChildren()];
+        if(children && this.deep) {
+            while(i < children.length) {
+                this.resolve(children[i], resolved);
+                i++;
+            }
+        }
+        this.template = resolved;
+    }
+
+    extendMap(map, next) {
+        for(let v in next) {
+            if(next.hasOwnProperty(v)) {
+                map[v] = next[v];
+            }
+        }
+    }
+
+    /**
+     * Function will attach given properties into a given Elem and returns the resolved Elem.
+     * @param {object} elem 
+     * @param {object} props 
+     * @returns The resolved elem with attached properties.
+     */
+    resolveElem(elem, props) {
+        let el = {};
+        let children = elem.getChildren();
+        if(Util.isArray(children) && children.length > 1) {
+            let elTag = elem.getTagName().toLowerCase();
+            let elName = this.resolveId(elTag, props);
+            elName = this.resolveClass(elName, props);
+            elName = this.resolveAttrs(elName, props);
+            el[elName] = [];
+        } else {
+            el[elem.getTagName().toLowerCase()] = props
+        }
+        return el;
+    }
+
+    /**
+     * Function will place an ID attribute into an element tag if the ID attribute is found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with the ID or without.
+     */
+    resolveId(tag, props) {
+        if(props.id)
+            return tag+"#"+props.id;
+        else
+            return tag;
+    }
+
+    /**
+     * Function will place a class attribute into an element tag if the class attribute is found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with the classes or without.
+     */
+    resolveClass(tag, props) {
+        if(props.class)
+            return tag+"."+props.class.replace(/ /g, ".");
+        else
+            return tag;
+    }
+
+    /**
+     * Function will resolve all other attributes and place them into an element tag if other attributes are found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with other attributes or without.
+     */
+    resolveAttrs(tag, props) {
+        let tagName = tag;
+        for (let p in props) {
+            if (props.hasOwnProperty(p) && p !== 'id' && p !== 'class' && p.indexOf('on') !== 0) {
+                tagName += `[${p}=${props[p]}]`
+            }
+        }
+        return tagName;
+    }
+
+    /**
+     * Resolves a given Elem object and returns its properties in an object.
+     * @param {object} elem 
+     * @returns The properties object of the given element.
+     */
+    resolveProps(elem) {
+        let props = {};
+        let attributes = elem.dom().attributes;
+        let a = 0;
+        if(attributes) {
+            while(a < attributes.length) {
+                props[this.resolveAttributeNames(attributes[a].name)] = attributes[a].value;
+                a++;
+            }
+        }
+
+        if(elem.dom().hasChildNodes() && elem.dom().childNodes[0].nodeType === 3) {
+            props["text"] = elem.getText();
+        }
+
+        for(let p in elem.dom()) {
+            if(p.indexOf("on") !== 0 || Util.isEmpty(elem.dom()[p]))
+                continue;
+            else
+                props[this.resolveListeners(p)] = elem.dom()[p];
+        }
+
+        return props;
+    }
+
+    /**
+     * Resolves html data-* attributes by removing '-' and setting the next character to uppercase. If the attribute is not 
+     * data-* attribute then it is directly returned.
+     * @param {string} attrName 
+     * @returns Resolved attribute name.
+     */
+    resolveAttributeNames(attrName) {
+        if(attrName.indexOf("data" === 0 && attrName.length > "data".length)) {
+            while(attrName.search("-") > -1) {
+                attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search("-") + 1).toUpperCase());
+            }
+            return attrName
+        } else {
+            return attrName;
+        }
+    }
+
+    resolveListeners(name) {
+        switch(name) {
+            case "onanimationstart":
+                return "onAnimationStart";
+            case "onanimationiteration":
+                return "onAnimationIteration";
+            case "onanimationend":
+                return "onAnimationEnd";
+            case "ontransitionend":
+                return "onTransitionEnd";
+            case "ondrag":
+                return "onDrag"
+            case "ondragend":
+                return "onDragEnd";
+            case "ondragenter":
+                return "onDragEnter";
+            case "ondragover":
+                return "onDragOver";
+            case "ondragstart":
+                return "onDragStart";
+            case "ondrop":
+                return "onDrop"; 
+            case "onclick":
+                return "onClick";
+            case "ondblclick":
+                return "onDoubleClick";
+            case "oncontextmenu":
+                return "onContextMenu";
+            case "onmousedown":
+                return "onMouseDown";
+            case "onmouseenter":
+                return "onMouseEnter";
+            case "onmouseleave":
+                return "onMouseLeave";
+            case "onmousemove":
+                return "onMouseMove";
+            case "onmouseover":
+                return "onMouseOver";
+            case "onmouseout":
+                return "onMouseOut";
+            case "onmouseup":
+                return "onMouseUp";
+            case "onwheel":
+                return "onWheel";
+            case "onscroll":
+                return "onScroll";
+            case "onresize":
+                return "onResize";
+            case "onerror":
+                return "onError";
+            case "onload":
+                return "onLoad";
+            case "onunload":
+                return "onUnload";
+            case "onbeforeunload":
+                return "onBeforeUnload";
+            case "onkeyup":
+                return "onKeyUp";
+            case "onkeydown":
+                return "onKeyDown";
+            case "onkeypress":
+                return "onKeyPress";
+            case "oninput":
+                return "onInput";
+            case "onchange":
+                return "onChange";
+            case "onsubmit":
+                return "onSubmit";
+            case "onselect":
+                return "onSelect";
+            case "onreset":
+                return "onReset"
+            case "onfocus":
+                return "onFocus";
+            case "onfocusin":
+                return "onFocusIn";
+            case "onfocusout":
+                return "onFocusOut";
+            case "onblur":
+                return "onBlur";
+            case "oncopy":
+                return "onCopy";
+            case "oncut":
+                return "onCut";
+            case "onpaste":
+                return "onPaste";
+            case "onabort":
+                return "onAbort";
+            case "onwaiting":
+                return "onWaiting";
+            case "onvolumechange":
+                return "onVolumeChange";
+            case "ontimeupdate":
+                return "onTimeUpdate";
+            case "onseeking":
+                return "onSeeking";
+            case "onseekend":
+                return "onSeekEnd";
+            case "onratechange":
+                return "onRateChange";
+            case "onprogress":
+                return "onProgress";
+            case "onloadmetadata":
+                return "onLoadMetadata";
+            case "onloadeddata":
+                return "onLoadedData";
+            case "onloadstart":
+                return "onLoadStart";
+            case "onplaying":
+                return "onPlaying";
+            case "onplay":
+                return "onPlay";
+            case "onpause":
+                return "onPause";
+            case "onended":
+                return "onEnded";
+            case "ondurationchange":
+                return "onDurationChange";
+            case "oncanplay":
+                return "onCanPlay";
+            case "oncanplaythrough":
+                return "onCanPlayThrough";
+            case "onstalled":
+                return "onStalled";
+            case "onsuspend":
+                return "onSuspend";
+            case "onpopstate":
+                return "onPopState";
+            case "onstorage":
+                return "onStorage";
+            case "onhashchange":
+                return "onHashChange";
+            case "onafterprint":
+                return "onAfterPrint";
+            case "onbeforeprint":
+                return "onBeforePrint";
+            case "onpagehide":
+                return "onPageHide";
+            case "onpageshow":
+                return "onPageShow";
+        }
+    }
+
+    toLiteralString(elem) {
+        const props = this.resolveProps(elem);
+        let string = this.resolveId(elem.getTagName().toLowerCase(), props);
+        string = this.resolveClass(string, props);
+        string = this.resolveAttrs(string, props);
+        return string;
+    }
+
+    /**
+     * Function by default resolves a given element and its' children and returns template representation of the element.
+     * @param {object} elem 
+     * @param {boolean} deep 
+     * @returns Template object representation of the Elem
+     */
+    static toTemplate(elem, deep) {
+        return RMEElemTemplater.getInstance().toTemplate(elem, deep);
+    }
+
+    /**
+     * Function resolves and returns properties of a given Elem object.
+     * @param {object} elem 
+     * @returns The properties object of the given Elem.
+     */
+    static getElementProps(elem) {
+        return RMEElemTemplater.getInstance().resolveProps(elem);
+    }
+
+    static toLiteralString(elem) {
+        return RMEElemTemplater.getInstance().toLiteralString(elem);
+    }
+
+    static getInstance() {
+        if(!this.instance)
+            this.instance = new RMEElemTemplater();
+        return this.instance;
+    }
+}
 
 
 let Elem = (function() {
@@ -1489,6 +1833,10 @@ let Elem = (function() {
          */
         toString() {
             return "<"+this.getTagName().toLowerCase()+">"+this.getContent()+"</"+this.getTagName().toLowerCase()+">";
+        }
+
+        toLiteralString() {
+            return RMEElemTemplater.toLiteralString(this);
         }
 
         /**
@@ -3009,338 +3357,6 @@ let Elem = (function() {
 }());
 
 
-/**
- * RMEElemTemplater class is able to create a Template out of an Elem object.
- */
-class RMEElemTemplater {
-    constructor() {
-        this.instance;
-        this.template = {};
-        this.deep = true;
-    }
-
-    toTemplate(elem, deep) {
-        if(!Util.isEmpty(deep))
-            this.deep = deep;
-        this.resolve(elem, this.template);
-        return this.template;
-    }
-
-    /**
-     * Function is called recursively and resolves an Elem object and its children in recursion
-     * @param {object} elem 
-     * @param {object} parent 
-     */
-    resolve(elem, parent) {
-        let resolved = this.resolveElem(elem, this.resolveProps(elem));
-        for(let p in parent) {
-            if(parent.hasOwnProperty(p)) {
-                if(Util.isArray(parent[p]))
-                    parent[p].push(resolved);
-                else
-                    this.extendMap(parent[p], resolved);
-            }
-        }
-
-        let i = 0;
-        let children = Util.isArray(elem.getChildren()) ? elem.getChildren() : [elem.getChildren()];
-        if(children && this.deep) {
-            while(i < children.length) {
-                this.resolve(children[i], resolved);
-                i++;
-            }
-        }
-        this.template = resolved;
-    }
-
-    extendMap(map, next) {
-        for(let v in next) {
-            if(next.hasOwnProperty(v)) {
-                map[v] = next[v];
-            }
-        }
-    }
-
-    /**
-     * Function will attach given properties into a given Elem and returns the resolved Elem.
-     * @param {object} elem 
-     * @param {object} props 
-     * @returns The resolved elem with attached properties.
-     */
-    resolveElem(elem, props) {
-        let el = {};
-        let children = elem.getChildren();
-        if(Util.isArray(children) && children.length > 1) {
-            let elTag = elem.getTagName().toLowerCase();
-            let elName = this.resolveId(elTag, props);
-            elName = this.resolveClass(elName, props);
-            elName = this.resolveAttrs(elName, props);
-            el[elName] = [];
-        } else {
-            el[elem.getTagName().toLowerCase()] = props
-        }
-        return el;
-    }
-
-    /**
-     * Function will place an ID attribute into an element tag if the ID attribute is found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with the ID or without.
-     */
-    resolveId(tag, props) {
-        if(props.id)
-            return tag+"#"+props.id;
-        else
-            return tag;
-    }
-
-    /**
-     * Function will place a class attribute into an element tag if the class attribute is found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with the classes or without.
-     */
-    resolveClass(tag, props) {
-        if(props.class)
-            return tag+"."+props.class.replace(/ /g, ".");
-        else
-            return tag;
-    }
-
-    /**
-     * Function will resolve all other attributes and place them into an element tag if other attributes are found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with other attributes or without.
-     */
-    resolveAttrs(tag, props) {
-        let tagName = tag;
-        for(let p in props) {
-            if(props.hasOwnProperty(p) && p !== "id" && p !== "class") {
-                tagName += `[${p}=${props[p]}]`
-            }
-        }
-        return tagName;
-    }
-
-    /**
-     * Resolves a given Elem object and returns its properties in an object.
-     * @param {object} elem 
-     * @returns The properties object of the given element.
-     */
-    resolveProps(elem) {
-        let props = {};
-        let attributes = elem.dom().attributes;
-        let a = 0;
-        if(attributes) {
-            while(a < attributes.length) {
-                props[this.resolveAttributeNames(attributes[a].name)] = attributes[a].value;
-                a++;
-            }
-        }
-
-        if(elem.dom().hasChildNodes() && elem.dom().childNodes[0].nodeType === 3) {
-            props["text"] = elem.getText();
-        }
-
-        for(let p in elem.dom()) {
-            if(p.indexOf("on") !== 0 || Util.isEmpty(elem.dom()[p]))
-                continue;
-            else
-                props[this.resolveListeners(p)] = elem.dom()[p];
-        }
-
-        return props;
-    }
-
-    /**
-     * Resolves html data-* attributes by removing '-' and setting the next character to uppercase. If the attribute is not 
-     * data-* attribute then it is directly returned.
-     * @param {string} attrName 
-     * @returns Resolved attribute name.
-     */
-    resolveAttributeNames(attrName) {
-        if(attrName.indexOf("data" === 0 && attrName.length > "data".length)) {
-            while(attrName.search("-") > -1) {
-                attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search("-") + 1).toUpperCase());
-            }
-            return attrName
-        } else {
-            return attrName;
-        }
-    }
-
-    resolveListeners(name) {
-        switch(name) {
-            case "onanimationstart":
-                return "onAnimationStart";
-            case "onanimationiteration":
-                return "onAnimationIteration";
-            case "onanimationend":
-                return "onAnimationEnd";
-            case "ontransitionend":
-                return "onTransitionEnd";
-            case "ondrag":
-                return "onDrag"
-            case "ondragend":
-                return "onDragEnd";
-            case "ondragenter":
-                return "onDragEnter";
-            case "ondragover":
-                return "onDragOver";
-            case "ondragstart":
-                return "onDragStart";
-            case "ondrop":
-                return "onDrop"; 
-            case "onclick":
-                return "onClick";
-            case "ondblclick":
-                return "onDoubleClick";
-            case "oncontextmenu":
-                return "onContextMenu";
-            case "onmousedown":
-                return "onMouseDown";
-            case "onmouseenter":
-                return "onMouseEnter";
-            case "onmouseleave":
-                return "onMouseLeave";
-            case "onmousemove":
-                return "onMouseMove";
-            case "onmouseover":
-                return "onMouseOver";
-            case "onmouseout":
-                return "onMouseOut";
-            case "onmouseup":
-                return "onMouseUp";
-            case "onwheel":
-                return "onWheel";
-            case "onscroll":
-                return "onScroll";
-            case "onresize":
-                return "onResize";
-            case "onerror":
-                return "onError";
-            case "onload":
-                return "onLoad";
-            case "onunload":
-                return "onUnload";
-            case "onbeforeunload":
-                return "onBeforeUnload";
-            case "onkeyup":
-                return "onKeyUp";
-            case "onkeydown":
-                return "onKeyDown";
-            case "onkeypress":
-                return "onKeyPress";
-            case "oninput":
-                return "onInput";
-            case "onchange":
-                return "onChange";
-            case "onsubmit":
-                return "onSubmit";
-            case "onselect":
-                return "onSelect";
-            case "onreset":
-                return "onReset"
-            case "onfocus":
-                return "onFocus";
-            case "onfocusin":
-                return "onFocusIn";
-            case "onfocusout":
-                return "onFocusOut";
-            case "onblur":
-                return "onBlur";
-            case "oncopy":
-                return "onCopy";
-            case "oncut":
-                return "onCut";
-            case "onpaste":
-                return "onPaste";
-            case "onabort":
-                return "onAbort";
-            case "onwaiting":
-                return "onWaiting";
-            case "onvolumechange":
-                return "onVolumeChange";
-            case "ontimeupdate":
-                return "onTimeUpdate";
-            case "onseeking":
-                return "onSeeking";
-            case "onseekend":
-                return "onSeekEnd";
-            case "onratechange":
-                return "onRateChange";
-            case "onprogress":
-                return "onProgress";
-            case "onloadmetadata":
-                return "onLoadMetadata";
-            case "onloadeddata":
-                return "onLoadedData";
-            case "onloadstart":
-                return "onLoadStart";
-            case "onplaying":
-                return "onPlaying";
-            case "onplay":
-                return "onPlay";
-            case "onpause":
-                return "onPause";
-            case "onended":
-                return "onEnded";
-            case "ondurationchange":
-                return "onDurationChange";
-            case "oncanplay":
-                return "onCanPlay";
-            case "oncanplaythrough":
-                return "onCanPlayThrough";
-            case "onstalled":
-                return "onStalled";
-            case "onsuspend":
-                return "onSuspend";
-            case "onpopstate":
-                return "onPopState";
-            case "onstorage":
-                return "onStorage";
-            case "onhashchange":
-                return "onHashChange";
-            case "onafterprint":
-                return "onAfterPrint";
-            case "onbeforeprint":
-                return "onBeforePrint";
-            case "onpagehide":
-                return "onPageHide";
-            case "onpageshow":
-                return "onPageShow";
-        }
-    }
-
-    /**
-     * Function by default resolves a given element and its' children and returns template representation of the element.
-     * @param {object} elem 
-     * @param {boolean} deep 
-     * @returns Template object representation of the Elem
-     */
-    static toTemplate(elem, deep) {
-        return RMEElemTemplater.getInstance().toTemplate(elem, deep);
-    }
-
-    /**
-     * Function resolves and returns properties of a given Elem object.
-     * @param {object} elem 
-     * @returns The properties object of the given Elem.
-     */
-    static getElementProps(elem) {
-        return RMEElemTemplater.getInstance().resolveProps(elem);
-    }
-
-    static getInstance() {
-        if(!this.instance)
-            this.instance = new RMEElemTemplater();
-        return this.instance;
-    }
-}
-
-
 
 const EventPipe = (function() {
 
@@ -4190,6 +4206,290 @@ let Messages = (function() {
 
 
 
+let RME = (function() {
+    /**
+     * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create RESTfull webpages with ease and speed.
+     * This library is free to use under the MIT License.
+     * 
+     * RME class is a core of the RME library. The RME class offers functionality to start a RME application, control components, external script files and rme storage.
+     */
+    class RME {
+        constructor() {
+            this.instance = this;
+            this.completeRun = function() {};
+            this.runner = function() {};
+            this.onStorageChange = function(state) {};
+            this.components = {};
+            this.rmeState = {};
+            this.router;
+            this.messages;
+            this.defaultApp;
+        }
+
+        complete() {
+            this.completeRun.call();
+        }
+
+        start() {
+            this.runner.call();
+        }
+
+        setComplete(runnable) {
+            this.completeRun = runnable;
+        }
+
+        setRunner(runnable) {
+            this.runner = runnable;
+            return this.instance;
+        }
+
+        addComponent(runnable, props) {
+            var comp;
+            if(Util.isFunction(runnable))
+                comp = runnable.call();
+            else if(Util.isObject(runnable))
+                comp = runnable;
+            for(var p in comp) {
+                if(comp.hasOwnProperty(p)) {
+                    this.components[p] = {component: comp[p], update: Util.isFunction(props) ? props : undefined};
+                }
+            }
+            comp = null;
+        }
+
+        getComponent(name, props) {
+            let comp = this.components[name];
+            if (!comp)
+                throw "Cannot find a component: \""+name+"\"";
+            if (!Util.isEmpty(props) && Util.isFunction(comp.update)) {
+                let stateRef = props.stateRef;
+                if (Util.isEmpty(props.stateRef))
+                    stateRef = name;
+                else if (props.stateRef.search(name) === -1)
+                    stateRef = `${name}${props.stateRef}`;
+
+                props["stateRef"] = stateRef;
+                const newProps = comp.update.call()(stateRef);
+                const nextProps = {...props, ...newProps};
+                if (!nextProps.shouldComponentUpdate || nextProps.shouldComponentUpdate(nextProps) !== false) {
+                    props = this.extendProps(props, newProps);
+                }
+            }
+            if (Util.isEmpty(props))
+                props = {};
+            if (!Util.isEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate))
+                props.onBeforeCreate.call(props, props);
+            let ret = comp.component.call(props, props);
+            if (Template.isTemplate(ret))
+                ret = Template.resolve(ret);
+            if (!Util.isEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate))
+                props.onAfterCreate.call(props, ret, props);
+            if (!Util.isEmpty(this.defaultApp) && !Util.isEmpty(props.onAfterRender) && Util.isFunction(props.onAfterRender))
+                this.defaultApp.addAfterRefreshCallback(props.onAfterRender.bind(ret, ret, props));
+
+            return ret;
+        }
+
+        extendProps(props, newProps) {
+            if(!Util.isEmpty(newProps)) {
+                for(let p in newProps) {
+                    if(newProps.hasOwnProperty(p)) {
+                        props[p] = newProps[p];
+                    }
+                }
+            }
+            return props;
+        }
+
+        setRmeState(key, value) {
+            this.rmeState[key] = value;
+            this.onStorageChange.call(this, this.rmeState);
+        }
+
+        getRmeState(key) {
+            return this.rmeState[key];
+        }
+
+        configure(config) {
+            this.router = config.router;
+            this.messages = config.messages;
+            this.defaultApp = config.app;
+            
+            if(!Util.isEmpty(this.router))
+                this.router.setApp(this.defaultApp);
+            if(!Util.isEmpty(this.messages))
+                this.messages.setApp(this.defaultApp);
+            if(!Util.isEmpty(this.defaultApp))
+                this.defaultApp.setRouter(this.router);
+        }
+
+        /** 
+         * Runs a runnable script immedeately. If multpile run functions are declared they will be invoked by the declaration order.
+         */
+        static run(runnable) {
+            if(runnable && Util.isFunction(runnable))
+                RME.getInstance().setRunner(runnable).start();
+        }
+
+        /**
+         * Waits until body has been loaded and then runs a runnable script. 
+         * If multiple ready functions are declared the latter one is invoked.
+         */
+        static ready(runnable) {
+            if(runnable && Util.isFunction(runnable))
+                RME.getInstance().setComplete(runnable);
+        }
+
+        /**
+         * Creates or retrieves a RME component. 
+         * If the first parameter is a function then this method will try to create a RME component and store it
+         * in the RME instance.
+         * If the first parameter is a string then this method will try to retrieve a RME component from the 
+         * RME instance.
+         * @param {*} runnable Type function or String.
+         * @param {Object} props 
+         */
+        static component(runnable, props) {
+            if(runnable && (Util.isFunction(runnable) || Util.isObject(runnable)))
+                RME.getInstance().addComponent(runnable, props);
+            else if(runnable && Util.isString(runnable))
+                return RME.getInstance().getComponent(runnable, props);
+        }
+
+        /**
+         * Saves data to or get data from the RME instance storage.
+         * If key and value parameters are not empty then this method will try to save the give value by the given key
+         * into to the RME instance storage.
+         * If key is not empty and value is empty then this method will try to get data from the RME instance storage
+         * by the given key.
+         * @param {String} key 
+         * @param {Object} value 
+         */
+        static storage(key, value) {
+            if(!Util.isEmpty(key) && !Util.isEmpty(value))
+                RME.getInstance().setRmeState(key, value);
+            else if(!Util.isEmpty(key) && Util.isEmpty(value))
+                return RME.getInstance().getRmeState(key);
+        }
+
+        /**
+         * Adds a script file on runtime into the head of the current html document where the method is called on.
+         * Source is required other properties can be omitted.
+         * @param {String} source URL or file name. *Requied
+         * @param {String} id 
+         * @param {String} type 
+         * @param {String} text Content of the script element if any.
+         * @param {boolean} defer If true script is executed when page has finished parsing.
+         * @param {*} crossOrigin 
+         * @param {String} charset 
+         * @param {boolean} async If true script is executed asynchronously when available.
+         */
+        static script(source, id, type, text, defer, crossOrigin, charset, async) {
+            if(!Util.isEmpty(source)) {
+                var sc = new Elem("script").setSource(source);
+                if(!Util.isEmpty(id))
+                    sc.setId(id);
+                if(!Util.isEmpty(type))
+                    sc.setType(type);
+                if(!Util.isEmpty(text))
+                    sc.setText(text);
+                if(!Util.isEmpty(defer))
+                    sc.setAttribute("defer", defer);
+                if(!Util.isEmpty(crossOrigin))
+                    sc.setAttribute("crossOrigin", crossOrigin);
+                if(!Util.isEmpty(charset))
+                    sc.setAttribute("charset", charset);
+                if(!Util.isEmpty(async))
+                    sc.setAttribute("async", async);
+                RME.addScript(sc);
+            }
+        }
+
+        /**
+         * This is called when ever a new data is saved into the RME instance storage.
+         * Callback function has one paramater newState that is the latest snapshot of the 
+         * current instance storage.
+         * @param {function} listener 
+         */
+        static onStorageChange(listener) {
+            if(listener && Util.isFunction(listener))
+                RME.getInstance().onrmestoragechange = listener;
+        }
+
+        /**
+         * Function checks if a component with the given name exists.
+         * @param {string} name 
+         * @returns True if the component exist otherwise false
+         */
+        static hasComponent(name) {
+            return !Util.isEmpty(RME.getInstance().components[name.replace("component:", "")]);
+        }
+
+        /**
+         * Function receives an object as a parameter that holds three properties router, messages and app. The function will
+         * autoconfigure the Router, the Messages and the App instance to be used as default.
+         * 
+         * The config object represented
+         * {
+         * router: Router reference
+         * messages: Messages reference
+         * app: App instance
+         * }
+         * @param {object} config 
+         */
+        static use(config) {
+            RME.getInstance().configure(config);
+        }
+
+        static addScript(elem) {
+            let scripts = Tree.getScripts();
+            let lastScript = scripts[scripts.length -1];
+            lastScript.after(elem);
+        }
+
+        static removeScript(sourceOrId) {
+            if(sourceOrId.indexOf("#") === 0) {
+                Tree.getHead().remove(Tree.get(sourceOrId));
+            } else {
+                let scripts = Tree.getScripts();
+                for(let s in scripts) {
+                    if(scripts.hasOwnProperty(s)) {
+                        let src = !Util.isEmpty(scripts[s].getSource()) ? scripts[s].getSource() : "";
+                        if(src.search(sourceOrId) > -1 && src.search(sourceOrId) === src.length - sourceOrId.length) {
+                            Tree.getHead().remove(scripts[s]);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        static getInstance() {
+            if(!this.instance)
+                this.instance = new RME();
+            return this.instance;
+        }
+    }
+    
+    document.addEventListener("readystatechange", () => {
+        if(document.readyState === "complete")
+            RME.getInstance().complete();
+    });
+
+    return {
+        run: RME.run,
+        ready: RME.ready,
+        component: RME.component,
+        storage: RME.storage,
+        script: RME.script,
+        onStorageChange: RME.onStorageChange,
+        hasComponent: RME.hasComponent,
+        use: RME.use
+    }
+}());
+
+
+
 let Router = (function() {
     /**
      * Router class handles and renders route elements that are given by Router.routes() method.
@@ -4657,290 +4957,6 @@ let Router = (function() {
 }());
 
 
-
-let RME = (function() {
-    /**
-     * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create RESTfull webpages with ease and speed.
-     * This library is free to use under the MIT License.
-     * 
-     * RME class is a core of the RME library. The RME class offers functionality to start a RME application, control components, external script files and rme storage.
-     */
-    class RME {
-        constructor() {
-            this.instance = this;
-            this.completeRun = function() {};
-            this.runner = function() {};
-            this.onStorageChange = function(state) {};
-            this.components = {};
-            this.rmeState = {};
-            this.router;
-            this.messages;
-            this.defaultApp;
-        }
-
-        complete() {
-            this.completeRun.call();
-        }
-
-        start() {
-            this.runner.call();
-        }
-
-        setComplete(runnable) {
-            this.completeRun = runnable;
-        }
-
-        setRunner(runnable) {
-            this.runner = runnable;
-            return this.instance;
-        }
-
-        addComponent(runnable, props) {
-            var comp;
-            if(Util.isFunction(runnable))
-                comp = runnable.call();
-            else if(Util.isObject(runnable))
-                comp = runnable;
-            for(var p in comp) {
-                if(comp.hasOwnProperty(p)) {
-                    this.components[p] = {component: comp[p], update: Util.isFunction(props) ? props : undefined};
-                }
-            }
-            comp = null;
-        }
-
-        getComponent(name, props) {
-            let comp = this.components[name];
-            if (!comp)
-                throw "Cannot find a component: \""+name+"\"";
-            if (!Util.isEmpty(props) && Util.isFunction(comp.update)) {
-                let stateRef = props.stateRef;
-                if (Util.isEmpty(props.stateRef))
-                    stateRef = name;
-                else if (props.stateRef.search(name) === -1)
-                    stateRef = `${name}${props.stateRef}`;
-
-                props["stateRef"] = stateRef;
-                const newProps = comp.update.call()(stateRef);
-                const nextProps = {...props, ...newProps};
-                if (!nextProps.shouldComponentUpdate || nextProps.shouldComponentUpdate(nextProps) !== false) {
-                    props = this.extendProps(props, newProps);
-                }
-            }
-            if (Util.isEmpty(props))
-                props = {};
-            if (!Util.isEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate))
-                props.onBeforeCreate.call(props, props);
-            let ret = comp.component.call(props, props);
-            if (Template.isTemplate(ret))
-                ret = Template.resolve(ret);
-            if (!Util.isEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate))
-                props.onAfterCreate.call(props, ret, props);
-            if (!Util.isEmpty(this.defaultApp) && !Util.isEmpty(props.onAfterRender) && Util.isFunction(props.onAfterRender))
-                this.defaultApp.addAfterRefreshCallback(props.onAfterRender.bind(ret, ret, props));
-
-            return ret;
-        }
-
-        extendProps(props, newProps) {
-            if(!Util.isEmpty(newProps)) {
-                for(let p in newProps) {
-                    if(newProps.hasOwnProperty(p)) {
-                        props[p] = newProps[p];
-                    }
-                }
-            }
-            return props;
-        }
-
-        setRmeState(key, value) {
-            this.rmeState[key] = value;
-            this.onStorageChange.call(this, this.rmeState);
-        }
-
-        getRmeState(key) {
-            return this.rmeState[key];
-        }
-
-        configure(config) {
-            this.router = config.router;
-            this.messages = config.messages;
-            this.defaultApp = config.app;
-            
-            if(!Util.isEmpty(this.router))
-                this.router.setApp(this.defaultApp);
-            if(!Util.isEmpty(this.messages))
-                this.messages.setApp(this.defaultApp);
-            if(!Util.isEmpty(this.defaultApp))
-                this.defaultApp.setRouter(this.router);
-        }
-
-        /** 
-         * Runs a runnable script immedeately. If multpile run functions are declared they will be invoked by the declaration order.
-         */
-        static run(runnable) {
-            if(runnable && Util.isFunction(runnable))
-                RME.getInstance().setRunner(runnable).start();
-        }
-
-        /**
-         * Waits until body has been loaded and then runs a runnable script. 
-         * If multiple ready functions are declared the latter one is invoked.
-         */
-        static ready(runnable) {
-            if(runnable && Util.isFunction(runnable))
-                RME.getInstance().setComplete(runnable);
-        }
-
-        /**
-         * Creates or retrieves a RME component. 
-         * If the first parameter is a function then this method will try to create a RME component and store it
-         * in the RME instance.
-         * If the first parameter is a string then this method will try to retrieve a RME component from the 
-         * RME instance.
-         * @param {*} runnable Type function or String.
-         * @param {Object} props 
-         */
-        static component(runnable, props) {
-            if(runnable && (Util.isFunction(runnable) || Util.isObject(runnable)))
-                RME.getInstance().addComponent(runnable, props);
-            else if(runnable && Util.isString(runnable))
-                return RME.getInstance().getComponent(runnable, props);
-        }
-
-        /**
-         * Saves data to or get data from the RME instance storage.
-         * If key and value parameters are not empty then this method will try to save the give value by the given key
-         * into to the RME instance storage.
-         * If key is not empty and value is empty then this method will try to get data from the RME instance storage
-         * by the given key.
-         * @param {String} key 
-         * @param {Object} value 
-         */
-        static storage(key, value) {
-            if(!Util.isEmpty(key) && !Util.isEmpty(value))
-                RME.getInstance().setRmeState(key, value);
-            else if(!Util.isEmpty(key) && Util.isEmpty(value))
-                return RME.getInstance().getRmeState(key);
-        }
-
-        /**
-         * Adds a script file on runtime into the head of the current html document where the method is called on.
-         * Source is required other properties can be omitted.
-         * @param {String} source URL or file name. *Requied
-         * @param {String} id 
-         * @param {String} type 
-         * @param {String} text Content of the script element if any.
-         * @param {boolean} defer If true script is executed when page has finished parsing.
-         * @param {*} crossOrigin 
-         * @param {String} charset 
-         * @param {boolean} async If true script is executed asynchronously when available.
-         */
-        static script(source, id, type, text, defer, crossOrigin, charset, async) {
-            if(!Util.isEmpty(source)) {
-                var sc = new Elem("script").setSource(source);
-                if(!Util.isEmpty(id))
-                    sc.setId(id);
-                if(!Util.isEmpty(type))
-                    sc.setType(type);
-                if(!Util.isEmpty(text))
-                    sc.setText(text);
-                if(!Util.isEmpty(defer))
-                    sc.setAttribute("defer", defer);
-                if(!Util.isEmpty(crossOrigin))
-                    sc.setAttribute("crossOrigin", crossOrigin);
-                if(!Util.isEmpty(charset))
-                    sc.setAttribute("charset", charset);
-                if(!Util.isEmpty(async))
-                    sc.setAttribute("async", async);
-                RME.addScript(sc);
-            }
-        }
-
-        /**
-         * This is called when ever a new data is saved into the RME instance storage.
-         * Callback function has one paramater newState that is the latest snapshot of the 
-         * current instance storage.
-         * @param {function} listener 
-         */
-        static onStorageChange(listener) {
-            if(listener && Util.isFunction(listener))
-                RME.getInstance().onrmestoragechange = listener;
-        }
-
-        /**
-         * Function checks if a component with the given name exists.
-         * @param {string} name 
-         * @returns True if the component exist otherwise false
-         */
-        static hasComponent(name) {
-            return !Util.isEmpty(RME.getInstance().components[name.replace("component:", "")]);
-        }
-
-        /**
-         * Function receives an object as a parameter that holds three properties router, messages and app. The function will
-         * autoconfigure the Router, the Messages and the App instance to be used as default.
-         * 
-         * The config object represented
-         * {
-         * router: Router reference
-         * messages: Messages reference
-         * app: App instance
-         * }
-         * @param {object} config 
-         */
-        static use(config) {
-            RME.getInstance().configure(config);
-        }
-
-        static addScript(elem) {
-            let scripts = Tree.getScripts();
-            let lastScript = scripts[scripts.length -1];
-            lastScript.after(elem);
-        }
-
-        static removeScript(sourceOrId) {
-            if(sourceOrId.indexOf("#") === 0) {
-                Tree.getHead().remove(Tree.get(sourceOrId));
-            } else {
-                let scripts = Tree.getScripts();
-                for(let s in scripts) {
-                    if(scripts.hasOwnProperty(s)) {
-                        let src = !Util.isEmpty(scripts[s].getSource()) ? scripts[s].getSource() : "";
-                        if(src.search(sourceOrId) > -1 && src.search(sourceOrId) === src.length - sourceOrId.length) {
-                            Tree.getHead().remove(scripts[s]);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        static getInstance() {
-            if(!this.instance)
-                this.instance = new RME();
-            return this.instance;
-        }
-    }
-    
-    document.addEventListener("readystatechange", () => {
-        if(document.readyState === "complete")
-            RME.getInstance().complete();
-    });
-
-    return {
-        run: RME.run,
-        ready: RME.ready,
-        component: RME.component,
-        storage: RME.storage,
-        script: RME.script,
-        onStorageChange: RME.onStorageChange,
-        hasComponent: RME.hasComponent,
-        use: RME.use
-    }
-}());
-
-
 /**
  * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
  */
@@ -5012,6 +5028,7 @@ class Storage {
 
 
 
+
 let Template = (function() {
     /**
      * Template class reads a JSON format notation and creates an element tree from it.
@@ -5067,7 +5084,7 @@ let Template = (function() {
                         if (Template.isAttr(obj, parent)) {
                             this.resolveAttributes(parent, obj, this.resolveFunctionBasedAttribute(template[obj]));
                         } else if (this.isEventKeyVal(obj, template[obj])) {
-                            parent[obj].call(parent, template[obj]);
+                            this.bindEventToElement(parent, template[obj], parent[obj]);
                         } else {
                             var child = this.resolveElement(obj, template[obj]);
                             if (Template.isFragment(child)) {
@@ -5088,6 +5105,10 @@ let Template = (function() {
                     }
                 }
             }
+        }
+
+        bindEventToElement(elemInstance, sourceFunction, targetFunction) {
+            targetFunction.call(elemInstance, sourceFunction);
         }
 
         /**
@@ -5660,7 +5681,6 @@ let Template = (function() {
         resolveToParent: Template.resolveToParent
     }
 }());
-
 
 
 /**
