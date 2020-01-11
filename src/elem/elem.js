@@ -644,6 +644,31 @@ let Elem = (function() {
         }
 
         /**
+         * Set this element selected.
+         * 
+         * @param {boolean} boolean 
+         * @returns Elem instance.
+         */
+        setSelected(boolean) {
+            if (Util.isBoolean(boolean) && boolean === true 
+                || (Util.isString(boolean) && boolean === 'selected')) {
+                this.setAttribute('selected', 'selected');
+            } else {
+                this.removeAttribute('selected')
+            }
+            return this;
+        }
+
+        /**
+         * Get this element selected selected attribute value.
+         * 
+         * @returns selected attribute value.
+         */
+        getSelected() {
+            return this.getAttribute('selected');
+        }
+
+        /**
          * Add classes to this element.
          * 
          * @param {String} classes 

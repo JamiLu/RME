@@ -26,8 +26,8 @@ class RMEElemTemplater {
         let resolved = this.resolveElem(elem, this.resolveProps(elem));
         for(let p in parent) {
             if(parent.hasOwnProperty(p)) {
-                if(Util.isArray(parent[p]))
-                    parent[p].push(resolved);
+                if(Util.isArray(parent[p]._rme_type_))
+                    parent[p]._rme_type_.push(resolved);
                 else
                     this.extendMap(parent[p], resolved);
             }
@@ -66,7 +66,10 @@ class RMEElemTemplater {
             let elName = this.resolveId(elTag, props);
             elName = this.resolveClass(elName, props);
             elName = this.resolveAttrs(elName, props);
-            el[elName] = [];
+            el[elName] = {
+                _rme_type_: [],
+                _rme_props_: props
+            };
         } else {
             el[elem.getTagName().toLowerCase()] = props
         }

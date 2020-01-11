@@ -43,29 +43,37 @@ let Template = (function() {
             for (var obj in template) {
                 if (template.hasOwnProperty(obj)) {
                     if (round === 0) {
-                        ++round;
                         this.root = this.resolveElement(obj, template[obj]);
-                        if (Util.isArray(template[obj]))
+                        if (Template.isAttr(obj, this.root)) {
+                            this.resolveAttributes(this.root, obj, this.resolveFunctionBasedAttribute(template[obj]))
+                        } else if (this.isEventKeyVal(obj, template[obj])) {
+                            this.bindEventToElement(this.root, template[obj], this.root[obj]);
+                        } else if (this.isArray(template[obj])) {
+                            ++round;
                             this.resolveArray(template[obj], this.root, round);
-                        else if (!this.isComponent(obj) && Util.isObject(template[obj]))
+                        } else if (!this.isComponent(obj) && Util.isObject(template[obj])) {
+                            ++round;
                             this.resolve(template[obj], this.root, round);
-                        else if (Util.isString(template[obj]) || Util.isNumber(template[obj]))
+                        } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
+                            ++round;
                             this.resolveStringNumber(this.root, template[obj]);
-                        else if (Util.isFunction(template[obj]))
+                        } else if (Util.isFunction(template[obj])) {
+                            ++round;
                             this.resolveFunction(this.root, template[obj], round);
+                        }
                     } else {
-                        ++round;
                         if (Template.isAttr(obj, parent)) {
                             this.resolveAttributes(parent, obj, this.resolveFunctionBasedAttribute(template[obj]));
                         } else if (this.isEventKeyVal(obj, template[obj])) {
                             this.bindEventToElement(parent, template[obj], parent[obj]);
                         } else {
+                            ++round;
                             var child = this.resolveElement(obj, template[obj]);
                             if (Template.isFragment(child)) {
                                 this.resolveFragment(child.fragment || template[obj], parent, round);
                             } else {
                                 parent.append(child);
-                                if (Util.isArray(template[obj])) {
+                                if (this.isArray(template[obj])) {
                                     this.resolveArray(template[obj], child, round);
                                 } else if (!this.isComponent(obj) && Util.isObject(template[obj])) {
                                     this.resolve(template[obj], child, round);
@@ -93,11 +101,11 @@ let Template = (function() {
          * @param {*} round 
          */
         resolveFragment(fragment, parent, round) {
-            if (Util.isArray(fragment)) {
+            if (this.isArray(fragment)) {
                 this.resolveArray(fragment, parent, round);
             } else if (Util.isFunction(fragment)) {
                 const ret = fragment.call(parent, parent);
-                if (Util.isArray(ret))
+                if (this.isArray(ret))
                     this.resolveArray(ret, parent, round);
                 else
                     Template.resolveToParent(ret, parent);
@@ -117,26 +125,41 @@ let Template = (function() {
             return Util.isFunction(attrValue) ? attrValue.call() : attrValue;
         }
 
+
+        /**
+         * Checks if the given parameter is an Array.
+         * 
+         * @param {*} nextValue 
+         * @returns True if the given value is an Array.
+         */
+        isArray(nextValue) {
+            return Util.isArray(nextValue) || (!Util.isEmpty(nextValue) && Util.isArray(nextValue._rme_type_));
+        }
+
         /**
          * Method resolves a given array template elements.
          * @param {array} array
          * @param {parent} parent
          * @param {round}
          */
-        resolveArray(array, parent, round) {
-            var i = 0;                
-            while(i < array.length) {
-                var o = array[i];
-                for(var key in o) {
-                    if(o.hasOwnProperty(key)) {
-                        if(Util.isObject(o[key])) {
+        resolveArray(nextValue, parent, round) {
+            let array = nextValue._rme_type_ || nextValue;
+            if (nextValue._rme_props_) {
+                this.resolve(nextValue._rme_props_, parent, round);
+            }
+            let i = 0;                
+            while (i < array.length) {
+                let o = array[i];
+                for (let key in o) {
+                    if (o.hasOwnProperty(key)) {
+                        if (Util.isObject(o[key])) {
                             this.resolve(o, parent, round);
-                        } else if(Util.isString(o[key]) || Util.isNumber(o[key])) {
-                            var el = this.resolveElement(key);
+                        } else if (Util.isString(o[key]) || Util.isNumber(o[key])) {
+                            let el = this.resolveElement(key);
                             this.resolveStringNumber(el, o[key]);
                             parent.append(el);
-                        } else if(Util.isFunction(o[key])) {
-                            var el = this.resolveElement(key);
+                        } else if (Util.isFunction(o[key])) {
+                            let el = this.resolveElement(key);
                             this.resolveFunction(el, o[key]);
                             parent.append(el);
                         }
@@ -170,7 +193,7 @@ let Template = (function() {
                     this.resolveMessage(elem, ret);
                 } else if (Util.isString(ret) || Util.isNumber(ret)) {
                     elem.setText(ret);
-                } else if(Util.isArray(ret)) {
+                } else if(this.isArray(ret)) {
                     this.resolveArray(ret, elem, round)
                 } else if (Util.isObject(ret)) {
                     this.resolve(ret, elem, round);
@@ -279,56 +302,59 @@ let Template = (function() {
          * @param {string} val
          */
         resolveAttributes(elem, key, val) {
-            switch(key) {
-                case "id":
+            switch (key) {
+                case 'id':
                     elem.setId(val);
                     break;
-                case "class":
+                case 'class':
                     elem.addClasses(val);
                     break;
-                case "text":
+                case 'text':
                     elem.setText(val);
                     break;
-                case "content":
+                case 'content':
                     this.resolveContent(elem, key, val);
                     break;
-                case "tabIndex":
+                case 'tabIndex':
                     elem.setTabIndex(val);
                     break;
-                case "editable":
+                case 'editable':
                     elem.setEditable(val);
                     break;
-                case "checked":
+                case 'checked':
                     elem.setChecked(val);
                     break;
-                case "disabled":
+                case 'disabled':
                     elem.setDisabled(val);
                     break;
-                case "visible":
+                case 'selected':
+                    elem.setSelected(val);
+                    break;
+                case 'visible':
                     elem.setVisible(val);
                     break;
-                case "display":
+                case 'display':
                     elem.display(val);
                     break;
-                case "styles":
+                case 'styles':
                     elem.setStyles(val);
                     break;
-                case "message":
+                case 'message':
                     this.resolveMessage(elem, val);
                     break;
-                case "click":
+                case 'click':
                     elem.click();
                     break;
-                case "focus":
+                case 'focus':
                     elem.focus();
                     break;
-                case "blur":
+                case 'blur':
                     elem.blur();
                     break;
-                case "maxLength":
+                case 'maxLength':
                     elem.setMaxLength(val);
                     break;
-                case "minLength":
+                case 'minLength':
                     elem.setMinLength(val);
                     break;
                 default: 
