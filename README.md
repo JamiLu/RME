@@ -6,14 +6,14 @@ JavaScript.
 
 Links
 -----
- - [https://jamilu.github.io/RME/](https://jamilu.github.io/RME/) (Online documentation)
+ - [https://jamilu.github.io/RME/](https://jamilu.github.io/RME/) Online documentation
  - [https://jamilu.github.io/RME/#howto](https://jamilu.github.io/RME/#howto) Examples online
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.5.4/rme.js](https://github.com/JamiLu/RME/releases/download/v1.5.4/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.5.4/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.5.4/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.5.4/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.5.4/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.5/rme.js](https://github.com/JamiLu/RME/releases/download/v1.5.5/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.5/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.5.5/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.5/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.5.5/rme.es5.min.js)
 
 NPM
 ---
@@ -58,7 +58,7 @@ Basics
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.5.4/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.5.5/rme.es5.min.js"></script>`
 
 __Or use NPM__
 
