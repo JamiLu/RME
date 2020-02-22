@@ -1,8 +1,10 @@
 "use strict";
 
-function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
 
-function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
@@ -291,7 +293,7 @@ var App = function () {
         if (this.ready) {
           if (this.refreshQueue) Util.clearTimeout(this.refreshQueue);
           this.refreshQueue = Util.setTimeout(function () {
-            var freshStage = Template.isTemplate(_this2.rawStage) ? Template.resolve(_this2.rawStage) : _this2.rawStage;
+            var freshStage = Template.isTemplate(_this2.rawStage) ? Template.resolve(_this2.rawStage) : _this2.rawStage.duplicate();
 
             if (!Util.isEmpty(_this2.router)) {
               var state = _this2.router.getCurrentState();
@@ -342,15 +344,18 @@ var App = function () {
        * If only one parameter is given then the parameter must be an object or a function. 
        * The object should define a component name and its values as follows. ({refName: {key: val, key: val}}) and
        * the function should return a object describing the component respectively.
+       * 
        * If two parameters are given then the first parameter is a component name
        * and the value parameter should describe the component state object as follows. (refName, {key: val, key: val}).
        * The value parameter may also be a function that returns the component state object respectively.
+       * 
        * The last parameter update is a boolean value that only if explicitly set to false then the app is not updated
        * after setting the state has occured.
+       * 
        * This function will store the state into this application instance state. 
-       * @param {*} refName 
-       * @param {*} value 
-       * @param {boolean} update
+       * @param {*} refName stateRef.
+       * @param {*} value new state to set.
+       * @param {boolean} update if set to false rerender wont happen after set state.
        */
 
     }, {
@@ -500,6 +505,44 @@ var App = function () {
     clearState: App.clearState,
     isStateEmpty: App.isStateEmpty,
     mergeState: App.mergeState
+  };
+}();
+/**
+ * The createApp function is a shortcut function to create an RME application.
+ * @param {string} selector
+ * @param {function} component
+ * @param {string} appName
+ * @returns a created app instance.
+ */
+
+
+var createApp = function () {
+  return function (selector, component, appName) {
+    return App.name(appName).root(selector).create(RME.component(component.name, {}));
+  };
+}();
+/**
+ * The useState function is a srhotcut function to set application component state.
+ * @param {*} refName string, orbject or function. String is the stateRef. Object is the new state object.
+ * Function receives a previous state as parameter and returns a new state object.
+ * @param {*} value function or object. Object is the new state. Function receives a previous state as 
+ * parameter and returns a new state object.
+ * @param {*} update optional string or boolean. If string then works as appName otherwise works as normal.
+ * @param {string} appName optional if not set default app is used .
+ * @returns the new state
+ */
+
+
+var useState = function () {
+  var resolveAppName = function resolveAppName(update, appName) {
+    if (Util.isString(update)) return update;
+    return appName;
+  };
+
+  return function (refName, value, update, appName) {
+    var name = resolveAppName(update, appName);
+    App.get(name).setState(refName, value, update);
+    return App.get(name).getState(refName);
   };
 }();
 
@@ -1160,6 +1203,162 @@ function () {
 
   return Browser;
 }();
+/**
+ * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
+ * instance might have not been created at the time when components are created so the queue will wait 
+ * until the application instance is created and then sets the state for the components in the queue.
+ */
+
+
+var AppSetInitialStateJob = function () {
+  var InitStateJob =
+  /*#__PURE__*/
+  function () {
+    function InitStateJob() {
+      _classCallCheck(this, InitStateJob);
+
+      this.updateJob;
+      this.updateJobMap = {};
+      this.appNameList = [];
+    }
+
+    _createClass(InitStateJob, [{
+      key: "resolveUpdateJobs",
+      value: function resolveUpdateJobs() {
+        var _this3 = this;
+
+        if (!this.updateJob) this.updateJob = Util.setInterval(function () {
+          var appName = _this3.getAppNameIfPresent();
+
+          if (!Util.isEmpty(appName)) {
+            _this3.updateJobMap[appName].forEach(function (job) {
+              return job();
+            });
+
+            _this3.updateJobMap[appName] = [];
+            _this3.appNameList = _this3.appNameList.filter(function (app) {
+              return app !== appName;
+            });
+
+            if (_this3.appNameList.length === 0) {
+              Util.clearInterval(_this3.updateJob);
+              _this3.updateJob = undefined;
+            }
+          }
+        });
+      }
+    }, {
+      key: "getAppNameIfPresent",
+      value: function getAppNameIfPresent() {
+        return this.appNameList.find(function (appName) {
+          return App.get(appName === "undefined" ? undefined : appName);
+        });
+      }
+    }, {
+      key: "addToQueue",
+      value: function addToQueue(appName, job) {
+        var updateQueue = this.updateJobMap[appName] || [];
+        updateQueue.push(job);
+        this.updateJobMap[appName] = updateQueue;
+        this.appNameList = Object.keys(this.updateJobMap);
+        this.resolveUpdateJobs();
+      }
+    }]);
+
+    return InitStateJob;
+  }();
+
+  var initStateJob = new InitStateJob();
+  return {
+    addToQueue: initStateJob.addToQueue.bind(initStateJob),
+    resolveUpdateJobs: initStateJob.resolveUpdateJobs.bind(initStateJob)
+  };
+}();
+/**
+ * Component resolves comma separated list of components that may be function or class.
+ * Function component example: const Comp = props => ({h1: 'Hello'});
+ * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
+ * Resolve components Component(Comp, Comp2);
+ * @param {function} components commma separated list of components
+ */
+
+
+var Component = function () {
+  var resolveInitialState = function resolveInitialState(initialState, stateRef, appName) {
+    if (!Util.isEmpty(App.get(appName))) {
+      App.get(appName).setState(stateRef, initialState, false);
+    } else {
+      AppSetInitialStateJob.addToQueue(appName, function () {
+        return App.get(appName).setState(stateRef, initialState);
+      });
+    }
+  };
+
+  var resolveComponent = function resolveComponent(component) {
+    if (Util.isObject(component)) {
+      App.component(_defineProperty({}, component.name, component.comp))(component.appName);
+      resolveInitialState(component.initialState, component.name + component.stateRef, component.appName);
+    } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
+      RME.component(_defineProperty({}, component.name, component));
+    } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
+      var comp = new component();
+      App.component(_defineProperty({}, component.name, comp.render))(comp.appName);
+      var state = {};
+      if (!Util.isEmpty(comp.onBeforeCreate)) state.onBeforeCreate = comp.onBeforeCreate;
+      if (!Util.isEmpty(comp.shouldComponentUpdate)) state.shouldComponentUpdate = comp.shouldComponentUpdate;
+      if (!Util.isEmpty(comp.onAfterCreate)) state.onAfterCreate = comp.onAfterCreate;
+      if (!Util.isEmpty(comp.onAfterRender)) state.onAfterRender = comp.onAfterRender;
+      state = _objectSpread({}, state, {}, comp.initialState);
+      var ref = comp.stateRef || state.stateRef || '';
+      resolveInitialState(state, component.name + ref, comp.appName);
+    }
+  };
+
+  return function () {
+    for (var _len = arguments.length, components = new Array(_len), _key = 0; _key < _len; _key++) {
+      components[_key] = arguments[_key];
+    }
+
+    components.forEach(function (component) {
+      return !Util.isEmpty(component.name) && resolveComponent(component);
+    });
+  };
+}();
+/**
+ * A bindState function transfers a function component to a stateful component just like it was created 
+ * using class or App class itself. The function receives three parameters. The function component,
+ * an optional state object and an optinal appName.
+ * Invoking examples:
+ * Component(bindState(StatefulComponent));
+ * Component(bindState(OtherComponent, { initialValue: 'initialText' }));
+ * @param {function} component
+ * @param {object} state
+ * @param {string} appName
+ */
+
+
+var bindState = function () {
+  var getStateRef = function getStateRef(state) {
+    return state && state.stateRef ? state.stateRef : '';
+  };
+
+  var removeStateRef = function removeStateRef(state) {
+    var obj = _objectSpread({}, state);
+
+    delete obj.stateRef;
+    return obj;
+  };
+
+  return function (component, state, appName) {
+    return {
+      comp: component,
+      name: component.name,
+      appName: appName,
+      stateRef: getStateRef(state),
+      initialState: _objectSpread({}, removeStateRef(state))
+    };
+  };
+}();
 
 var Cookie = function () {
   /**
@@ -1636,10 +1835,15 @@ var Elem = function () {
       value: function render() {
         var newState = [];
         var i = 0;
-        var max = arguments.length;
+
+        for (var _len2 = arguments.length, elems = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+          elems[_key2] = arguments[_key2];
+        }
+
+        var max = elems.length;
 
         while (i < max) {
-          if (Util.isArray(i < 0 || arguments.length <= i ? undefined : arguments[i])) newState = newState.concat(i < 0 || arguments.length <= i ? undefined : arguments[i]);else newState.push(i < 0 || arguments.length <= i ? undefined : arguments[i]);
+          if (Util.isArray(elems[i])) newState = newState.concat(elems[i]);else newState.push(elems[i]);
           i++;
         }
 
@@ -2044,8 +2248,8 @@ var Elem = function () {
 
     }, {
       key: "setEditable",
-      value: function setEditable(boolean) {
-        this.setAttribute('contenteditable', boolean);
+      value: function setEditable(_boolean) {
+        this.setAttribute('contenteditable', _boolean);
         return this;
       }
       /**
@@ -2068,8 +2272,8 @@ var Elem = function () {
 
     }, {
       key: "setDisabled",
-      value: function setDisabled(boolean) {
-        if (Util.isBoolean(boolean) && boolean === true || Util.isString(boolean) && boolean === 'disabled') {
+      value: function setDisabled(_boolean2) {
+        if (Util.isBoolean(_boolean2) && _boolean2 === true || Util.isString(_boolean2) && _boolean2 === 'disabled') {
           this.setAttribute('disabled', 'disabled');
         } else {
           this.removeAttribute('disabled');
@@ -2097,8 +2301,8 @@ var Elem = function () {
 
     }, {
       key: "setChecked",
-      value: function setChecked(boolean) {
-        if (Util.isBoolean(boolean) && boolean === true || Util.isString(boolean) && boolean === 'checked') {
+      value: function setChecked(_boolean3) {
+        if (Util.isBoolean(_boolean3) && _boolean3 === true || Util.isString(_boolean3) && _boolean3 === 'checked') {
           this.setAttribute('checked', 'checked');
           this.html.checked = true;
         } else {
@@ -2128,8 +2332,8 @@ var Elem = function () {
 
     }, {
       key: "setSelected",
-      value: function setSelected(boolean) {
-        if (Util.isBoolean(boolean) && boolean === true || Util.isString(boolean) && boolean === 'selected') {
+      value: function setSelected(_boolean4) {
+        if (Util.isBoolean(_boolean4) && _boolean4 === true || Util.isString(_boolean4) && _boolean4 === 'selected') {
           this.setAttribute('selected', 'selected');
         } else {
           this.removeAttribute('selected');
@@ -2284,8 +2488,8 @@ var Elem = function () {
 
     }, {
       key: "setVisible",
-      value: function setVisible(boolean) {
-        this.html.style.visibility = boolean ? "" : "hidden";
+      value: function setVisible(_boolean5) {
+        this.html.style.visibility = _boolean5 ? "" : "hidden";
         return this;
       }
       /**
@@ -2297,8 +2501,8 @@ var Elem = function () {
 
     }, {
       key: "display",
-      value: function display(boolean) {
-        this.html.style.display = boolean ? "" : "none";
+      value: function display(_boolean6) {
+        this.html.style.display = _boolean6 ? "" : "none";
         return this;
       }
       /**
@@ -2309,8 +2513,8 @@ var Elem = function () {
 
     }, {
       key: "setDraggable",
-      value: function setDraggable(boolean) {
-        this.setAttribute("draggable", boolean);
+      value: function setDraggable(_boolean7) {
+        this.setAttribute("draggable", _boolean7);
         return this;
       }
       /**
@@ -2325,8 +2529,12 @@ var Elem = function () {
         var i = 0;
         var paramArray = [];
 
-        while (i < (arguments.length <= 1 ? 0 : arguments.length - 1)) {
-          if (Util.isArray(i + 1 < 1 || arguments.length <= i + 1 ? undefined : arguments[i + 1])) paramArray = paramArray.concat(i + 1 < 1 || arguments.length <= i + 1 ? undefined : arguments[i + 1]);else paramArray.push(i + 1 < 1 || arguments.length <= i + 1 ? undefined : arguments[i + 1]);
+        for (var _len3 = arguments.length, params = new Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
+          params[_key3 - 1] = arguments[_key3];
+        }
+
+        while (i < params.length) {
+          if (Util.isArray(params[i])) paramArray = paramArray.concat(params[i]);else paramArray.push(params[i]);
           i++;
         }
 
@@ -2342,10 +2550,10 @@ var Elem = function () {
     }, {
       key: "click",
       value: function click() {
-        var _this3 = this;
+        var _this4 = this;
 
         Util.setTimeout(function () {
-          return _this3.html.click();
+          return _this4.html.click();
         });
         return this;
       }
@@ -2357,10 +2565,10 @@ var Elem = function () {
     }, {
       key: "focus",
       value: function focus() {
-        var _this4 = this;
+        var _this5 = this;
 
         Util.setTimeout(function () {
-          return _this4.html.focus();
+          return _this5.html.focus();
         });
         return this;
       }
@@ -2372,10 +2580,10 @@ var Elem = function () {
     }, {
       key: "blur",
       value: function blur() {
-        var _this5 = this;
+        var _this6 = this;
 
         Util.setTimeout(function () {
-          return _this5.html.blur();
+          return _this6.html.blur();
         });
         return this;
       }
@@ -3536,7 +3744,7 @@ function () {
   }, {
     key: "resolveClass",
     value: function resolveClass(tag, props) {
-      if (props.class) return tag + "." + props.class.replace(/ /g, ".");else return tag;
+      if (props["class"]) return tag + "." + props["class"].replace(/ /g, ".");else return tag;
     }
     /**
      * Function will resolve all other attributes and place them into an element tag if other attributes are found.
@@ -3867,162 +4075,6 @@ function () {
 
   return RMEElemTemplater;
 }();
-/**
- * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
- * instance might have not been created at the time when components are created so the queue will wait 
- * until the application instance is created and then sets the state for the components in the queue.
- */
-
-
-var AppSetInitialStateJob = function () {
-  var InitStateJob =
-  /*#__PURE__*/
-  function () {
-    function InitStateJob() {
-      _classCallCheck(this, InitStateJob);
-
-      this.updateJob;
-      this.updateJobMap = {};
-      this.appNameList = [];
-    }
-
-    _createClass(InitStateJob, [{
-      key: "resolveUpdateJobs",
-      value: function resolveUpdateJobs() {
-        var _this6 = this;
-
-        if (!this.updateJob) this.updateJob = Util.setInterval(function () {
-          var appName = _this6.getAppNameIfPresent();
-
-          if (!Util.isEmpty(appName)) {
-            _this6.updateJobMap[appName].forEach(function (job) {
-              return job();
-            });
-
-            _this6.updateJobMap[appName] = [];
-            _this6.appNameList = _this6.appNameList.filter(function (app) {
-              return app !== appName;
-            });
-
-            if (_this6.appNameList.length === 0) {
-              Util.clearInterval(_this6.updateJob);
-              _this6.updateJob = undefined;
-            }
-          }
-        });
-      }
-    }, {
-      key: "getAppNameIfPresent",
-      value: function getAppNameIfPresent() {
-        return this.appNameList.find(function (appName) {
-          return App.get(appName === "undefined" ? undefined : appName);
-        });
-      }
-    }, {
-      key: "addToQueue",
-      value: function addToQueue(appName, job) {
-        var updateQueue = this.updateJobMap[appName] || [];
-        updateQueue.push(job);
-        this.updateJobMap[appName] = updateQueue;
-        this.appNameList = Object.keys(this.updateJobMap);
-        this.resolveUpdateJobs();
-      }
-    }]);
-
-    return InitStateJob;
-  }();
-
-  var initStateJob = new InitStateJob();
-  return {
-    addToQueue: initStateJob.addToQueue.bind(initStateJob),
-    resolveUpdateJobs: initStateJob.resolveUpdateJobs.bind(initStateJob)
-  };
-}();
-/**
- * Component resolves comma separated list of components that may be function or class.
- * Function component example: const Comp = props => ({h1: 'Hello'});
- * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
- * Resolve components Component(Comp, Comp2);
- * @param {function} components commma separated list of components
- */
-
-
-var Component = function () {
-  var resolveInitialState = function resolveInitialState(initialState, stateRef, appName) {
-    if (!Util.isEmpty(App.get(appName))) {
-      App.get(appName).setState(stateRef, initialState, false);
-    } else {
-      AppSetInitialStateJob.addToQueue(appName, function () {
-        return App.get(appName).setState(stateRef, initialState);
-      });
-    }
-  };
-
-  var resolveComponent = function resolveComponent(component) {
-    if (Util.isObject(component)) {
-      App.component(_defineProperty({}, component.name, component.comp))(component.appName);
-      resolveInitialState(component.initialState, component.name + component.stateRef, component.appName);
-    } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
-      RME.component(_defineProperty({}, component.name, component));
-    } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
-      var comp = new component();
-      App.component(_defineProperty({}, component.name, comp.render))(comp.appName);
-      var state = {};
-      if (!Util.isEmpty(comp.onBeforeCreate)) state.onBeforeCreate = comp.onBeforeCreate;
-      if (!Util.isEmpty(comp.shouldComponentUpdate)) state.shouldComponentUpdate = comp.shouldComponentUpdate;
-      if (!Util.isEmpty(comp.onAfterCreate)) state.onAfterCreate = comp.onAfterCreate;
-      if (!Util.isEmpty(comp.onAfterRender)) state.onAfterRender = comp.onAfterRender;
-      state = _objectSpread({}, state, comp.initialState);
-      var ref = comp.stateRef || state.stateRef || '';
-      resolveInitialState(state, component.name + ref, comp.appName);
-    }
-  };
-
-  return function () {
-    for (var _len = arguments.length, components = new Array(_len), _key = 0; _key < _len; _key++) {
-      components[_key] = arguments[_key];
-    }
-
-    components.forEach(function (component) {
-      return !Util.isEmpty(component.name) && resolveComponent(component);
-    });
-  };
-}();
-/**
- * A bindState function transfers a function component to a stateful component just like it was created 
- * using class or App class itself. The function receives three parameters. The function component,
- * an optional state object and an optinal appName.
- * Invoking examples:
- * Component(bindState(StatefulComponent));
- * Component(bindState(OtherComponent, { initialValue: 'initialText' }));
- * @param {function} component
- * @param {object} state
- * @param {string} appName
- */
-
-
-var bindState = function () {
-  var getStateRef = function getStateRef(state) {
-    return state && state.stateRef ? state.stateRef : '';
-  };
-
-  var removeStateRef = function removeStateRef(state) {
-    var obj = _objectSpread({}, state);
-
-    delete obj.stateRef;
-    return obj;
-  };
-
-  return function (component, state, appName) {
-    return {
-      comp: component,
-      name: component.name,
-      appName: appName,
-      stateRef: getStateRef(state),
-      initialState: _objectSpread({}, removeStateRef(state))
-    };
-  };
-}();
 
 var EventPipe = function () {
   /**
@@ -4149,7 +4201,7 @@ function () {
     value: function get(url, init) {
       if (!init) init = {};
       init.method = "GET";
-      return this.do({
+      return this["do"]({
         url: url,
         init: init,
         contentType: Http.JSON
@@ -4168,7 +4220,7 @@ function () {
       if (!init) init = {};
       init.method = "POST";
       init.body = body;
-      return this.do({
+      return this["do"]({
         url: url,
         init: init,
         contentType: Http.JSON
@@ -4187,7 +4239,7 @@ function () {
       if (!init) init = {};
       init.method = "PUT";
       init.body = body;
-      return this.do({
+      return this["do"]({
         url: url,
         init: init,
         contentType: Http.JSON
@@ -4204,7 +4256,7 @@ function () {
     value: function _delete(url, init) {
       if (!init) init = {};
       init.method = "DELETE";
-      return this.do({
+      return this["do"]({
         url: url,
         init: init,
         contentType: Http.JSON
@@ -4831,6 +4883,705 @@ Key.COMMA = ",";
 
 Key.DOT = ".";
 
+var Messages = function () {
+  /**
+   * Messages class handles internationalization. The class offers public methods that enable easy 
+   * using of translated content.
+   */
+  var Messages =
+  /*#__PURE__*/
+  function () {
+    function Messages() {
+      _classCallCheck(this, Messages);
+
+      this.instance = this;
+      this.messages = [];
+      this.locale = "";
+      this.translated = [];
+
+      this.load = function () {};
+
+      this.messagesType;
+      this.app;
+      this.ready = false;
+      this.registerMessages();
+    }
+    /**
+     * Initializes the Messages
+     */
+
+
+    _createClass(Messages, [{
+      key: "registerMessages",
+      value: function registerMessages() {
+        var _this11 = this;
+
+        document.addEventListener("readystatechange", function () {
+          if (document.readyState === "complete") {
+            _this11.ready = true;
+
+            _this11.runTranslated.call(_this11);
+          }
+        });
+      }
+    }, {
+      key: "setLoad",
+      value: function setLoad(loader) {
+        this.load = loader;
+      }
+    }, {
+      key: "setAppInstance",
+      value: function setAppInstance(appInstance) {
+        this.app = appInstance;
+      }
+    }, {
+      key: "setLocale",
+      value: function setLocale(locale) {
+        this.locale = locale;
+        return this;
+      }
+    }, {
+      key: "setMessages",
+      value: function setMessages(messages) {
+        if (Util.isArray(messages)) this.messagesType = "array";else if (Util.isObject(messages)) this.messagesType = "map";else throw "messages must be type array or object";
+        this.messages = messages;
+        this.runTranslated.call(this);
+      }
+    }, {
+      key: "getMessage",
+      value: function getMessage(text) {
+        for (var _len4 = arguments.length, params = new Array(_len4 > 1 ? _len4 - 1 : 0), _key4 = 1; _key4 < _len4; _key4++) {
+          params[_key4 - 1] = arguments[_key4];
+        }
+
+        if (Util.isEmpty(params[0][0])) {
+          return this.resolveMessage(text);
+        } else {
+          this.getTranslatedElemIfExist(text, params[0][0]);
+          var msg = this.resolveMessage(text);
+          return this.resolveParams(msg, params[0][0]);
+        }
+      }
+      /**
+       * Resolves translated message key and returns a resolved message if exist
+       * otherwise returns the given key.
+       * @param {string} text 
+       * @returns A resolved message if exist otherwise the given key.
+       */
+
+    }, {
+      key: "resolveMessage",
+      value: function resolveMessage(text) {
+        if (this.messagesType === "array") {
+          return this.resolveMessagesArray(text);
+        } else if (this.messagesType === "map") {
+          return this.resolveMessagesMap(text);
+        }
+      }
+      /**
+       * Resolves a translated message key from the map. Returns a resolved message 
+       * if found otherwise returns the key.
+       * @param {string} text 
+       * @returns A resolved message
+       */
+
+    }, {
+      key: "resolveMessagesMap",
+      value: function resolveMessagesMap(text) {
+        var msg = text;
+
+        for (var i in this.messages) {
+          if (i === text) {
+            msg = this.messages[i];
+            break;
+          }
+        }
+
+        return msg;
+      }
+      /**
+       * Resolves a translated message key from the array. Returns a resolved message
+       * if found otherwise returns the key.
+       * @param {string} text 
+       * @returns A resolved message
+       */
+
+    }, {
+      key: "resolveMessagesArray",
+      value: function resolveMessagesArray(text) {
+        var i = 0;
+        var msg = text;
+
+        while (i < this.messages.length) {
+          if (!Util.isEmpty(this.messages[i][text])) {
+            msg = this.messages[i][text];
+            break;
+          }
+
+          i++;
+        }
+
+        return msg;
+      }
+      /**
+       * Resolves the message parameters if exist otherwise does nothing.
+       * @param {string} msg 
+       * @param {*} params 
+       * @returns The message with resolved message parameteres if parameters exist.
+       */
+
+    }, {
+      key: "resolveParams",
+      value: function resolveParams(msg, params) {
+        if (!Util.isEmpty(msg)) {
+          var i = 0;
+
+          while (i < params.length) {
+            msg = msg.replace("{" + i + "}", params[i]);
+            i++;
+          }
+
+          return msg;
+        }
+      }
+      /**
+       * Function gets a Elem object and inserts it into a translated object array if it exists.
+       * @param {string} key 
+       * @param {*} params 
+       */
+
+    }, {
+      key: "getTranslatedElemIfExist",
+      value: function getTranslatedElemIfExist(key, params) {
+        if (Util.isEmpty(this.app)) {
+          var last = params[params.length - 1];
+
+          if (Util.isObject(last) && last instanceof Elem) {
+            last = params.pop();
+            this.translated.push({
+              key: key,
+              params: params,
+              obj: last
+            });
+          }
+        }
+      }
+      /**
+       * Function goes through the translated objects array and sets a translated message to the translated elements.
+       */
+
+    }, {
+      key: "runTranslated",
+      value: function runTranslated() {
+        var _this12 = this;
+
+        if (Util.isEmpty(this.app) && this.ready) {
+          Util.setTimeout(function () {
+            var i = 0;
+
+            while (i < _this12.translated.length) {
+              _this12.translated[i].obj.setText.call(_this12.translated[i].obj, Messages.message(_this12.translated[i].key, _this12.translated[i].params));
+
+              i++;
+            }
+          });
+        } else if (this.ready) {
+          this.app.refresh();
+        }
+      }
+      /**
+       * Function returns current locale of the Messages
+       * @returns Current locale
+       */
+
+    }], [{
+      key: "locale",
+      value: function locale() {
+        return Messages.getInstance().locale;
+      }
+      /**
+       * Lang function is used to change or set the current locale to be the given locale. After calling this method
+       * the Messages.load function will be automatically invoked.
+       * @param {string} locale String
+       * @param {object} locale Event
+       */
+
+    }, {
+      key: "lang",
+      value: function lang(locale) {
+        var loc;
+
+        if (Util.isObject(locale) && locale instanceof Event) {
+          locale.preventDefault();
+          var el = Elem.wrap(locale.target);
+          loc = el.getHref();
+          if (Util.isEmpty(loc)) loc = el.getValue();
+          if (Util.isEmpty(loc)) loc = el.getText();
+        } else if (Util.isString(locale)) loc = locale;else throw "Given parameter must be type string or instance of Event, given value: " + locale;
+
+        if (!Util.isEmpty(loc)) Messages.getInstance().setLocale(loc).load.call(null, Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
+      }
+      /**
+       * Message function is used to retrieve translated messages. The function also supports message parameters
+       * that can be given as a comma separeted list. 
+       * @param {string} text 
+       * @param {*} params 
+       * @returns A resolved message or the given key if the message is not found.
+       */
+
+    }, {
+      key: "message",
+      value: function message(text) {
+        for (var _len5 = arguments.length, params = new Array(_len5 > 1 ? _len5 - 1 : 0), _key5 = 1; _key5 < _len5; _key5++) {
+          params[_key5 - 1] = arguments[_key5];
+        }
+
+        return Messages.getInstance().getMessage(text, params);
+      }
+      /**
+       * Load function is used to load new messages or change already loaded messages.
+       * Implementation of the function receives two parameters. The one of the parameters is the changed locale and 
+       * the other is setMessages(messagesArrayOrObject) function that is used to change the translated messages.
+       * This function is called automatically when language is changed by calling the Messages.lang() function.
+       * @param {function} loader 
+       */
+
+    }, {
+      key: "load",
+      value: function load(loader) {
+        if (!Util.isFunction(loader)) throw "loader must be type function " + Util.getType(loader);
+        Messages.getInstance().setLoad(loader);
+      }
+      /**
+       * Set the app instance to be invoked on the Messages update.
+       * @param {object} appInstance 
+       */
+
+    }, {
+      key: "setApp",
+      value: function setApp(appInstance) {
+        Messages.getInstance().setAppInstance(appInstance);
+        return Messages;
+      }
+    }, {
+      key: "getInstance",
+      value: function getInstance() {
+        if (!this.instance) this.instance = new Messages();
+        return this.instance;
+      }
+    }]);
+
+    return Messages;
+  }();
+
+  return {
+    lang: Messages.lang,
+    message: Messages.message,
+    load: Messages.load,
+    locale: Messages.locale,
+    setApp: Messages.setApp
+  };
+}();
+/**
+ * The configure function will configure given Components. This is a shortcut function of the
+ * RME.use(config) function. Advantage of this function is that the Compoments can be given in 
+ * any order and they will be recognized automatically.
+ * 
+ * Example use case would be to invoke configure(App.get(), Router, Messages); which would equal to
+ * RME.use({
+ *  messages: Messages,
+ *  router: Router,
+ *  app: App.get()
+ * });
+ * 
+ * This function can be conbined with a createApp('#app', AppComponent) function as follows:
+ * configure(createApp('#app', AppComponent), Router, Messages); This is probably the shortest way to 
+ * create an RME application.
+ * @param {*} params comma separated list of components
+ */
+
+
+var configure = function () {
+  return function () {
+    var config = {};
+
+    for (var _len6 = arguments.length, params = new Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
+      params[_key6] = arguments[_key6];
+    }
+
+    params.forEach(function (param) {
+      if (param.routes) {
+        config = _objectSpread({}, config, {
+          router: param
+        });
+      } else if (param.load) {
+        config = _objectSpread({}, config, {
+          messages: param
+        });
+      } else if (param.name) {
+        config = _objectSpread({}, config, {
+          app: param
+        });
+      }
+    });
+    RME.use(config);
+  };
+}();
+
+var RME = function () {
+  /**
+   * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create RESTfull webpages with ease and speed.
+   * This library is free to use under the MIT License.
+   * 
+   * RME class is a core of the RME library. The RME class offers functionality to start a RME application, control components, external script files and rme storage.
+   */
+  var RME =
+  /*#__PURE__*/
+  function () {
+    function RME() {
+      _classCallCheck(this, RME);
+
+      this.instance = this;
+
+      this.completeRun = function () {};
+
+      this.runner = function () {};
+
+      this.onStorageChange = function (state) {};
+
+      this.components = {};
+      this.rmeState = {};
+      this.router;
+      this.messages;
+      this.defaultApp;
+    }
+
+    _createClass(RME, [{
+      key: "complete",
+      value: function complete() {
+        this.completeRun.call();
+      }
+    }, {
+      key: "start",
+      value: function start() {
+        this.runner.call();
+      }
+    }, {
+      key: "setComplete",
+      value: function setComplete(runnable) {
+        this.completeRun = runnable;
+      }
+    }, {
+      key: "setRunner",
+      value: function setRunner(runnable) {
+        this.runner = runnable;
+        return this.instance;
+      }
+    }, {
+      key: "addComponent",
+      value: function addComponent(runnable, props) {
+        var comp;
+        if (Util.isFunction(runnable)) comp = runnable.call();else if (Util.isObject(runnable)) comp = runnable;
+
+        for (var p in comp) {
+          if (comp.hasOwnProperty(p)) {
+            this.components[p] = {
+              component: comp[p],
+              update: Util.isFunction(props) ? props : undefined
+            };
+          }
+        }
+
+        comp = null;
+      }
+    }, {
+      key: "getComponent",
+      value: function getComponent(name, props) {
+        var comp = this.components[name];
+        if (!comp) throw "Cannot find a component: \"" + name + "\"";
+
+        if (!Util.isEmpty(props) && Util.isFunction(comp.update)) {
+          var stateRef = props.stateRef;
+          if (Util.isEmpty(props.stateRef)) stateRef = name;else if (props.stateRef.search(name) === -1) stateRef = "".concat(name).concat(props.stateRef);
+          props["stateRef"] = stateRef;
+          var newProps = comp.update.call()(stateRef);
+
+          var nextProps = _objectSpread({}, props, {}, newProps);
+
+          if (!nextProps.shouldComponentUpdate || nextProps.shouldComponentUpdate(nextProps) !== false) {
+            props = this.extendProps(props, newProps);
+          }
+        }
+
+        if (Util.isEmpty(props)) props = {};
+        if (!Util.isEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate)) props.onBeforeCreate.call(props, props);
+        var ret = comp.component.call(props, props);
+        if (Template.isTemplate(ret)) ret = Template.resolve(ret);
+        if (!Util.isEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate)) props.onAfterCreate.call(props, ret, props);
+        if (!Util.isEmpty(this.defaultApp) && !Util.isEmpty(props.onAfterRender) && Util.isFunction(props.onAfterRender)) this.defaultApp.addAfterRefreshCallback(props.onAfterRender.bind(ret, ret, props));
+        return ret;
+      }
+    }, {
+      key: "extendProps",
+      value: function extendProps(props, newProps) {
+        if (!Util.isEmpty(newProps)) {
+          for (var p in newProps) {
+            if (newProps.hasOwnProperty(p)) {
+              props[p] = newProps[p];
+            }
+          }
+        }
+
+        return props;
+      }
+    }, {
+      key: "setRmeState",
+      value: function setRmeState(key, value) {
+        this.rmeState[key] = value;
+        this.onStorageChange.call(this, this.rmeState);
+      }
+    }, {
+      key: "getRmeState",
+      value: function getRmeState(key) {
+        return this.rmeState[key];
+      }
+    }, {
+      key: "configure",
+      value: function configure(config) {
+        this.router = config.router;
+        this.messages = config.messages;
+        this.defaultApp = config.app;
+        if (!Util.isEmpty(this.router)) this.router.setApp(this.defaultApp);
+        if (!Util.isEmpty(this.messages)) this.messages.setApp(this.defaultApp);
+        if (!Util.isEmpty(this.defaultApp)) this.defaultApp.setRouter(this.router);
+      }
+      /** 
+       * Runs a runnable script immedeately. If multpile run functions are declared they will be invoked by the declaration order.
+       */
+
+    }], [{
+      key: "run",
+      value: function run(runnable) {
+        if (runnable && Util.isFunction(runnable)) RME.getInstance().setRunner(runnable).start();
+      }
+      /**
+       * Waits until body has been loaded and then runs a runnable script. 
+       * If multiple ready functions are declared the latter one is invoked.
+       */
+
+    }, {
+      key: "ready",
+      value: function ready(runnable) {
+        if (runnable && Util.isFunction(runnable)) RME.getInstance().setComplete(runnable);
+      }
+      /**
+       * Creates or retrieves a RME component. 
+       * If the first parameter is a function then this method will try to create a RME component and store it
+       * in the RME instance.
+       * If the first parameter is a string then this method will try to retrieve a RME component from the 
+       * RME instance.
+       * @param {*} runnable Type function or String.
+       * @param {Object} props 
+       */
+
+    }, {
+      key: "component",
+      value: function component(runnable, props) {
+        if (runnable && (Util.isFunction(runnable) || Util.isObject(runnable))) RME.getInstance().addComponent(runnable, props);else if (runnable && Util.isString(runnable)) return RME.getInstance().getComponent(runnable, props);
+      }
+      /**
+       * Saves data to or get data from the RME instance storage.
+       * If key and value parameters are not empty then this method will try to save the give value by the given key
+       * into to the RME instance storage.
+       * If key is not empty and value is empty then this method will try to get data from the RME instance storage
+       * by the given key.
+       * @param {String} key 
+       * @param {Object} value 
+       */
+
+    }, {
+      key: "storage",
+      value: function storage(key, value) {
+        if (!Util.isEmpty(key) && !Util.isEmpty(value)) RME.getInstance().setRmeState(key, value);else if (!Util.isEmpty(key) && Util.isEmpty(value)) return RME.getInstance().getRmeState(key);
+      }
+      /**
+       * Adds a script file on runtime into the head of the current html document where the method is called on.
+       * Source is required other properties can be omitted.
+       * @param {String} source URL or file name. *Requied
+       * @param {String} id 
+       * @param {String} type 
+       * @param {String} text Content of the script element if any.
+       * @param {boolean} defer If true script is executed when page has finished parsing.
+       * @param {*} crossOrigin 
+       * @param {String} charset 
+       * @param {boolean} async If true script is executed asynchronously when available.
+       */
+
+    }, {
+      key: "script",
+      value: function script(source, id, type, text, defer, crossOrigin, charset, async) {
+        if (!Util.isEmpty(source)) {
+          var sc = new Elem("script").setSource(source);
+          if (!Util.isEmpty(id)) sc.setId(id);
+          if (!Util.isEmpty(type)) sc.setType(type);
+          if (!Util.isEmpty(text)) sc.setText(text);
+          if (!Util.isEmpty(defer)) sc.setAttribute("defer", defer);
+          if (!Util.isEmpty(crossOrigin)) sc.setAttribute("crossOrigin", crossOrigin);
+          if (!Util.isEmpty(charset)) sc.setAttribute("charset", charset);
+          if (!Util.isEmpty(async)) sc.setAttribute("async", async);
+          RME.addScript(sc);
+        }
+      }
+      /**
+       * This is called when ever a new data is saved into the RME instance storage.
+       * Callback function has one paramater newState that is the latest snapshot of the 
+       * current instance storage.
+       * @param {function} listener 
+       */
+
+    }, {
+      key: "onStorageChange",
+      value: function onStorageChange(listener) {
+        if (listener && Util.isFunction(listener)) RME.getInstance().onrmestoragechange = listener;
+      }
+      /**
+       * Function checks if a component with the given name exists.
+       * @param {string} name 
+       * @returns True if the component exist otherwise false
+       */
+
+    }, {
+      key: "hasComponent",
+      value: function hasComponent(name) {
+        return !Util.isEmpty(RME.getInstance().components[name.replace("component:", "")]);
+      }
+      /**
+       * Function receives an object as a parameter that holds three properties router, messages and app. The function will
+       * autoconfigure the Router, the Messages and the App instance to be used as default.
+       * 
+       * The config object represented
+       * {
+       * router: Router reference
+       * messages: Messages reference
+       * app: App instance
+       * }
+       * @param {object} config 
+       */
+
+    }, {
+      key: "use",
+      value: function use(config) {
+        RME.getInstance().configure(config);
+      }
+    }, {
+      key: "addScript",
+      value: function addScript(elem) {
+        var scripts = Tree.getScripts();
+        var lastScript = scripts[scripts.length - 1];
+        lastScript.after(elem);
+      }
+    }, {
+      key: "removeScript",
+      value: function removeScript(sourceOrId) {
+        if (sourceOrId.indexOf("#") === 0) {
+          Tree.getHead().remove(Tree.get(sourceOrId));
+        } else {
+          var scripts = Tree.getScripts();
+
+          for (var s in scripts) {
+            if (scripts.hasOwnProperty(s)) {
+              var src = !Util.isEmpty(scripts[s].getSource()) ? scripts[s].getSource() : "";
+
+              if (src.search(sourceOrId) > -1 && src.search(sourceOrId) === src.length - sourceOrId.length) {
+                Tree.getHead().remove(scripts[s]);
+                break;
+              }
+            }
+          }
+        }
+      }
+    }, {
+      key: "getInstance",
+      value: function getInstance() {
+        if (!this.instance) this.instance = new RME();
+        return this.instance;
+      }
+    }]);
+
+    return RME;
+  }();
+
+  document.addEventListener("readystatechange", function () {
+    if (document.readyState === "complete") RME.getInstance().complete();
+  });
+  return {
+    run: RME.run,
+    ready: RME.ready,
+    component: RME.component,
+    storage: RME.storage,
+    script: RME.script,
+    onStorageChange: RME.onStorageChange,
+    hasComponent: RME.hasComponent,
+    use: RME.use
+  };
+}();
+/**
+ * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
+ */
+
+
+var Session =
+/*#__PURE__*/
+function () {
+  function Session() {
+    _classCallCheck(this, Session);
+  }
+
+  _createClass(Session, null, [{
+    key: "set",
+
+    /**
+     * Save data into the Session.
+     * @param {string} key
+     * @param {*} value
+     */
+    value: function set(key, value) {
+      sessionStorage.setItem(key, value);
+    }
+    /**
+     * Get the saved data from the Session.
+     * @param {string} key
+     */
+
+  }, {
+    key: "get",
+    value: function get(key) {
+      return sessionStorage.getItem(key);
+    }
+    /**
+     * Remove data from the Session.
+     * @param {string} key
+     */
+
+  }, {
+    key: "remove",
+    value: function remove(key) {
+      sessionStorage.removeItem(key);
+    }
+    /**
+     * Clears the Session.
+     */
+
+  }, {
+    key: "clear",
+    value: function clear() {
+      sessionStorage.clear();
+    }
+  }]);
+
+  return Session;
+}();
+
 var Router = function () {
   /**
    * Router class handles and renders route elements that are given by Router.routes() method.
@@ -4842,7 +5593,7 @@ var Router = function () {
   /*#__PURE__*/
   function () {
     function Router() {
-      var _this11 = this;
+      var _this13 = this;
 
       _classCallCheck(this, Router);
 
@@ -4855,11 +5606,11 @@ var Router = function () {
       this.prevUrl = location.pathname;
 
       this.loadCall = function () {
-        return _this11.navigateUrl(location.pathname);
+        return _this13.navigateUrl(location.pathname);
       };
 
       this.hashCall = function () {
-        return _this11.navigateUrl(location.hash);
+        return _this13.navigateUrl(location.hash);
       };
 
       this.useHistory = true;
@@ -4877,17 +5628,17 @@ var Router = function () {
     _createClass(Router, [{
       key: "registerRouter",
       value: function registerRouter() {
-        var _this12 = this;
+        var _this14 = this;
 
         document.addEventListener("readystatechange", function () {
           if (document.readyState === "complete") {
             var check = Util.setInterval(function () {
-              var hasRoot = !Util.isEmpty(_this12.root.elem) ? document.querySelector(_this12.root.elem) : false;
+              var hasRoot = !Util.isEmpty(_this14.root.elem) ? document.querySelector(_this14.root.elem) : false;
 
               if (hasRoot) {
                 Util.clearInterval(check);
 
-                _this12.resolveRoutes();
+                _this14.resolveRoutes();
               }
             }, 50);
           }
@@ -5379,660 +6130,6 @@ var Router = function () {
     getCurrentState: Router.getCurrentState,
     setApp: Router.setApp
   };
-}();
-
-var Messages = function () {
-  /**
-   * Messages class handles internationalization. The class offers public methods that enable easy 
-   * using of translated content.
-   */
-  var Messages =
-  /*#__PURE__*/
-  function () {
-    function Messages() {
-      _classCallCheck(this, Messages);
-
-      this.instance = this;
-      this.messages = [];
-      this.locale = "";
-      this.translated = [];
-
-      this.load = function () {};
-
-      this.messagesType;
-      this.app;
-      this.ready = false;
-      this.registerMessages();
-    }
-    /**
-     * Initializes the Messages
-     */
-
-
-    _createClass(Messages, [{
-      key: "registerMessages",
-      value: function registerMessages() {
-        var _this13 = this;
-
-        document.addEventListener("readystatechange", function () {
-          if (document.readyState === "complete") {
-            _this13.ready = true;
-
-            _this13.runTranslated.call(_this13);
-          }
-        });
-      }
-    }, {
-      key: "setLoad",
-      value: function setLoad(loader) {
-        this.load = loader;
-      }
-    }, {
-      key: "setAppInstance",
-      value: function setAppInstance(appInstance) {
-        this.app = appInstance;
-      }
-    }, {
-      key: "setLocale",
-      value: function setLocale(locale) {
-        this.locale = locale;
-        return this;
-      }
-    }, {
-      key: "setMessages",
-      value: function setMessages(messages) {
-        if (Util.isArray(messages)) this.messagesType = "array";else if (Util.isObject(messages)) this.messagesType = "map";else throw "messages must be type array or object";
-        this.messages = messages;
-        this.runTranslated.call(this);
-      }
-    }, {
-      key: "getMessage",
-      value: function getMessage(text) {
-        for (var _len2 = arguments.length, params = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-          params[_key2 - 1] = arguments[_key2];
-        }
-
-        if (Util.isEmpty(params[0][0])) {
-          return this.resolveMessage(text);
-        } else {
-          this.getTranslatedElemIfExist(text, params[0][0]);
-          var msg = this.resolveMessage(text);
-          return this.resolveParams(msg, params[0][0]);
-        }
-      }
-      /**
-       * Resolves translated message key and returns a resolved message if exist
-       * otherwise returns the given key.
-       * @param {string} text 
-       * @returns A resolved message if exist otherwise the given key.
-       */
-
-    }, {
-      key: "resolveMessage",
-      value: function resolveMessage(text) {
-        if (this.messagesType === "array") {
-          return this.resolveMessagesArray(text);
-        } else if (this.messagesType === "map") {
-          return this.resolveMessagesMap(text);
-        }
-      }
-      /**
-       * Resolves a translated message key from the map. Returns a resolved message 
-       * if found otherwise returns the key.
-       * @param {string} text 
-       * @returns A resolved message
-       */
-
-    }, {
-      key: "resolveMessagesMap",
-      value: function resolveMessagesMap(text) {
-        var msg = text;
-
-        for (var i in this.messages) {
-          if (i === text) {
-            msg = this.messages[i];
-            break;
-          }
-        }
-
-        return msg;
-      }
-      /**
-       * Resolves a translated message key from the array. Returns a resolved message
-       * if found otherwise returns the key.
-       * @param {string} text 
-       * @returns A resolved message
-       */
-
-    }, {
-      key: "resolveMessagesArray",
-      value: function resolveMessagesArray(text) {
-        var i = 0;
-        var msg = text;
-
-        while (i < this.messages.length) {
-          if (!Util.isEmpty(this.messages[i][text])) {
-            msg = this.messages[i][text];
-            break;
-          }
-
-          i++;
-        }
-
-        return msg;
-      }
-      /**
-       * Resolves the message parameters if exist otherwise does nothing.
-       * @param {string} msg 
-       * @param {*} params 
-       * @returns The message with resolved message parameteres if parameters exist.
-       */
-
-    }, {
-      key: "resolveParams",
-      value: function resolveParams(msg, params) {
-        if (!Util.isEmpty(msg)) {
-          var i = 0;
-
-          while (i < params.length) {
-            msg = msg.replace("{" + i + "}", params[i]);
-            i++;
-          }
-
-          return msg;
-        }
-      }
-      /**
-       * Function gets a Elem object and inserts it into a translated object array if it exists.
-       * @param {string} key 
-       * @param {*} params 
-       */
-
-    }, {
-      key: "getTranslatedElemIfExist",
-      value: function getTranslatedElemIfExist(key, params) {
-        if (Util.isEmpty(this.app)) {
-          var last = params[params.length - 1];
-
-          if (Util.isObject(last) && last instanceof Elem) {
-            last = params.pop();
-            this.translated.push({
-              key: key,
-              params: params,
-              obj: last
-            });
-          }
-        }
-      }
-      /**
-       * Function goes through the translated objects array and sets a translated message to the translated elements.
-       */
-
-    }, {
-      key: "runTranslated",
-      value: function runTranslated() {
-        var _this14 = this;
-
-        if (Util.isEmpty(this.app) && this.ready) {
-          Util.setTimeout(function () {
-            var i = 0;
-
-            while (i < _this14.translated.length) {
-              _this14.translated[i].obj.setText.call(_this14.translated[i].obj, Messages.message(_this14.translated[i].key, _this14.translated[i].params));
-
-              i++;
-            }
-          });
-        } else if (this.ready) {
-          this.app.refresh();
-        }
-      }
-      /**
-       * Function returns current locale of the Messages
-       * @returns Current locale
-       */
-
-    }], [{
-      key: "locale",
-      value: function locale() {
-        return Messages.getInstance().locale;
-      }
-      /**
-       * Lang function is used to change or set the current locale to be the given locale. After calling this method
-       * the Messages.load function will be automatically invoked.
-       * @param {string} locale String
-       * @param {object} locale Event
-       */
-
-    }, {
-      key: "lang",
-      value: function lang(locale) {
-        var loc;
-
-        if (Util.isObject(locale) && locale instanceof Event) {
-          locale.preventDefault();
-          var el = Elem.wrap(locale.target);
-          loc = el.getHref();
-          if (Util.isEmpty(loc)) loc = el.getValue();
-          if (Util.isEmpty(loc)) loc = el.getText();
-        } else if (Util.isString(locale)) loc = locale;else throw "Given parameter must be type string or instance of Event, given value: " + locale;
-
-        if (!Util.isEmpty(loc)) Messages.getInstance().setLocale(loc).load.call(null, Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
-      }
-      /**
-       * Message function is used to retrieve translated messages. The function also supports message parameters
-       * that can be given as a comma separeted list. 
-       * @param {string} text 
-       * @param {*} params 
-       * @returns A resolved message or the given key if the message is not found.
-       */
-
-    }, {
-      key: "message",
-      value: function message(text) {
-        for (var _len3 = arguments.length, params = new Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
-          params[_key3 - 1] = arguments[_key3];
-        }
-
-        return Messages.getInstance().getMessage(text, params);
-      }
-      /**
-       * Load function is used to load new messages or change already loaded messages.
-       * Implementation of the function receives two parameters. The one of the parameters is the changed locale and 
-       * the other is setMessages(messagesArrayOrObject) function that is used to change the translated messages.
-       * This function is called automatically when language is changed by calling the Messages.lang() function.
-       * @param {function} loader 
-       */
-
-    }, {
-      key: "load",
-      value: function load(loader) {
-        if (!Util.isFunction(loader)) throw "loader must be type function " + Util.getType(loader);
-        Messages.getInstance().setLoad(loader);
-      }
-      /**
-       * Set the app instance to be invoked on the Messages update.
-       * @param {object} appInstance 
-       */
-
-    }, {
-      key: "setApp",
-      value: function setApp(appInstance) {
-        Messages.getInstance().setAppInstance(appInstance);
-        return Messages;
-      }
-    }, {
-      key: "getInstance",
-      value: function getInstance() {
-        if (!this.instance) this.instance = new Messages();
-        return this.instance;
-      }
-    }]);
-
-    return Messages;
-  }();
-
-  return {
-    lang: Messages.lang,
-    message: Messages.message,
-    load: Messages.load,
-    locale: Messages.locale,
-    setApp: Messages.setApp
-  };
-}();
-
-var RME = function () {
-  /**
-   * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create RESTfull webpages with ease and speed.
-   * This library is free to use under the MIT License.
-   * 
-   * RME class is a core of the RME library. The RME class offers functionality to start a RME application, control components, external script files and rme storage.
-   */
-  var RME =
-  /*#__PURE__*/
-  function () {
-    function RME() {
-      _classCallCheck(this, RME);
-
-      this.instance = this;
-
-      this.completeRun = function () {};
-
-      this.runner = function () {};
-
-      this.onStorageChange = function (state) {};
-
-      this.components = {};
-      this.rmeState = {};
-      this.router;
-      this.messages;
-      this.defaultApp;
-    }
-
-    _createClass(RME, [{
-      key: "complete",
-      value: function complete() {
-        this.completeRun.call();
-      }
-    }, {
-      key: "start",
-      value: function start() {
-        this.runner.call();
-      }
-    }, {
-      key: "setComplete",
-      value: function setComplete(runnable) {
-        this.completeRun = runnable;
-      }
-    }, {
-      key: "setRunner",
-      value: function setRunner(runnable) {
-        this.runner = runnable;
-        return this.instance;
-      }
-    }, {
-      key: "addComponent",
-      value: function addComponent(runnable, props) {
-        var comp;
-        if (Util.isFunction(runnable)) comp = runnable.call();else if (Util.isObject(runnable)) comp = runnable;
-
-        for (var p in comp) {
-          if (comp.hasOwnProperty(p)) {
-            this.components[p] = {
-              component: comp[p],
-              update: Util.isFunction(props) ? props : undefined
-            };
-          }
-        }
-
-        comp = null;
-      }
-    }, {
-      key: "getComponent",
-      value: function getComponent(name, props) {
-        var comp = this.components[name];
-        if (!comp) throw "Cannot find a component: \"" + name + "\"";
-
-        if (!Util.isEmpty(props) && Util.isFunction(comp.update)) {
-          var stateRef = props.stateRef;
-          if (Util.isEmpty(props.stateRef)) stateRef = name;else if (props.stateRef.search(name) === -1) stateRef = "".concat(name).concat(props.stateRef);
-          props["stateRef"] = stateRef;
-          var newProps = comp.update.call()(stateRef);
-
-          var nextProps = _objectSpread({}, props, newProps);
-
-          if (!nextProps.shouldComponentUpdate || nextProps.shouldComponentUpdate(nextProps) !== false) {
-            props = this.extendProps(props, newProps);
-          }
-        }
-
-        if (Util.isEmpty(props)) props = {};
-        if (!Util.isEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate)) props.onBeforeCreate.call(props, props);
-        var ret = comp.component.call(props, props);
-        if (Template.isTemplate(ret)) ret = Template.resolve(ret);
-        if (!Util.isEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate)) props.onAfterCreate.call(props, ret, props);
-        if (!Util.isEmpty(this.defaultApp) && !Util.isEmpty(props.onAfterRender) && Util.isFunction(props.onAfterRender)) this.defaultApp.addAfterRefreshCallback(props.onAfterRender.bind(ret, ret, props));
-        return ret;
-      }
-    }, {
-      key: "extendProps",
-      value: function extendProps(props, newProps) {
-        if (!Util.isEmpty(newProps)) {
-          for (var p in newProps) {
-            if (newProps.hasOwnProperty(p)) {
-              props[p] = newProps[p];
-            }
-          }
-        }
-
-        return props;
-      }
-    }, {
-      key: "setRmeState",
-      value: function setRmeState(key, value) {
-        this.rmeState[key] = value;
-        this.onStorageChange.call(this, this.rmeState);
-      }
-    }, {
-      key: "getRmeState",
-      value: function getRmeState(key) {
-        return this.rmeState[key];
-      }
-    }, {
-      key: "configure",
-      value: function configure(config) {
-        this.router = config.router;
-        this.messages = config.messages;
-        this.defaultApp = config.app;
-        if (!Util.isEmpty(this.router)) this.router.setApp(this.defaultApp);
-        if (!Util.isEmpty(this.messages)) this.messages.setApp(this.defaultApp);
-        if (!Util.isEmpty(this.defaultApp)) this.defaultApp.setRouter(this.router);
-      }
-      /** 
-       * Runs a runnable script immedeately. If multpile run functions are declared they will be invoked by the declaration order.
-       */
-
-    }], [{
-      key: "run",
-      value: function run(runnable) {
-        if (runnable && Util.isFunction(runnable)) RME.getInstance().setRunner(runnable).start();
-      }
-      /**
-       * Waits until body has been loaded and then runs a runnable script. 
-       * If multiple ready functions are declared the latter one is invoked.
-       */
-
-    }, {
-      key: "ready",
-      value: function ready(runnable) {
-        if (runnable && Util.isFunction(runnable)) RME.getInstance().setComplete(runnable);
-      }
-      /**
-       * Creates or retrieves a RME component. 
-       * If the first parameter is a function then this method will try to create a RME component and store it
-       * in the RME instance.
-       * If the first parameter is a string then this method will try to retrieve a RME component from the 
-       * RME instance.
-       * @param {*} runnable Type function or String.
-       * @param {Object} props 
-       */
-
-    }, {
-      key: "component",
-      value: function component(runnable, props) {
-        if (runnable && (Util.isFunction(runnable) || Util.isObject(runnable))) RME.getInstance().addComponent(runnable, props);else if (runnable && Util.isString(runnable)) return RME.getInstance().getComponent(runnable, props);
-      }
-      /**
-       * Saves data to or get data from the RME instance storage.
-       * If key and value parameters are not empty then this method will try to save the give value by the given key
-       * into to the RME instance storage.
-       * If key is not empty and value is empty then this method will try to get data from the RME instance storage
-       * by the given key.
-       * @param {String} key 
-       * @param {Object} value 
-       */
-
-    }, {
-      key: "storage",
-      value: function storage(key, value) {
-        if (!Util.isEmpty(key) && !Util.isEmpty(value)) RME.getInstance().setRmeState(key, value);else if (!Util.isEmpty(key) && Util.isEmpty(value)) return RME.getInstance().getRmeState(key);
-      }
-      /**
-       * Adds a script file on runtime into the head of the current html document where the method is called on.
-       * Source is required other properties can be omitted.
-       * @param {String} source URL or file name. *Requied
-       * @param {String} id 
-       * @param {String} type 
-       * @param {String} text Content of the script element if any.
-       * @param {boolean} defer If true script is executed when page has finished parsing.
-       * @param {*} crossOrigin 
-       * @param {String} charset 
-       * @param {boolean} async If true script is executed asynchronously when available.
-       */
-
-    }, {
-      key: "script",
-      value: function script(source, id, type, text, defer, crossOrigin, charset, async) {
-        if (!Util.isEmpty(source)) {
-          var sc = new Elem("script").setSource(source);
-          if (!Util.isEmpty(id)) sc.setId(id);
-          if (!Util.isEmpty(type)) sc.setType(type);
-          if (!Util.isEmpty(text)) sc.setText(text);
-          if (!Util.isEmpty(defer)) sc.setAttribute("defer", defer);
-          if (!Util.isEmpty(crossOrigin)) sc.setAttribute("crossOrigin", crossOrigin);
-          if (!Util.isEmpty(charset)) sc.setAttribute("charset", charset);
-          if (!Util.isEmpty(async)) sc.setAttribute("async", async);
-          RME.addScript(sc);
-        }
-      }
-      /**
-       * This is called when ever a new data is saved into the RME instance storage.
-       * Callback function has one paramater newState that is the latest snapshot of the 
-       * current instance storage.
-       * @param {function} listener 
-       */
-
-    }, {
-      key: "onStorageChange",
-      value: function onStorageChange(listener) {
-        if (listener && Util.isFunction(listener)) RME.getInstance().onrmestoragechange = listener;
-      }
-      /**
-       * Function checks if a component with the given name exists.
-       * @param {string} name 
-       * @returns True if the component exist otherwise false
-       */
-
-    }, {
-      key: "hasComponent",
-      value: function hasComponent(name) {
-        return !Util.isEmpty(RME.getInstance().components[name.replace("component:", "")]);
-      }
-      /**
-       * Function receives an object as a parameter that holds three properties router, messages and app. The function will
-       * autoconfigure the Router, the Messages and the App instance to be used as default.
-       * 
-       * The config object represented
-       * {
-       * router: Router reference
-       * messages: Messages reference
-       * app: App instance
-       * }
-       * @param {object} config 
-       */
-
-    }, {
-      key: "use",
-      value: function use(config) {
-        RME.getInstance().configure(config);
-      }
-    }, {
-      key: "addScript",
-      value: function addScript(elem) {
-        var scripts = Tree.getScripts();
-        var lastScript = scripts[scripts.length - 1];
-        lastScript.after(elem);
-      }
-    }, {
-      key: "removeScript",
-      value: function removeScript(sourceOrId) {
-        if (sourceOrId.indexOf("#") === 0) {
-          Tree.getHead().remove(Tree.get(sourceOrId));
-        } else {
-          var scripts = Tree.getScripts();
-
-          for (var s in scripts) {
-            if (scripts.hasOwnProperty(s)) {
-              var src = !Util.isEmpty(scripts[s].getSource()) ? scripts[s].getSource() : "";
-
-              if (src.search(sourceOrId) > -1 && src.search(sourceOrId) === src.length - sourceOrId.length) {
-                Tree.getHead().remove(scripts[s]);
-                break;
-              }
-            }
-          }
-        }
-      }
-    }, {
-      key: "getInstance",
-      value: function getInstance() {
-        if (!this.instance) this.instance = new RME();
-        return this.instance;
-      }
-    }]);
-
-    return RME;
-  }();
-
-  document.addEventListener("readystatechange", function () {
-    if (document.readyState === "complete") RME.getInstance().complete();
-  });
-  return {
-    run: RME.run,
-    ready: RME.ready,
-    component: RME.component,
-    storage: RME.storage,
-    script: RME.script,
-    onStorageChange: RME.onStorageChange,
-    hasComponent: RME.hasComponent,
-    use: RME.use
-  };
-}();
-/**
- * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
- */
-
-
-var Session =
-/*#__PURE__*/
-function () {
-  function Session() {
-    _classCallCheck(this, Session);
-  }
-
-  _createClass(Session, null, [{
-    key: "set",
-
-    /**
-     * Save data into the Session.
-     * @param {string} key
-     * @param {*} value
-     */
-    value: function set(key, value) {
-      sessionStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the Session.
-     * @param {string} key
-     */
-
-  }, {
-    key: "get",
-    value: function get(key) {
-      return sessionStorage.getItem(key);
-    }
-    /**
-     * Remove data from the Session.
-     * @param {string} key
-     */
-
-  }, {
-    key: "remove",
-    value: function remove(key) {
-      sessionStorage.removeItem(key);
-    }
-    /**
-     * Clears the Session.
-     */
-
-  }, {
-    key: "clear",
-    value: function clear() {
-      sessionStorage.clear();
-    }
-  }]);
-
-  return Session;
 }();
 /**
  * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
@@ -6673,7 +6770,7 @@ var Template = function () {
           }
         }
 
-        props = _objectSpread({}, props, newProps);
+        props = _objectSpread({}, props, {}, newProps);
         return props;
       }
     }, {
@@ -7130,8 +7227,8 @@ function () {
 
   }, {
     key: "isBoolean",
-    value: function isBoolean(boolean) {
-      return Util.isType(boolean, "boolean");
+    value: function isBoolean(_boolean8) {
+      return Util.isType(_boolean8, "boolean");
     }
     /**
      * Checks is a given parameter a string.
@@ -7203,8 +7300,8 @@ function () {
         throw "callback not fuction";
       }
 
-      for (var _len4 = arguments.length, params = new Array(_len4 > 2 ? _len4 - 2 : 0), _key4 = 2; _key4 < _len4; _key4++) {
-        params[_key4 - 2] = arguments[_key4];
+      for (var _len7 = arguments.length, params = new Array(_len7 > 2 ? _len7 - 2 : 0), _key7 = 2; _key7 < _len7; _key7++) {
+        params[_key7 - 2] = arguments[_key7];
       }
 
       return window.setTimeout(callback, milliseconds, params);
@@ -7234,8 +7331,8 @@ function () {
         throw "callback not fuction";
       }
 
-      for (var _len5 = arguments.length, params = new Array(_len5 > 2 ? _len5 - 2 : 0), _key5 = 2; _key5 < _len5; _key5++) {
-        params[_key5 - 2] = arguments[_key5];
+      for (var _len8 = arguments.length, params = new Array(_len8 > 2 ? _len8 - 2 : 0), _key8 = 2; _key8 < _len8; _key8++) {
+        params[_key8 - 2] = arguments[_key8];
       }
 
       return window.setInterval(callback, milliseconds, params);
