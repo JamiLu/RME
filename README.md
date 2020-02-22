@@ -11,9 +11,9 @@ Links
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.5.5/rme.js](https://github.com/JamiLu/RME/releases/download/v1.5.5/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.5.5/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.5.5/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.5.5/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.5.5/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.7/rme.js](https://github.com/JamiLu/RME/releases/download/v1.5.7/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.7/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.5.7/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.7/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.5.7/rme.es5.min.js)
 
 NPM
 ---
@@ -25,10 +25,13 @@ On an appropriate js file import what is needed. Possible imports below:
 
 ```
 import RME, { 
-    App,
+    configure,
+    createApp,
+    useState,
     Component,
     bindState,
     CSS,
+    App,
     Elem,
     Tree,
     Template,
@@ -58,13 +61,13 @@ Basics
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.5.5/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.5.7/rme.es5.min.js"></script>`
 
 __Or use NPM__
 
 `npm i rme.js`
 
-`import RME, { App, Component, bindState } from 'rme.js'`
+`import RME, { App, Component, bindState, Key } from 'rme.js'`
 
 Then simply copy paste code clips below to your js file and voilà. 
 

@@ -3,6 +3,7 @@ import Util from '../util';
 import RMEElemRenderer from './renderer';
 import Template from '../template';
 import Tree from '../tree';
+import { debug } from 'util';
 
 let App = (function() {
 
@@ -237,7 +238,7 @@ let App = (function() {
                     Util.clearTimeout(this.refreshQueue);
 
                 this.refreshQueue = Util.setTimeout(() => {
-                    let freshStage = Template.isTemplate(this.rawStage) ? Template.resolve(this.rawStage) : this.rawStage;
+                    let freshStage = Template.isTemplate(this.rawStage) ? Template.resolve(this.rawStage) : this.rawStage.duplicate();
     
                     if (!Util.isEmpty(this.router)) {
                         let state = this.router.getCurrentState();
@@ -256,7 +257,7 @@ let App = (function() {
                             if (!Util.isEmpty(state.onAfter)) this.afterRefreshCallQueue.push(state.onAfter);
                         }
                     }
-    
+
                     if (this.oldStage.toString() !== freshStage.toString()) {
                         this.oldStage = this.renderer.merge(this.oldStage, freshStage);
                     }
@@ -282,15 +283,18 @@ let App = (function() {
          * If only one parameter is given then the parameter must be an object or a function. 
          * The object should define a component name and its values as follows. ({refName: {key: val, key: val}}) and
          * the function should return a object describing the component respectively.
+         * 
          * If two parameters are given then the first parameter is a component name
          * and the value parameter should describe the component state object as follows. (refName, {key: val, key: val}).
          * The value parameter may also be a function that returns the component state object respectively.
+         * 
          * The last parameter update is a boolean value that only if explicitly set to false then the app is not updated
          * after setting the state has occured.
+         * 
          * This function will store the state into this application instance state. 
-         * @param {*} refName 
-         * @param {*} value 
-         * @param {boolean} update
+         * @param {*} refName stateRef.
+         * @param {*} value new state to set.
+         * @param {boolean} update if set to false rerender wont happen after set state.
          */
         setState(refName, value, update) {
             if (Util.isString(refName) && Util.isFunction(value)) {

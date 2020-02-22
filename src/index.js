@@ -1,5 +1,5 @@
-import RME from './rme';
-import App from './app';
+import RME, { configure } from './rme';
+import App, { createApp, useState } from './app';
 import Component, { bindState } from './component';
 import CSS from './css';
 import Elem from './elem';
@@ -18,10 +18,13 @@ import Util from './util';
 
 export default RME;
 export {
-    App,
+    configure,
+    createApp,
+    useState,
     Component,
     bindState,
     CSS,
+    App,
     Elem,
     Tree,
     Template,
