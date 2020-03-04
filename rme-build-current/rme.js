@@ -1040,6 +1040,9 @@ class Browser {
 
 
 
+
+
+
 /**
  * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
  * instance might have not been created at the time when components are created so the queue will wait 
@@ -1180,9 +1183,6 @@ const bindState = (function() {
     })
 
 })();
-
-
-
 
 
 
@@ -3087,6 +3087,80 @@ let Elem = (function() {
 }());
 
 
+
+const EventPipe = (function() {
+
+    /**
+     * EventPipe class can be used to multicast and send custom events to registered listeners.
+     * Each event in an event queue will be sent to each registerd listener.
+     */
+    class EventPipe {
+        constructor() {
+            this.eventsQueue = [];
+            this.callQueue = [];
+            this.loopTimeout;
+        }
+
+        containsEvent() {
+            return this.eventsQueue.find(ev => ev.type === event.type);
+        }
+
+        /**
+         * Function sends an event object though the EventPipe. The event must have a type attribute
+         * defined otherwise an error is thrown. 
+         * Example defintion of the event object. 
+         * { 
+         *   type: 'some event',
+         *   ...payload
+         * }
+         * If an event listener is defined the sent event will be received on the event listener.
+         * @param {object} event 
+         */
+        send(event) {
+            if (Util.isEmpty(event.type))
+                throw new Error('Event must have type attribute.');
+            
+            if (!this.containsEvent())
+                this.eventsQueue.push(event);
+
+            this.loopEvents();
+        }
+
+        loopEvents() {
+            if (this.loopTimeout)
+                Util.clearTimeout(this.loopTimeout);
+
+            this.loopTimeout = Util.setTimeout(() => {
+                this.callQueue.forEach(eventCallback => 
+                    this.eventsQueue.forEach(ev => eventCallback(ev)));
+
+                this.eventsQueue = [];
+                this.callQueue = [];
+            });
+        }
+
+        /**
+         * Function registers an event listener function that receives an event sent through the
+         * EventPipe. Each listener will receive each event that are in an event queue. The listener
+         * function receives the event as a parameter.
+         * @param {function} eventCallback 
+         */
+        receive(eventCallback) {
+            this.callQueue.push(eventCallback);
+        }
+
+    }
+
+    const eventPipe = new EventPipe();
+
+    return {
+        send: eventPipe.send.bind(eventPipe),
+        receive: eventPipe.receive.bind(eventPipe)
+    }
+
+})();
+
+
 /**
  * RMEElemTemplater class is able to create a Template out of an Elem object.
  */
@@ -3432,80 +3506,6 @@ class RMEElemTemplater {
         return this.instance;
     }
 }
-
-
-
-const EventPipe = (function() {
-
-    /**
-     * EventPipe class can be used to multicast and send custom events to registered listeners.
-     * Each event in an event queue will be sent to each registerd listener.
-     */
-    class EventPipe {
-        constructor() {
-            this.eventsQueue = [];
-            this.callQueue = [];
-            this.loopTimeout;
-        }
-
-        containsEvent() {
-            return this.eventsQueue.find(ev => ev.type === event.type);
-        }
-
-        /**
-         * Function sends an event object though the EventPipe. The event must have a type attribute
-         * defined otherwise an error is thrown. 
-         * Example defintion of the event object. 
-         * { 
-         *   type: 'some event',
-         *   ...payload
-         * }
-         * If an event listener is defined the sent event will be received on the event listener.
-         * @param {object} event 
-         */
-        send(event) {
-            if (Util.isEmpty(event.type))
-                throw new Error('Event must have type attribute.');
-            
-            if (!this.containsEvent())
-                this.eventsQueue.push(event);
-
-            this.loopEvents();
-        }
-
-        loopEvents() {
-            if (this.loopTimeout)
-                Util.clearTimeout(this.loopTimeout);
-
-            this.loopTimeout = Util.setTimeout(() => {
-                this.callQueue.forEach(eventCallback => 
-                    this.eventsQueue.forEach(ev => eventCallback(ev)));
-
-                this.eventsQueue = [];
-                this.callQueue = [];
-            });
-        }
-
-        /**
-         * Function registers an event listener function that receives an event sent through the
-         * EventPipe. Each listener will receive each event that are in an event queue. The listener
-         * function receives the event as a parameter.
-         * @param {function} eventCallback 
-         */
-        receive(eventCallback) {
-            this.callQueue.push(eventCallback);
-        }
-
-    }
-
-    const eventPipe = new EventPipe();
-
-    return {
-        send: eventPipe.send.bind(eventPipe),
-        receive: eventPipe.receive.bind(eventPipe)
-    }
-
-})();
 
 
 
@@ -4612,41 +4612,6 @@ let RME = (function() {
 }());
 
 
-/**
- * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
- */
-class Session {
-    /**
-     * Save data into the Session.
-     * @param {string} key
-     * @param {*} value
-     */
-    static set(key, value) {
-        sessionStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the Session.
-     * @param {string} key
-     */
-    static get(key) {
-        return sessionStorage.getItem(key);
-    }
-    /**
-     * Remove data from the Session.
-     * @param {string} key
-     */
-    static remove(key) {
-        sessionStorage.removeItem(key);
-    }
-    /**
-     * Clears the Session.
-     */
-    static clear() {
-        sessionStorage.clear();
-    }
-}
-
-
 
 let Router = (function() {
     /**
@@ -5116,6 +5081,41 @@ let Router = (function() {
 
 
 /**
+ * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
+ */
+class Session {
+    /**
+     * Save data into the Session.
+     * @param {string} key
+     * @param {*} value
+     */
+    static set(key, value) {
+        sessionStorage.setItem(key, value);
+    }
+    /**
+     * Get the saved data from the Session.
+     * @param {string} key
+     */
+    static get(key) {
+        return sessionStorage.getItem(key);
+    }
+    /**
+     * Remove data from the Session.
+     * @param {string} key
+     */
+    static remove(key) {
+        sessionStorage.removeItem(key);
+    }
+    /**
+     * Clears the Session.
+     */
+    static clear() {
+        sessionStorage.clear();
+    }
+}
+
+
+/**
  * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
  */
 class Storage {
@@ -5148,6 +5148,7 @@ class Storage {
         localStorage.clear();
     }
 }
+
 
 
 
@@ -5192,11 +5193,7 @@ let Template = (function() {
                 if (template.hasOwnProperty(obj)) {
                     if (round === 0) {
                         this.root = this.resolveElement(obj, template[obj]);
-                        if (Template.isAttr(obj, this.root)) {
-                            this.resolveAttributes(this.root, obj, this.resolveFunctionBasedAttribute(template[obj]))
-                        } else if (this.isEventKeyVal(obj, template[obj])) {
-                            this.bindEventToElement(this.root, template[obj], this.root[obj]);
-                        } else if (this.isArray(template[obj])) {
+                        if (this.isArray(template[obj])) {
                             ++round;
                             this.resolveArray(template[obj], this.root, round);
                         } else if (!this.isComponent(obj) && Util.isObject(template[obj])) {
@@ -5208,6 +5205,10 @@ let Template = (function() {
                         } else if (Util.isFunction(template[obj])) {
                             ++round;
                             this.resolveFunction(this.root, template[obj], round);
+                        } else if (Template.isAttr(obj, this.root)) {
+                            this.resolveAttributes(this.root, obj, this.resolveFunctionBasedAttribute(template[obj]))
+                        } else if (this.isEventKeyVal(obj, template[obj])) {
+                            this.bindEventToElement(this.root, template[obj], this.root[obj]);
                         }
                     } else {
                         if (Template.isAttr(obj, parent)) {
@@ -5455,10 +5456,10 @@ let Template = (function() {
                     elem.setId(val);
                     break;
                 case 'class':
-                    elem.addClasses(val);
+                    elem.addClasses(val || '');
                     break;
                 case 'text':
-                    elem.setText(val);
+                    elem.setText(val || '');
                     break;
                 case 'content':
                     this.resolveContent(elem, key, val);
@@ -5829,7 +5830,6 @@ let Template = (function() {
         resolveToParent: Template.resolveToParent
     }
 }());
-
 
 
 /**
