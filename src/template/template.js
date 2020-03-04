@@ -44,11 +44,7 @@ let Template = (function() {
                 if (template.hasOwnProperty(obj)) {
                     if (round === 0) {
                         this.root = this.resolveElement(obj, template[obj]);
-                        if (Template.isAttr(obj, this.root)) {
-                            this.resolveAttributes(this.root, obj, this.resolveFunctionBasedAttribute(template[obj]))
-                        } else if (this.isEventKeyVal(obj, template[obj])) {
-                            this.bindEventToElement(this.root, template[obj], this.root[obj]);
-                        } else if (this.isArray(template[obj])) {
+                        if (this.isArray(template[obj])) {
                             ++round;
                             this.resolveArray(template[obj], this.root, round);
                         } else if (!this.isComponent(obj) && Util.isObject(template[obj])) {
@@ -60,6 +56,10 @@ let Template = (function() {
                         } else if (Util.isFunction(template[obj])) {
                             ++round;
                             this.resolveFunction(this.root, template[obj], round);
+                        } else if (Template.isAttr(obj, this.root)) {
+                            this.resolveAttributes(this.root, obj, this.resolveFunctionBasedAttribute(template[obj]))
+                        } else if (this.isEventKeyVal(obj, template[obj])) {
+                            this.bindEventToElement(this.root, template[obj], this.root[obj]);
                         }
                     } else {
                         if (Template.isAttr(obj, parent)) {
@@ -307,10 +307,10 @@ let Template = (function() {
                     elem.setId(val);
                     break;
                 case 'class':
-                    elem.addClasses(val);
+                    elem.addClasses(val || '');
                     break;
                 case 'text':
-                    elem.setText(val);
+                    elem.setText(val || '');
                     break;
                 case 'content':
                     this.resolveContent(elem, key, val);
