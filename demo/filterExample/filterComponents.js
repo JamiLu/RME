@@ -1,4 +1,4 @@
-import RME, { App, Component, bindState } from '../../src/index';
+import RME, { Component, bindState, useState } from '../../src/index';
 
 RME.storage('countryList', [
     {country: 'Finland', capital: 'Helsinki'}, {country: 'Sweden', capital: 'Stockholm'}, {country: 'Norway', capital: 'Oslo'},
@@ -11,7 +11,7 @@ const FilterExample = props => ({
         h2: 'Filter Example',
         'input[type=text][placeholder=Type to Filter Country]': {
             onInput: event => 
-                App.setState(props.stateRef, {
+                useState(props.stateRef, {
                     rows: RME.storage('countryList')
                         .filter(row => row.country.toLowerCase().search(event.target.value) > -1)
                 })

@@ -1,4 +1,4 @@
-import { App, Component, bindState } from '../../src/index';
+import { Component, bindState, useState } from '../../src/index';
 
 const FormExample = props => ({
     fragment: {
@@ -6,7 +6,7 @@ const FormExample = props => ({
         TitleHeader: props,
         Form: {
             input: event => {
-                App.setState(props.stateRef, state => ({
+                useState(props.stateRef, state => ({
                     ...state,
                     [event.target.name]: event.target.value
                 }));

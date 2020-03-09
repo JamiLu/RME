@@ -1,4 +1,4 @@
-import { App, Key, Component, bindState } from '../../src/index';
+import { App, Key, Component, bindState, useState } from '../../src/index';
 
 const TodoExample = props => ({
     fragment: {
@@ -6,9 +6,9 @@ const TodoExample = props => ({
         'input[type=text][placeholder=Type & Press Enter to Add]': {
             onKeyDown: event => {
                 if(event.key === Key.ENTER) {
-                    App.mergeState(props.stateRef, {
-                        list: {li: event.target.value}
-                    });
+                    useState(props.stateRef, state => ({
+                        list: state.list.concat({li: event.target.value})
+                    }));
                     event.target.value = '';
                 }
             }
