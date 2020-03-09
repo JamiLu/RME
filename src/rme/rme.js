@@ -239,16 +239,20 @@ let RME = (function() {
         }
 
         static addScript(elem) {
-            let scripts = Tree.getScripts();
-            let lastScript = scripts[scripts.length -1];
-            lastScript.after(elem);
+            let scripts = Tree.getHead().getByTag('script');
+            if (scripts.length > 0) {
+                let lastScript = scripts[scripts.length -1];
+                lastScript.after(elem);
+            } else {
+                Tree.getHead().append(elem);
+            }
         }
 
         static removeScript(sourceOrId) {
             if(sourceOrId.indexOf("#") === 0) {
                 Tree.getHead().remove(Tree.get(sourceOrId));
             } else {
-                let scripts = Tree.getScripts();
+                let scripts = Tree.getHead().getByTag('script');
                 for(let s in scripts) {
                     if(scripts.hasOwnProperty(s)) {
                         let src = !Util.isEmpty(scripts[s].getSource()) ? scripts[s].getSource() : "";
