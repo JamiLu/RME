@@ -1,52 +1,42 @@
 import updateCalculator from '../actions/calculatorAction';
 
-RME.component({ keyPadButton: (props) => ({
-        // class: props.class ? props.class : '',
+const keyPadButton = props => ({
     'button.w3-button.w3-jumbo.keypad-button': {
         text: props.text,
         styles: props.styles,
         class: props.class ? props.class : '',
-        onClick: (event) => {
-            let elem = Elem.wrap(event.target);
-            // Util.setTimeout(() => {
-            //     elem.addClasses('animated jello');
-            //     elem.onAnimationEnd((event) => {
-            //         console.log('anim ended');
-            //         elem.removeClasses('animated jello');
-            //     });
-            // });
-
-            let state = App.getState('calculator');
+        onClick: () => {
+            let state = useState('Calculator');
             switch(props.text) {
                 case 'C':
                     updateCalculator({result: '', statement: ''});
                 break;
                 case '=':
-                    updateCalculator({result: eval(state.statement), statement: state.statement+'='});
+                    updateCalculator({result: eval(state.statement), statement: state.statement+' = '});
                 break;
                 default:
-                    updateCalculator({statement: state.statement+props.text})
+                    updateCalculator({statement: state.statement+props.text});
             }
         }
     }
-})});
+});
 
-RME.component({ operationButton: (props) => ({
+const operationButton = props => ({
     keyPadButton: {
         text: props.text,
         styles: props.styles ? props.styles : undefined,
         class: props.class ? props.class : 'w3-pale-blue'
     }
-})});
+});
 
-RME.component({ numberButton: (props) => ({
+const numberButton = props => ({
     keyPadButton: {
         text: props.text,
         class: 'w3-light-gray'
     }
-})});
+});
 
-RME.component({ keyPad: (props) => ({
+const KeyPad = props => ({
     table: props.rows.map(row => ({
         tr: [
             {td: row.col1},
@@ -55,4 +45,6 @@ RME.component({ keyPad: (props) => ({
             {td: row.col4}
         ]
     }))
-})});
+});
+
+Component(keyPadButton, operationButton, numberButton, KeyPad);

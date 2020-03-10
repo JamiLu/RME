@@ -1,5 +1,5 @@
-const updateCalculator = (state) => {
-    App.setState('calculator', state);
+const updateCalculator = state => {
+    useState('Calculator', state);
 }
 
 export default updateCalculator;

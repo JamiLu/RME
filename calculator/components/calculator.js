@@ -1,13 +1,14 @@
 import './keypad';
 import './screen';
 
-App.component({ calculator: (props) => ({
+const Calculator = props => ({
     div: [
-        {resultScreen: {
-            result: props.result,
-            statement: props.statement
+        {ResultScreen: {
+            statement: props.statement,
+            result: props.result
         }},
-        {keyPad: {
+        {KeyPad: {
+            calculatorRef: props.stateRef,
             rows: [
                 {
                     col1: {operationButton: {text: '/'}},
@@ -41,67 +42,7 @@ App.component({ calculator: (props) => ({
                 }
             ]
         }}
-        // {'div.button-row': [
-        //     {operationButton: {
-        //         text: '/'
-        //     }},
-        //     {operationButton: {
-        //         text: '*'
-        //     }},
-        //     {operationButton: {
-        //         text: '-'
-        //     }},
-        //     {operationButton: {
-        //         text: '+'
-        //     }},
-        // // ]},
-        // // {'div.button-row': [
-        //     {numberButton: {
-        //         text: 7
-        //     }},
-        //     {numberButton: {
-        //         text: 8
-        //     }},
-        //     {numberButton: {
-        //         text: 9
-        //     }},
-        //     {operationButton: {
-        //         text: 'C',
-        //         class: 'w3-pale-red',
-        //         // styles: {height: 300+'px'}
-        //     }},
-        // // ]},
-        // // {'div.button-row': [
-        //     {numberButton: {
-        //         text: 4
-        //     }},
-        //     {numberButton: {
-        //         text: 5
-        //     }},
-        //     {numberButton: {
-        //         text: 6
-        //     }},
-        // // ]},
-        // // {'div.button-row': [
-        //     {numberButton: {
-        //         text: 1
-        //     }},
-        //     {numberButton: {
-        //         text: 2
-        //     }},
-        //     {numberButton: {
-        //         text: 3
-        //     }},
-        // // ]},
-        // // {'div.button-row': [
-        //     {numberButton: {
-        //         text: 0
-        //     }},
-        //     {operationButton: {
-        //         text: '=',
-        //         // styles: {width: 300+'px'},
-        //         class: 'w3-pale-green'
-        //     }}
-        // ]},
     ]
-})})();
+});
+
+Component(bindState(Calculator, {statement: '', result: ''}));
