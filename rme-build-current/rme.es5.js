@@ -1203,6 +1203,153 @@ function () {
 
   return Browser;
 }();
+
+var Cookie = function () {
+  /**
+   * Cookie interface offers an easy way to get, set or remove cookies in application logic.
+   * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
+   * 
+   * {
+   *    name: "name",
+   *    value: "value",
+   *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+   *    cookiePath: "cookiePath absolute dir",
+   *    cookieDomain: "cookieDomain e.g example.com",
+   *    setSecureBoolean: true|false
+   * }
+   * 
+   * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+   * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+   */
+  var Cookie =
+  /*#__PURE__*/
+  function () {
+    function Cookie() {
+      _classCallCheck(this, Cookie);
+    }
+
+    _createClass(Cookie, null, [{
+      key: "get",
+
+      /**
+       * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
+       * 
+       * @param {String} name 
+       * @returns cookie object
+       */
+      value: function get(name) {
+        if (navigator.cookieEnabled) {
+          var retCookie = null;
+          var cookies = document.cookie.split(";");
+          var i = 0;
+
+          while (i < cookies.length) {
+            var cookie = cookies[i];
+            var eq = cookie.search("=");
+            var cn = cookie.substr(0, eq).trim();
+            var cv = cookie.substr(eq + 1, cookie.length).trim();
+
+            if (cn === name) {
+              retCookie = new CookieInstance(cn, cv);
+              break;
+            }
+
+            i++;
+          }
+
+          return retCookie;
+        }
+      }
+      /**
+       * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
+       * 
+       * @param {string} name
+       * @param {string} value
+       * @param {string} expiresDate
+       * @param {string} cookiePath
+       * @param {string} cookieDomain
+       * @param {boolean} setSecureBoolean
+       */
+
+    }, {
+      key: "set",
+      value: function set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+        if (navigator.cookieEnabled) {
+          document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
+        }
+      }
+      /**
+       * Remove a cookie by name. Method will set the cookie expired and then remove it.
+       * @param {string} name
+       */
+
+    }, {
+      key: "remove",
+      value: function remove(name) {
+        var co = Cookie.get(name);
+
+        if (!Util.isEmpty(co)) {
+          co.setExpired();
+          document.cookie = co.toString();
+        }
+      }
+    }]);
+
+    return Cookie;
+  }();
+  /**
+   * Cookie object may hold following values:
+   *
+   * {
+   *    name: "name",
+   *    value: "value",
+   *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+   *    cookiePath: "cookiePath absolute dir",
+   *    cookieDomain: "cookieDomain e.g example.com",
+   *    setSecureBoolean: true|false
+   * }
+   * 
+   * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+   * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+   */
+
+
+  var CookieInstance =
+  /*#__PURE__*/
+  function () {
+    function CookieInstance(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+      _classCallCheck(this, CookieInstance);
+
+      this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
+      this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
+      this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
+      this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
+      this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
+      this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
+    }
+
+    _createClass(CookieInstance, [{
+      key: "setExpired",
+      value: function setExpired() {
+        this.cookieExpires = new Date(1970, 0, 1).toString();
+      }
+    }, {
+      key: "toString",
+      value: function toString() {
+        return this.cookieName + "=" + this.cookieValue + "; expires=" + this.cookieExpires + "; path=" + this.cookiePath + "; domain=" + this.cookieDomain + "; " + this.cookieSecurity;
+      }
+    }], [{
+      key: "create",
+      value: function create(name, value, expires, cpath, cdomain, setSecure) {
+        return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
+      }
+    }]);
+
+    return CookieInstance;
+  }();
+
+  return Cookie;
+}();
 /**
  * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
  * instance might have not been created at the time when components are created so the queue will wait 
@@ -1420,678 +1567,6 @@ var CSS = function () {
         style.setContent(prevContent + content);
       }
     }
-  };
-}();
-
-var Cookie = function () {
-  /**
-   * Cookie interface offers an easy way to get, set or remove cookies in application logic.
-   * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
-   * 
-   * {
-   *    name: "name",
-   *    value: "value",
-   *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-   *    cookiePath: "cookiePath absolute dir",
-   *    cookieDomain: "cookieDomain e.g example.com",
-   *    setSecureBoolean: true|false
-   * }
-   * 
-   * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-   * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-   */
-  var Cookie =
-  /*#__PURE__*/
-  function () {
-    function Cookie() {
-      _classCallCheck(this, Cookie);
-    }
-
-    _createClass(Cookie, null, [{
-      key: "get",
-
-      /**
-       * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
-       * 
-       * @param {String} name 
-       * @returns cookie object
-       */
-      value: function get(name) {
-        if (navigator.cookieEnabled) {
-          var retCookie = null;
-          var cookies = document.cookie.split(";");
-          var i = 0;
-
-          while (i < cookies.length) {
-            var cookie = cookies[i];
-            var eq = cookie.search("=");
-            var cn = cookie.substr(0, eq).trim();
-            var cv = cookie.substr(eq + 1, cookie.length).trim();
-
-            if (cn === name) {
-              retCookie = new CookieInstance(cn, cv);
-              break;
-            }
-
-            i++;
-          }
-
-          return retCookie;
-        }
-      }
-      /**
-       * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
-       * 
-       * @param {string} name
-       * @param {string} value
-       * @param {string} expiresDate
-       * @param {string} cookiePath
-       * @param {string} cookieDomain
-       * @param {boolean} setSecureBoolean
-       */
-
-    }, {
-      key: "set",
-      value: function set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-        if (navigator.cookieEnabled) {
-          document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
-        }
-      }
-      /**
-       * Remove a cookie by name. Method will set the cookie expired and then remove it.
-       * @param {string} name
-       */
-
-    }, {
-      key: "remove",
-      value: function remove(name) {
-        var co = Cookie.get(name);
-
-        if (!Util.isEmpty(co)) {
-          co.setExpired();
-          document.cookie = co.toString();
-        }
-      }
-    }]);
-
-    return Cookie;
-  }();
-  /**
-   * Cookie object may hold following values:
-   *
-   * {
-   *    name: "name",
-   *    value: "value",
-   *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-   *    cookiePath: "cookiePath absolute dir",
-   *    cookieDomain: "cookieDomain e.g example.com",
-   *    setSecureBoolean: true|false
-   * }
-   * 
-   * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-   * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-   */
-
-
-  var CookieInstance =
-  /*#__PURE__*/
-  function () {
-    function CookieInstance(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-      _classCallCheck(this, CookieInstance);
-
-      this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
-      this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
-      this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
-      this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
-      this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
-      this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
-    }
-
-    _createClass(CookieInstance, [{
-      key: "setExpired",
-      value: function setExpired() {
-        this.cookieExpires = new Date(1970, 0, 1).toString();
-      }
-    }, {
-      key: "toString",
-      value: function toString() {
-        return this.cookieName + "=" + this.cookieValue + "; expires=" + this.cookieExpires + "; path=" + this.cookiePath + "; domain=" + this.cookieDomain + "; " + this.cookieSecurity;
-      }
-    }], [{
-      key: "create",
-      value: function create(name, value, expires, cpath, cdomain, setSecure) {
-        return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
-      }
-    }]);
-
-    return CookieInstance;
-  }();
-
-  return Cookie;
-}();
-/**
- * RMEElemTemplater class is able to create a Template out of an Elem object.
- */
-
-
-var RMEElemTemplater =
-/*#__PURE__*/
-function () {
-  function RMEElemTemplater() {
-    _classCallCheck(this, RMEElemTemplater);
-
-    this.instance;
-    this.template = {};
-    this.deep = true;
-  }
-
-  _createClass(RMEElemTemplater, [{
-    key: "toTemplate",
-    value: function toTemplate(elem, deep) {
-      if (!Util.isEmpty(deep)) this.deep = deep;
-      this.resolve(elem, this.template);
-      return this.template;
-    }
-    /**
-     * Function is called recursively and resolves an Elem object and its children in recursion
-     * @param {object} elem 
-     * @param {object} parent 
-     */
-
-  }, {
-    key: "resolve",
-    value: function resolve(elem, parent) {
-      var resolved = this.resolveElem(elem, this.resolveProps(elem));
-
-      for (var p in parent) {
-        if (parent.hasOwnProperty(p)) {
-          if (Util.isArray(parent[p]._rme_type_)) parent[p]._rme_type_.push(resolved);else this.extendMap(parent[p], resolved);
-        }
-      }
-
-      var i = 0;
-      var children = Util.isArray(elem.getChildren()) ? elem.getChildren() : [elem.getChildren()];
-
-      if (children && this.deep) {
-        while (i < children.length) {
-          this.resolve(children[i], resolved);
-          i++;
-        }
-      }
-
-      this.template = resolved;
-    }
-  }, {
-    key: "extendMap",
-    value: function extendMap(map, next) {
-      for (var v in next) {
-        if (next.hasOwnProperty(v)) {
-          map[v] = next[v];
-        }
-      }
-    }
-    /**
-     * Function will attach given properties into a given Elem and returns the resolved Elem.
-     * @param {object} elem 
-     * @param {object} props 
-     * @returns The resolved elem with attached properties.
-     */
-
-  }, {
-    key: "resolveElem",
-    value: function resolveElem(elem, props) {
-      var el = {};
-      var children = elem.getChildren();
-
-      if (Util.isArray(children) && children.length > 1) {
-        var elTag = elem.getTagName().toLowerCase();
-        var elName = this.resolveId(elTag, props);
-        elName = this.resolveClass(elName, props);
-        elName = this.resolveAttrs(elName, props);
-        el[elName] = {
-          _rme_type_: [],
-          _rme_props_: props
-        };
-      } else {
-        el[elem.getTagName().toLowerCase()] = props;
-      }
-
-      return el;
-    }
-    /**
-     * Function will place an ID attribute into an element tag if the ID attribute is found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with the ID or without.
-     */
-
-  }, {
-    key: "resolveId",
-    value: function resolveId(tag, props) {
-      if (props.id) return tag + "#" + props.id;else return tag;
-    }
-    /**
-     * Function will place a class attribute into an element tag if the class attribute is found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with the classes or without.
-     */
-
-  }, {
-    key: "resolveClass",
-    value: function resolveClass(tag, props) {
-      if (props["class"]) return tag + "." + props["class"].replace(/ /g, ".");else return tag;
-    }
-    /**
-     * Function will resolve all other attributes and place them into an element tag if other attributes are found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with other attributes or without.
-     */
-
-  }, {
-    key: "resolveAttrs",
-    value: function resolveAttrs(tag, props) {
-      var tagName = tag;
-
-      for (var p in props) {
-        if (props.hasOwnProperty(p) && p !== 'id' && p !== 'class' && p.indexOf('on') !== 0) {
-          tagName += "[".concat(p, "=").concat(props[p], "]");
-        }
-      }
-
-      return tagName;
-    }
-    /**
-     * Resolves a given Elem object and returns its properties in an object.
-     * @param {object} elem 
-     * @returns The properties object of the given element.
-     */
-
-  }, {
-    key: "resolveProps",
-    value: function resolveProps(elem) {
-      var props = {};
-      var attributes = elem.dom().attributes;
-      var a = 0;
-
-      if (attributes) {
-        while (a < attributes.length) {
-          props[this.resolveAttributeNames(attributes[a].name)] = attributes[a].value;
-          a++;
-        }
-      }
-
-      if (elem.dom().hasChildNodes() && elem.dom().childNodes[0].nodeType === 3) {
-        props["text"] = elem.getText();
-      }
-
-      for (var p in elem.dom()) {
-        if (p.indexOf("on") !== 0 || Util.isEmpty(elem.dom()[p])) continue;else props[this.resolveListeners(p)] = elem.dom()[p];
-      }
-
-      return props;
-    }
-    /**
-     * Resolves html data-* attributes by removing '-' and setting the next character to uppercase. If the attribute is not 
-     * data-* attribute then it is directly returned.
-     * @param {string} attrName 
-     * @returns Resolved attribute name.
-     */
-
-  }, {
-    key: "resolveAttributeNames",
-    value: function resolveAttributeNames(attrName) {
-      if (attrName.indexOf("data" === 0 && attrName.length > "data".length)) {
-        while (attrName.search("-") > -1) {
-          attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search("-") + 1).toUpperCase());
-        }
-
-        return attrName;
-      } else {
-        return attrName;
-      }
-    }
-  }, {
-    key: "resolveListeners",
-    value: function resolveListeners(name) {
-      switch (name) {
-        case "onanimationstart":
-          return "onAnimationStart";
-
-        case "onanimationiteration":
-          return "onAnimationIteration";
-
-        case "onanimationend":
-          return "onAnimationEnd";
-
-        case "ontransitionend":
-          return "onTransitionEnd";
-
-        case "ondrag":
-          return "onDrag";
-
-        case "ondragend":
-          return "onDragEnd";
-
-        case "ondragenter":
-          return "onDragEnter";
-
-        case "ondragover":
-          return "onDragOver";
-
-        case "ondragstart":
-          return "onDragStart";
-
-        case "ondrop":
-          return "onDrop";
-
-        case "onclick":
-          return "onClick";
-
-        case "ondblclick":
-          return "onDoubleClick";
-
-        case "oncontextmenu":
-          return "onContextMenu";
-
-        case "onmousedown":
-          return "onMouseDown";
-
-        case "onmouseenter":
-          return "onMouseEnter";
-
-        case "onmouseleave":
-          return "onMouseLeave";
-
-        case "onmousemove":
-          return "onMouseMove";
-
-        case "onmouseover":
-          return "onMouseOver";
-
-        case "onmouseout":
-          return "onMouseOut";
-
-        case "onmouseup":
-          return "onMouseUp";
-
-        case "onwheel":
-          return "onWheel";
-
-        case "onscroll":
-          return "onScroll";
-
-        case "onresize":
-          return "onResize";
-
-        case "onerror":
-          return "onError";
-
-        case "onload":
-          return "onLoad";
-
-        case "onunload":
-          return "onUnload";
-
-        case "onbeforeunload":
-          return "onBeforeUnload";
-
-        case "onkeyup":
-          return "onKeyUp";
-
-        case "onkeydown":
-          return "onKeyDown";
-
-        case "onkeypress":
-          return "onKeyPress";
-
-        case "oninput":
-          return "onInput";
-
-        case "onchange":
-          return "onChange";
-
-        case "onsubmit":
-          return "onSubmit";
-
-        case "onselect":
-          return "onSelect";
-
-        case "onreset":
-          return "onReset";
-
-        case "onfocus":
-          return "onFocus";
-
-        case "onfocusin":
-          return "onFocusIn";
-
-        case "onfocusout":
-          return "onFocusOut";
-
-        case "onblur":
-          return "onBlur";
-
-        case "oncopy":
-          return "onCopy";
-
-        case "oncut":
-          return "onCut";
-
-        case "onpaste":
-          return "onPaste";
-
-        case "onabort":
-          return "onAbort";
-
-        case "onwaiting":
-          return "onWaiting";
-
-        case "onvolumechange":
-          return "onVolumeChange";
-
-        case "ontimeupdate":
-          return "onTimeUpdate";
-
-        case "onseeking":
-          return "onSeeking";
-
-        case "onseekend":
-          return "onSeekEnd";
-
-        case "onratechange":
-          return "onRateChange";
-
-        case "onprogress":
-          return "onProgress";
-
-        case "onloadmetadata":
-          return "onLoadMetadata";
-
-        case "onloadeddata":
-          return "onLoadedData";
-
-        case "onloadstart":
-          return "onLoadStart";
-
-        case "onplaying":
-          return "onPlaying";
-
-        case "onplay":
-          return "onPlay";
-
-        case "onpause":
-          return "onPause";
-
-        case "onended":
-          return "onEnded";
-
-        case "ondurationchange":
-          return "onDurationChange";
-
-        case "oncanplay":
-          return "onCanPlay";
-
-        case "oncanplaythrough":
-          return "onCanPlayThrough";
-
-        case "onstalled":
-          return "onStalled";
-
-        case "onsuspend":
-          return "onSuspend";
-
-        case "onpopstate":
-          return "onPopState";
-
-        case "onstorage":
-          return "onStorage";
-
-        case "onhashchange":
-          return "onHashChange";
-
-        case "onafterprint":
-          return "onAfterPrint";
-
-        case "onbeforeprint":
-          return "onBeforePrint";
-
-        case "onpagehide":
-          return "onPageHide";
-
-        case "onpageshow":
-          return "onPageShow";
-      }
-    }
-  }, {
-    key: "toLiteralString",
-    value: function toLiteralString(elem) {
-      var props = this.resolveProps(elem);
-      var string = this.resolveId(elem.getTagName().toLowerCase(), props);
-      string = this.resolveClass(string, props);
-      string = this.resolveAttrs(string, props);
-      return string;
-    }
-    /**
-     * Function by default resolves a given element and its' children and returns template representation of the element.
-     * @param {object} elem 
-     * @param {boolean} deep 
-     * @returns Template object representation of the Elem
-     */
-
-  }], [{
-    key: "toTemplate",
-    value: function toTemplate(elem, deep) {
-      return RMEElemTemplater.getInstance().toTemplate(elem, deep);
-    }
-    /**
-     * Function resolves and returns properties of a given Elem object.
-     * @param {object} elem 
-     * @returns The properties object of the given Elem.
-     */
-
-  }, {
-    key: "getElementProps",
-    value: function getElementProps(elem) {
-      return RMEElemTemplater.getInstance().resolveProps(elem);
-    }
-  }, {
-    key: "toLiteralString",
-    value: function toLiteralString(elem) {
-      return RMEElemTemplater.getInstance().toLiteralString(elem);
-    }
-  }, {
-    key: "getInstance",
-    value: function getInstance() {
-      if (!this.instance) this.instance = new RMEElemTemplater();
-      return this.instance;
-    }
-  }]);
-
-  return RMEElemTemplater;
-}();
-
-var EventPipe = function () {
-  /**
-   * EventPipe class can be used to multicast and send custom events to registered listeners.
-   * Each event in an event queue will be sent to each registerd listener.
-   */
-  var EventPipe =
-  /*#__PURE__*/
-  function () {
-    function EventPipe() {
-      _classCallCheck(this, EventPipe);
-
-      this.eventsQueue = [];
-      this.callQueue = [];
-      this.loopTimeout;
-    }
-
-    _createClass(EventPipe, [{
-      key: "containsEvent",
-      value: function containsEvent() {
-        return this.eventsQueue.find(function (ev) {
-          return ev.type === event.type;
-        });
-      }
-      /**
-       * Function sends an event object though the EventPipe. The event must have a type attribute
-       * defined otherwise an error is thrown. 
-       * Example defintion of the event object. 
-       * { 
-       *   type: 'some event',
-       *   ...payload
-       * }
-       * If an event listener is defined the sent event will be received on the event listener.
-       * @param {object} event 
-       */
-
-    }, {
-      key: "send",
-      value: function send(event) {
-        if (Util.isEmpty(event.type)) throw new Error('Event must have type attribute.');
-        if (!this.containsEvent()) this.eventsQueue.push(event);
-        this.loopEvents();
-      }
-    }, {
-      key: "loopEvents",
-      value: function loopEvents() {
-        var _this4 = this;
-
-        if (this.loopTimeout) Util.clearTimeout(this.loopTimeout);
-        this.loopTimeout = Util.setTimeout(function () {
-          _this4.callQueue.forEach(function (eventCallback) {
-            return _this4.eventsQueue.forEach(function (ev) {
-              return eventCallback(ev);
-            });
-          });
-
-          _this4.eventsQueue = [];
-          _this4.callQueue = [];
-        });
-      }
-      /**
-       * Function registers an event listener function that receives an event sent through the
-       * EventPipe. Each listener will receive each event that are in an event queue. The listener
-       * function receives the event as a parameter.
-       * @param {function} eventCallback 
-       */
-
-    }, {
-      key: "receive",
-      value: function receive(eventCallback) {
-        this.callQueue.push(eventCallback);
-      }
-    }]);
-
-    return EventPipe;
-  }();
-
-  var eventPipe = new EventPipe();
-  return {
-    send: eventPipe.send.bind(eventPipe),
-    receive: eventPipe.receive.bind(eventPipe)
   };
 }();
 
@@ -3075,10 +2550,10 @@ var Elem = function () {
     }, {
       key: "click",
       value: function click() {
-        var _this5 = this;
+        var _this4 = this;
 
         Util.setTimeout(function () {
-          return _this5.html.click();
+          return _this4.html.click();
         });
         return this;
       }
@@ -3090,10 +2565,10 @@ var Elem = function () {
     }, {
       key: "focus",
       value: function focus() {
-        var _this6 = this;
+        var _this5 = this;
 
         Util.setTimeout(function () {
-          return _this6.html.focus();
+          return _this5.html.focus();
         });
         return this;
       }
@@ -3105,10 +2580,10 @@ var Elem = function () {
     }, {
       key: "blur",
       value: function blur() {
-        var _this7 = this;
+        var _this6 = this;
 
         Util.setTimeout(function () {
-          return _this7.html.blur();
+          return _this6.html.blur();
         });
         return this;
       }
@@ -4159,6 +3634,531 @@ var Elem = function () {
   return Elem;
 }();
 /**
+ * RMEElemTemplater class is able to create a Template out of an Elem object.
+ */
+
+
+var RMEElemTemplater =
+/*#__PURE__*/
+function () {
+  function RMEElemTemplater() {
+    _classCallCheck(this, RMEElemTemplater);
+
+    this.instance;
+    this.template = {};
+    this.deep = true;
+  }
+
+  _createClass(RMEElemTemplater, [{
+    key: "toTemplate",
+    value: function toTemplate(elem, deep) {
+      if (!Util.isEmpty(deep)) this.deep = deep;
+      this.resolve(elem, this.template);
+      return this.template;
+    }
+    /**
+     * Function is called recursively and resolves an Elem object and its children in recursion
+     * @param {object} elem 
+     * @param {object} parent 
+     */
+
+  }, {
+    key: "resolve",
+    value: function resolve(elem, parent) {
+      var resolved = this.resolveElem(elem, this.resolveProps(elem));
+
+      for (var p in parent) {
+        if (parent.hasOwnProperty(p)) {
+          if (Util.isArray(parent[p]._rme_type_)) parent[p]._rme_type_.push(resolved);else this.extendMap(parent[p], resolved);
+        }
+      }
+
+      var i = 0;
+      var children = Util.isArray(elem.getChildren()) ? elem.getChildren() : [elem.getChildren()];
+
+      if (children && this.deep) {
+        while (i < children.length) {
+          this.resolve(children[i], resolved);
+          i++;
+        }
+      }
+
+      this.template = resolved;
+    }
+  }, {
+    key: "extendMap",
+    value: function extendMap(map, next) {
+      for (var v in next) {
+        if (next.hasOwnProperty(v)) {
+          map[v] = next[v];
+        }
+      }
+    }
+    /**
+     * Function will attach given properties into a given Elem and returns the resolved Elem.
+     * @param {object} elem 
+     * @param {object} props 
+     * @returns The resolved elem with attached properties.
+     */
+
+  }, {
+    key: "resolveElem",
+    value: function resolveElem(elem, props) {
+      var el = {};
+      var children = elem.getChildren();
+
+      if (Util.isArray(children) && children.length > 1) {
+        var elTag = elem.getTagName().toLowerCase();
+        var elName = this.resolveId(elTag, props);
+        elName = this.resolveClass(elName, props);
+        elName = this.resolveAttrs(elName, props);
+        el[elName] = {
+          _rme_type_: [],
+          _rme_props_: props
+        };
+      } else {
+        el[elem.getTagName().toLowerCase()] = props;
+      }
+
+      return el;
+    }
+    /**
+     * Function will place an ID attribute into an element tag if the ID attribute is found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with the ID or without.
+     */
+
+  }, {
+    key: "resolveId",
+    value: function resolveId(tag, props) {
+      if (props.id) return tag + "#" + props.id;else return tag;
+    }
+    /**
+     * Function will place a class attribute into an element tag if the class attribute is found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with the classes or without.
+     */
+
+  }, {
+    key: "resolveClass",
+    value: function resolveClass(tag, props) {
+      if (props["class"]) return tag + "." + props["class"].replace(/ /g, ".");else return tag;
+    }
+    /**
+     * Function will resolve all other attributes and place them into an element tag if other attributes are found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with other attributes or without.
+     */
+
+  }, {
+    key: "resolveAttrs",
+    value: function resolveAttrs(tag, props) {
+      var tagName = tag;
+
+      for (var p in props) {
+        if (props.hasOwnProperty(p) && p !== 'id' && p !== 'class' && p.indexOf('on') !== 0) {
+          tagName += "[".concat(p, "=").concat(props[p], "]");
+        }
+      }
+
+      return tagName;
+    }
+    /**
+     * Resolves a given Elem object and returns its properties in an object.
+     * @param {object} elem 
+     * @returns The properties object of the given element.
+     */
+
+  }, {
+    key: "resolveProps",
+    value: function resolveProps(elem) {
+      var props = {};
+      var attributes = elem.dom().attributes;
+      var a = 0;
+
+      if (attributes) {
+        while (a < attributes.length) {
+          props[this.resolveAttributeNames(attributes[a].name)] = attributes[a].value;
+          a++;
+        }
+      }
+
+      if (elem.dom().hasChildNodes() && elem.dom().childNodes[0].nodeType === 3) {
+        props["text"] = elem.getText();
+      }
+
+      for (var p in elem.dom()) {
+        if (p.indexOf("on") !== 0 || Util.isEmpty(elem.dom()[p])) continue;else props[this.resolveListeners(p)] = elem.dom()[p];
+      }
+
+      return props;
+    }
+    /**
+     * Resolves html data-* attributes by removing '-' and setting the next character to uppercase. If the attribute is not 
+     * data-* attribute then it is directly returned.
+     * @param {string} attrName 
+     * @returns Resolved attribute name.
+     */
+
+  }, {
+    key: "resolveAttributeNames",
+    value: function resolveAttributeNames(attrName) {
+      if (attrName.indexOf("data" === 0 && attrName.length > "data".length)) {
+        while (attrName.search("-") > -1) {
+          attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search("-") + 1).toUpperCase());
+        }
+
+        return attrName;
+      } else {
+        return attrName;
+      }
+    }
+  }, {
+    key: "resolveListeners",
+    value: function resolveListeners(name) {
+      switch (name) {
+        case "onanimationstart":
+          return "onAnimationStart";
+
+        case "onanimationiteration":
+          return "onAnimationIteration";
+
+        case "onanimationend":
+          return "onAnimationEnd";
+
+        case "ontransitionend":
+          return "onTransitionEnd";
+
+        case "ondrag":
+          return "onDrag";
+
+        case "ondragend":
+          return "onDragEnd";
+
+        case "ondragenter":
+          return "onDragEnter";
+
+        case "ondragover":
+          return "onDragOver";
+
+        case "ondragstart":
+          return "onDragStart";
+
+        case "ondrop":
+          return "onDrop";
+
+        case "onclick":
+          return "onClick";
+
+        case "ondblclick":
+          return "onDoubleClick";
+
+        case "oncontextmenu":
+          return "onContextMenu";
+
+        case "onmousedown":
+          return "onMouseDown";
+
+        case "onmouseenter":
+          return "onMouseEnter";
+
+        case "onmouseleave":
+          return "onMouseLeave";
+
+        case "onmousemove":
+          return "onMouseMove";
+
+        case "onmouseover":
+          return "onMouseOver";
+
+        case "onmouseout":
+          return "onMouseOut";
+
+        case "onmouseup":
+          return "onMouseUp";
+
+        case "onwheel":
+          return "onWheel";
+
+        case "onscroll":
+          return "onScroll";
+
+        case "onresize":
+          return "onResize";
+
+        case "onerror":
+          return "onError";
+
+        case "onload":
+          return "onLoad";
+
+        case "onunload":
+          return "onUnload";
+
+        case "onbeforeunload":
+          return "onBeforeUnload";
+
+        case "onkeyup":
+          return "onKeyUp";
+
+        case "onkeydown":
+          return "onKeyDown";
+
+        case "onkeypress":
+          return "onKeyPress";
+
+        case "oninput":
+          return "onInput";
+
+        case "onchange":
+          return "onChange";
+
+        case "onsubmit":
+          return "onSubmit";
+
+        case "onselect":
+          return "onSelect";
+
+        case "onreset":
+          return "onReset";
+
+        case "onfocus":
+          return "onFocus";
+
+        case "onfocusin":
+          return "onFocusIn";
+
+        case "onfocusout":
+          return "onFocusOut";
+
+        case "onblur":
+          return "onBlur";
+
+        case "oncopy":
+          return "onCopy";
+
+        case "oncut":
+          return "onCut";
+
+        case "onpaste":
+          return "onPaste";
+
+        case "onabort":
+          return "onAbort";
+
+        case "onwaiting":
+          return "onWaiting";
+
+        case "onvolumechange":
+          return "onVolumeChange";
+
+        case "ontimeupdate":
+          return "onTimeUpdate";
+
+        case "onseeking":
+          return "onSeeking";
+
+        case "onseekend":
+          return "onSeekEnd";
+
+        case "onratechange":
+          return "onRateChange";
+
+        case "onprogress":
+          return "onProgress";
+
+        case "onloadmetadata":
+          return "onLoadMetadata";
+
+        case "onloadeddata":
+          return "onLoadedData";
+
+        case "onloadstart":
+          return "onLoadStart";
+
+        case "onplaying":
+          return "onPlaying";
+
+        case "onplay":
+          return "onPlay";
+
+        case "onpause":
+          return "onPause";
+
+        case "onended":
+          return "onEnded";
+
+        case "ondurationchange":
+          return "onDurationChange";
+
+        case "oncanplay":
+          return "onCanPlay";
+
+        case "oncanplaythrough":
+          return "onCanPlayThrough";
+
+        case "onstalled":
+          return "onStalled";
+
+        case "onsuspend":
+          return "onSuspend";
+
+        case "onpopstate":
+          return "onPopState";
+
+        case "onstorage":
+          return "onStorage";
+
+        case "onhashchange":
+          return "onHashChange";
+
+        case "onafterprint":
+          return "onAfterPrint";
+
+        case "onbeforeprint":
+          return "onBeforePrint";
+
+        case "onpagehide":
+          return "onPageHide";
+
+        case "onpageshow":
+          return "onPageShow";
+      }
+    }
+  }, {
+    key: "toLiteralString",
+    value: function toLiteralString(elem) {
+      var props = this.resolveProps(elem);
+      var string = this.resolveId(elem.getTagName().toLowerCase(), props);
+      string = this.resolveClass(string, props);
+      string = this.resolveAttrs(string, props);
+      return string;
+    }
+    /**
+     * Function by default resolves a given element and its' children and returns template representation of the element.
+     * @param {object} elem 
+     * @param {boolean} deep 
+     * @returns Template object representation of the Elem
+     */
+
+  }], [{
+    key: "toTemplate",
+    value: function toTemplate(elem, deep) {
+      return RMEElemTemplater.getInstance().toTemplate(elem, deep);
+    }
+    /**
+     * Function resolves and returns properties of a given Elem object.
+     * @param {object} elem 
+     * @returns The properties object of the given Elem.
+     */
+
+  }, {
+    key: "getElementProps",
+    value: function getElementProps(elem) {
+      return RMEElemTemplater.getInstance().resolveProps(elem);
+    }
+  }, {
+    key: "toLiteralString",
+    value: function toLiteralString(elem) {
+      return RMEElemTemplater.getInstance().toLiteralString(elem);
+    }
+  }, {
+    key: "getInstance",
+    value: function getInstance() {
+      if (!this.instance) this.instance = new RMEElemTemplater();
+      return this.instance;
+    }
+  }]);
+
+  return RMEElemTemplater;
+}();
+
+var EventPipe = function () {
+  /**
+   * EventPipe class can be used to multicast and send custom events to registered listeners.
+   * Each event in an event queue will be sent to each registerd listener.
+   */
+  var EventPipe =
+  /*#__PURE__*/
+  function () {
+    function EventPipe() {
+      _classCallCheck(this, EventPipe);
+
+      this.eventsQueue = [];
+      this.callQueue = [];
+      this.loopTimeout;
+    }
+
+    _createClass(EventPipe, [{
+      key: "containsEvent",
+      value: function containsEvent() {
+        return this.eventsQueue.find(function (ev) {
+          return ev.type === event.type;
+        });
+      }
+      /**
+       * Function sends an event object though the EventPipe. The event must have a type attribute
+       * defined otherwise an error is thrown. 
+       * Example defintion of the event object. 
+       * { 
+       *   type: 'some event',
+       *   ...payload
+       * }
+       * If an event listener is defined the sent event will be received on the event listener.
+       * @param {object} event 
+       */
+
+    }, {
+      key: "send",
+      value: function send(event) {
+        if (Util.isEmpty(event.type)) throw new Error('Event must have type attribute.');
+        if (!this.containsEvent()) this.eventsQueue.push(event);
+        this.loopEvents();
+      }
+    }, {
+      key: "loopEvents",
+      value: function loopEvents() {
+        var _this7 = this;
+
+        if (this.loopTimeout) Util.clearTimeout(this.loopTimeout);
+        this.loopTimeout = Util.setTimeout(function () {
+          _this7.callQueue.forEach(function (eventCallback) {
+            return _this7.eventsQueue.forEach(function (ev) {
+              return eventCallback(ev);
+            });
+          });
+
+          _this7.eventsQueue = [];
+          _this7.callQueue = [];
+        });
+      }
+      /**
+       * Function registers an event listener function that receives an event sent through the
+       * EventPipe. Each listener will receive each event that are in an event queue. The listener
+       * function receives the event as a parameter.
+       * @param {function} eventCallback 
+       */
+
+    }, {
+      key: "receive",
+      value: function receive(eventCallback) {
+        this.callQueue.push(eventCallback);
+      }
+    }]);
+
+    return EventPipe;
+  }();
+
+  var eventPipe = new EventPipe();
+  return {
+    send: eventPipe.send.bind(eventPipe),
+    receive: eventPipe.receive.bind(eventPipe)
+  };
+}();
+/**
  * Before using this class you should also be familiar on how to use fetch since usage of this class
  * will be quite similar to fetch except predefined candy that is added on a class.
  *
@@ -4883,556 +4883,6 @@ Key.COMMA = ",";
 
 Key.DOT = ".";
 
-var Router = function () {
-  /**
-   * Router class handles and renders route elements that are given by Router.routes() method.
-   * The method takes an array of route objects that are defined as follows: {route: "url", elem: elemObject, hide: true|false|undefined}.
-   * The first element the array of route objects is by default the root route object in which all other route objects 
-   * are rendered into.
-   */
-  var Router =
-  /*#__PURE__*/
-  function () {
-    function Router() {
-      var _this11 = this;
-
-      _classCallCheck(this, Router);
-
-      this.instance = null;
-      this.root = null;
-      this.origRoot = null;
-      this.routes = [];
-      this.origRoutes = [];
-      this.currentRoute = {};
-      this.prevUrl = location.pathname;
-
-      this.loadCall = function () {
-        return _this11.navigateUrl(location.pathname);
-      };
-
-      this.hashCall = function () {
-        return _this11.navigateUrl(location.hash);
-      };
-
-      this.useHistory = true;
-      this.autoListen = true;
-      this.useHash = false;
-      this.scrolltop = true;
-      this.app;
-      this.registerRouter();
-    }
-    /**
-     * Initializes the Router.
-     */
-
-
-    _createClass(Router, [{
-      key: "registerRouter",
-      value: function registerRouter() {
-        var _this12 = this;
-
-        document.addEventListener("readystatechange", function () {
-          if (document.readyState === "complete") {
-            var check = Util.setInterval(function () {
-              var hasRoot = !Util.isEmpty(_this12.root.elem) ? document.querySelector(_this12.root.elem) : false;
-
-              if (hasRoot) {
-                Util.clearInterval(check);
-
-                _this12.resolveRoutes();
-              }
-            }, 50);
-          }
-        });
-      }
-      /**
-       * Register listeners according to the useHistory and the autoListen state.
-       */
-
-    }, {
-      key: "registerListeners",
-      value: function registerListeners() {
-        if (this.useHistory && this.autoListen) window.addEventListener("load", this.loadCall);else if (!this.useHistory && this.autoListen) window.addEventListener("hashchange", this.hashCall);
-        if (!this.autoListen) window.addEventListener("popstate", this.onPopState.bind(this));
-      }
-      /**
-       * Clear the registered listeners.
-       */
-
-    }, {
-      key: "clearListeners",
-      value: function clearListeners() {
-        window.removeEventListener("load", this.loadCall);
-        window.removeEventListener("hashchange", this.hashCall);
-        if (!this.autoListen) window.removeEventListener("popstate", this.onPopState);
-      }
-      /**
-       * On popstate call is registered if the auto listen is false. It listens the browsers history change and renders accordingly.
-       */
-
-    }, {
-      key: "onPopState",
-      value: function onPopState() {
-        if (this.useHistory) this.renderRoute(location.pathname);else this.renderRoute(location.hash);
-      }
-      /**
-       * Set the router to use a history implementation or an anchor hash implementation.
-       * If true then the history implementation is used. Default is true.
-       * @param {boolean} use
-       */
-
-    }, {
-      key: "setUseHistory",
-      value: function setUseHistory(use) {
-        this.useHistory = use;
-      }
-      /**
-       * Set the Router to auto listen url change to true or false.
-       * @param {boolean} listen
-       */
-
-    }, {
-      key: "setAutoListen",
-      value: function setAutoListen(listen) {
-        this.autoListen = listen;
-      }
-      /**
-       * Set auto scroll up true or false.
-       * @param {boolean} auto 
-       */
-
-    }, {
-      key: "setAutoScrollUp",
-      value: function setAutoScrollUp(auto) {
-        this.scrolltop = auto;
-      }
-      /**
-       * Set the app instance that the Router invokes on update.
-       * @param {object} appInstance 
-       */
-
-    }, {
-      key: "setApp",
-      value: function setApp(appInstance) {
-        this.app = appInstance;
-      }
-      /**
-       * Resolves the root and the first page.
-       */
-
-    }, {
-      key: "resolveRoutes",
-      value: function resolveRoutes() {
-        if (Util.isString(this.root.elem)) {
-          this.root.elem = this.resolveElem(this.root.elem);
-        } else if (Util.isEmpty(this.root)) {
-          this.root = this.routes.shift();
-          this.root.elem = this.resolveElem(this.root.elem);
-          this.origRoot = this.root.elem;
-        }
-
-        if (this.useHash) {
-          this.renderRoute(location.hash);
-        } else {
-          this.renderRoute(location.pathname);
-        }
-      }
-      /**
-       * Set the routes and if a root is not set then the first element will be the root route element.
-       * @param {array} routes
-       */
-
-    }, {
-      key: "setRoutes",
-      value: function setRoutes(routes) {
-        this.routes = routes;
-      }
-      /**
-       * Add a route into the Router. {route: "url", elem: elemObject}
-       * @param {object} route
-       */
-
-    }, {
-      key: "addRoute",
-      value: function addRoute(route) {
-        this.routes.push(route);
-      }
-      /**
-       * Set a root route object into the Router. {route: "url", elem: elemObject}
-       * @param {object} route
-       */
-
-    }, {
-      key: "setRoot",
-      value: function setRoot(route) {
-        this.root = route;
-        this.origRoot = route.elem;
-      }
-      /**
-       * @deprecated
-       * Resolve route elements.
-       * @param {array} routes 
-       */
-
-    }, {
-      key: "resolveRouteElems",
-      value: function resolveRouteElems(routes) {
-        var i = 0;
-
-        while (i < routes.length) {
-          routes[i].elem = this.resolveElem(routes[i].elem);
-          i++;
-        }
-
-        return routes;
-      }
-      /**
-       * Method resolves element. If elem is string gets a component of the name if exist otherwise creates a new elemen of the name.
-       * If both does not apply then method assumes the elem to be an element and returns it.
-       * @param {*} elem 
-       */
-
-    }, {
-      key: "resolveElem",
-      value: function resolveElem(elem, props) {
-        if (Util.isString(elem) && RME.hasComponent(elem)) {
-          return RME.component(elem, props);
-        } else if (Util.isString(elem) && this.isSelector(elem)) {
-          return Tree.getFirst(elem);
-        } else if (elem instanceof Elem) {
-          return elem;
-        } else if (Util.isEmpty(elem)) {
-          return elem;
-        }
-
-        throw new Error("Could not resolve a route elem: ".concat(elem));
-      }
-      /**
-       * Function checks if a tag starts with a dot or hashtag or is a HTML tag.
-       * If described conditions are met then the tag is supposed to be a selector.
-       * @param {string} tag 
-       * @returns True if the tag is a selector otherwise false.
-       */
-
-    }, {
-      key: "isSelector",
-      value: function isSelector(tag) {
-        return tag.charAt(0) === '.' || tag.charAt(0) === '#' || Template.isTag(tag);
-      }
-      /**
-       * Method navigates to the url and renders a route element inside the root route element if found.
-       * @param {string} url
-       */
-
-    }, {
-      key: "navigateUrl",
-      value: function navigateUrl(url) {
-        var route = this.findRoute(url);
-
-        if (!Util.isEmpty(route) && this.useHistory && !route.hide) {
-          history.pushState(null, null, url);
-        } else if (!Util.isEmpty(route) && !route.hide) {
-          location.href = url;
-        }
-
-        if (!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
-          if (route.scrolltop === true || route.scrolltop === undefined && this.scrolltop) Browser.scrollTo(0, 0);
-          this.prevUrl = this.getUrlPath(url);
-          this.currentRoute = route;
-
-          if (Util.isEmpty(this.app)) {
-            if (!Util.isEmpty(route.onBefore)) route.onBefore();
-            this.root.elem.render(this.resolveElem(route.elem, route.compProps));
-            if (!Util.isEmpty(route.onAfter)) route.onAfter();
-          } else {
-            if (!Util.isEmpty(route.onBefore)) route.onBefore();
-            this.app.refresh();
-          }
-        }
-      }
-      /**
-       * Method looks for a route by the url. If the router is found then it will be returned otherwise returns null
-       * @param {string} url
-       * @param {boolean} force
-       * @returns The found router or null if not found.
-       */
-
-    }, {
-      key: "findRoute",
-      value: function findRoute(url, force) {
-        var i = 0;
-
-        if (!Util.isEmpty(url) && (this.prevUrl !== this.getUrlPath(url) || force)) {
-          while (i < this.routes.length) {
-            if (this.matches(this.routes[i].route, url)) return this.routes[i];
-            i++;
-          }
-        }
-
-        return null;
-      }
-      /**
-       * Method will look for a route by the url and if the route is found then it will be rendered 
-       * inside the root route element.
-       * @param {string} url
-       */
-
-    }, {
-      key: "renderRoute",
-      value: function renderRoute(url) {
-        var route = this.findRoute(url, true);
-
-        if (!Util.isEmpty(route) && Util.isEmpty(this.app)) {
-          if (!Util.isEmpty(route.onBefore)) route.onBefore();
-          this.root.elem.render(this.resolveElem(route.elem, route.compProps));
-          this.currentRoute = route;
-          if (!Util.isEmpty(route.onAfter)) route.onAfter();
-        } else if (Util.isEmpty(this.app)) {
-          this.root.elem.render();
-        } else if (!Util.isEmpty(route) && !Util.isEmpty(this.app)) {
-          if (!Util.isEmpty(route.onBefore)) route.onBefore();
-          this.app.refresh();
-          this.currentRoute = route;
-        }
-
-        this.prevUrl = location.pathname;
-      }
-      /**
-       * Method matches a given url parameters and returns true if the urls matches.
-       * @param {string} url
-       * @param {string} newUrl
-       * @returns True if the given urls matches otherwise false.
-       */
-
-    }, {
-      key: "matches",
-      value: function matches(url, newUrl) {
-        if (this.useHistory) {
-          url = Util.isString(url) ? url.replace(/\*/g, '.*').replace(/\/{2,}/g, '/') : url;
-          var path = this.getUrlPath(newUrl);
-          var found = path.match(url);
-          if (!Util.isEmpty(found)) found = found.join();
-          return found === path && new RegExp(url).test(newUrl);
-        } else {
-          if (Util.isString(url)) {
-            url = url.replace(/\*/g, '.*');
-            if (url.charAt(0) !== '#') url = "#".concat(url);
-          }
-
-          var hash = newUrl.match(/\#{1}.*/).join();
-
-          var _found = hash.match(url);
-
-          if (!Util.isEmpty(_found)) _found = _found.join();
-          return _found === hash && new RegExp(url).test(newUrl);
-        }
-      }
-      /**
-       * Cut the protocol and domain of the url off if exist.
-       * For example https://www.example.com/example -> /example
-       * @param {string} url 
-       * @returns The path of the url.
-       */
-
-    }, {
-      key: "getUrlPath",
-      value: function getUrlPath(url) {
-        return this.useHash ? url : url.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
-      }
-      /**
-       * @returns The current status of the Router in an object.
-       */
-
-    }, {
-      key: "getCurrentState",
-      value: function getCurrentState() {
-        return {
-          root: this.origRoot,
-          rootElem: this.root.elem,
-          current: this.resolveElem(this.currentRoute.elem, this.currentRoute.compProps),
-          onAfter: this.currentRoute.onAfter
-        };
-      }
-      /**
-       * Method will try to find a route according to the given parameter. The supported parameter combinations are url, event or elem & event. 
-       * The first paramter can either be an URL or an Event or an Elem. The second parameter is an Event if the first parameter is an Elem.
-       * If the route is found, then the Router will update a new url to the browser and render the found route element.
-       * @param {string} url
-       * @param {object} url type event
-       * @param {object} url type Elem
-       * @param {object} event
-       */
-
-    }], [{
-      key: "navigate",
-      value: function navigate(url, event) {
-        if (Util.isString(url)) Router.getInstance().navigateUrl(url);else if (Util.isObject(url) && url instanceof Event) {
-          if (!Router.getInstance().autoListen || Router.getInstance().useHash) url.preventDefault();
-          Router.getInstance().navigateUrl(url.target.href);
-        } else if (Util.isObject(url) && url instanceof Elem && !Util.isEmpty(event) && Util.isObject(event) && event instanceof Event) {
-          if (!Router.getInstance().autoListen || Router.getInstance().useHash) event.preventDefault();
-          Router.getInstance().navigateUrl(url.getHref());
-        }
-      }
-      /**
-       * Set a root element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
-       * @param {object} elem
-       * @returns Router
-       */
-
-    }, {
-      key: "root",
-      value: function root(elem) {
-        Router.getInstance().setRoot({
-          elem: elem
-        });
-        return Router;
-      }
-      /**
-       * Add a new route element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
-       * @param {string} url
-       * @param {object} elem
-       * @param {boolean} hide
-       */
-
-    }, {
-      key: "add",
-      value: function add(url, elem, hide) {
-        Router.getInstance().addRoute({
-          route: url,
-          elem: elem,
-          hide: hide
-        });
-        return Router;
-      }
-      /**
-       * Set an array of routes that the Router uses. If a root is not set then the first item in the given routes array will be the root route element.
-       * @param {array} routes
-       */
-
-    }, {
-      key: "routes",
-      value: function routes(_routes) {
-        if (!Util.isArray(_routes)) throw "Could not set routes. Given parameter: \"" + _routes + "\" is not an array.";
-        Router.getInstance().setRoutes(_routes);
-        return Router;
-      }
-      /**
-       * Method sets the Router to use an url implementation. The url implementation defaults to HTML standard that pressing a link
-       * will cause the browser reload a new page. After reload the new page is rendered. If you wish to skip reload then you should 
-       * set the parameter manual to true.
-       * @param {boolean} manual
-       * @returns Router
-       */
-
-    }, {
-      key: "url",
-      value: function url(manual) {
-        Router.getInstance().setUseHistory(true);
-        Router.getInstance().registerListeners();
-
-        if (Util.isBoolean(manual) && manual) {
-          Router.manual();
-        }
-
-        return Router;
-      }
-      /**
-       * Method sets the Router not to automatically follow url changes. If this method is invoked 
-       * the user must explicitly define a method that calls Router.navigate in order to have navigation working
-       * properly when going forward and backward in the history. The method will not 
-       * do anything if the url implementation is not used.
-       * @returns Router
-       */
-
-    }, {
-      key: "manual",
-      value: function manual() {
-        if (Router.getInstance().useHistory) {
-          Router.getInstance().clearListeners();
-          Router.getInstance().setAutoListen(false);
-          Router.getInstance().registerListeners();
-        }
-
-        return Router;
-      }
-      /**
-       * Method sets the Router to use a hash implementation. When this implementation is used 
-       * there is no need to manually use Router.navigate function because change
-       * of the hash is automatically followed.
-       * @returns Router
-       */
-
-    }, {
-      key: "hash",
-      value: function hash() {
-        Router.getInstance().setUseHistory(false);
-        Router.getInstance().setAutoListen(true);
-        Router.getInstance().registerListeners();
-        Router.getInstance().useHash = true;
-        return Router;
-      }
-      /**
-       * Method sets default level behavior for route naviagation. If the given value is true then the Browser auto-scrolls up 
-       * when navigating to a new resource. If set false then the Browser does not auto-scroll up. Default value is true.
-       * @param {boolean} auto 
-       * @returns Router
-       */
-
-    }, {
-      key: "scroll",
-      value: function scroll(auto) {
-        if (Util.isBoolean(auto)) {
-          Router.getInstance().setAutoScrollUp(auto);
-        }
-
-        return Router;
-      }
-      /**
-       * Set the app instance to be invoked on the Router update.
-       * @param {object} appInstance 
-       * @returns Router
-       */
-
-    }, {
-      key: "setApp",
-      value: function setApp(appInstance) {
-        if (!Util.isEmpty(appInstance)) Router.getInstance().setApp(appInstance);
-        return Router;
-      }
-      /**
-       * @returns The current status of the router.
-       */
-
-    }, {
-      key: "getCurrentState",
-      value: function getCurrentState() {
-        return Router.getInstance().getCurrentState();
-      }
-    }, {
-      key: "getInstance",
-      value: function getInstance() {
-        if (Util.isEmpty(this.instance)) this.instance = new Router();
-        return this.instance;
-      }
-    }]);
-
-    return Router;
-  }();
-
-  return {
-    navigate: Router.navigate,
-    root: Router.root,
-    add: Router.add,
-    routes: Router.routes,
-    url: Router.url,
-    hash: Router.hash,
-    scroll: Router.scroll,
-    getCurrentState: Router.getCurrentState,
-    setApp: Router.setApp
-  };
-}();
-
 var Messages = function () {
   /**
    * Messages class handles internationalization. The class offers public methods that enable easy 
@@ -5464,13 +4914,13 @@ var Messages = function () {
     _createClass(Messages, [{
       key: "registerMessages",
       value: function registerMessages() {
-        var _this13 = this;
+        var _this11 = this;
 
         document.addEventListener("readystatechange", function () {
           if (document.readyState === "complete") {
-            _this13.ready = true;
+            _this11.ready = true;
 
-            _this13.runTranslated.call(_this13);
+            _this11.runTranslated.call(_this11);
           }
         });
       }
@@ -5623,14 +5073,14 @@ var Messages = function () {
     }, {
       key: "runTranslated",
       value: function runTranslated() {
-        var _this14 = this;
+        var _this12 = this;
 
         if (Util.isEmpty(this.app) && this.ready) {
           Util.setTimeout(function () {
             var i = 0;
 
-            while (i < _this14.translated.length) {
-              _this14.translated[i].obj.setText.call(_this14.translated[i].obj, Messages.message(_this14.translated[i].key, _this14.translated[i].params));
+            while (i < _this12.translated.length) {
+              _this12.translated[i].obj.setText.call(_this12.translated[i].obj, Messages.message(_this12.translated[i].key, _this12.translated[i].params));
 
               i++;
             }
@@ -5731,118 +5181,6 @@ var Messages = function () {
     locale: Messages.locale,
     setApp: Messages.setApp
   };
-}();
-/**
- * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
- */
-
-
-var Session =
-/*#__PURE__*/
-function () {
-  function Session() {
-    _classCallCheck(this, Session);
-  }
-
-  _createClass(Session, null, [{
-    key: "set",
-
-    /**
-     * Save data into the Session.
-     * @param {string} key
-     * @param {*} value
-     */
-    value: function set(key, value) {
-      sessionStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the Session.
-     * @param {string} key
-     */
-
-  }, {
-    key: "get",
-    value: function get(key) {
-      return sessionStorage.getItem(key);
-    }
-    /**
-     * Remove data from the Session.
-     * @param {string} key
-     */
-
-  }, {
-    key: "remove",
-    value: function remove(key) {
-      sessionStorage.removeItem(key);
-    }
-    /**
-     * Clears the Session.
-     */
-
-  }, {
-    key: "clear",
-    value: function clear() {
-      sessionStorage.clear();
-    }
-  }]);
-
-  return Session;
-}();
-/**
- * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
- */
-
-
-var Storage =
-/*#__PURE__*/
-function () {
-  function Storage() {
-    _classCallCheck(this, Storage);
-  }
-
-  _createClass(Storage, null, [{
-    key: "set",
-
-    /**
-     * Save data into the local storage. 
-     * @param {string} key
-     * @param {*} value
-     */
-    value: function set(key, value) {
-      localStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the local storage.
-     * @param {string} key
-     */
-
-  }, {
-    key: "get",
-    value: function get(key) {
-      return localStorage.getItem(key);
-    }
-    /**
-     * Remove data from the local storage.
-     * @param {string} key
-     */
-
-  }, {
-    key: "remove",
-    value: function remove(key) {
-      localStorage.removeItem(key);
-    }
-    /**
-     * Clears the local storage.
-     */
-
-  }, {
-    key: "clear",
-    value: function clear() {
-      localStorage.clear();
-    }
-  }]);
-
-  return Storage;
 }();
 /**
  * The configure function will configure given Components. This is a shortcut function of the
@@ -6191,6 +5529,614 @@ var RME = function () {
     hasComponent: RME.hasComponent,
     use: RME.use
   };
+}();
+
+var Router = function () {
+  /**
+   * Router class handles and renders route elements that are given by Router.routes() method.
+   * The method takes an array of route objects that are defined as follows: {route: "url", elem: elemObject, hide: true|false|undefined}.
+   * The first element the array of route objects is by default the root route object in which all other route objects 
+   * are rendered into.
+   */
+  var Router =
+  /*#__PURE__*/
+  function () {
+    function Router() {
+      var _this13 = this;
+
+      _classCallCheck(this, Router);
+
+      this.instance = null;
+      this.root = null;
+      this.origRoot = null;
+      this.routes = [];
+      this.origRoutes = [];
+      this.currentRoute = {};
+      this.prevUrl = location.pathname;
+
+      this.loadCall = function () {
+        return _this13.navigateUrl(location.pathname);
+      };
+
+      this.hashCall = function () {
+        return _this13.navigateUrl(location.hash);
+      };
+
+      this.useHistory = true;
+      this.autoListen = true;
+      this.useHash = false;
+      this.scrolltop = true;
+      this.app;
+      this.registerRouter();
+    }
+    /**
+     * Initializes the Router.
+     */
+
+
+    _createClass(Router, [{
+      key: "registerRouter",
+      value: function registerRouter() {
+        var _this14 = this;
+
+        document.addEventListener("readystatechange", function () {
+          if (document.readyState === "complete") {
+            var check = Util.setInterval(function () {
+              var hasRoot = !Util.isEmpty(_this14.root.elem) ? document.querySelector(_this14.root.elem) : false;
+
+              if (hasRoot) {
+                Util.clearInterval(check);
+
+                _this14.resolveRoutes();
+              }
+            }, 50);
+          }
+        });
+      }
+      /**
+       * Register listeners according to the useHistory and the autoListen state.
+       */
+
+    }, {
+      key: "registerListeners",
+      value: function registerListeners() {
+        if (this.useHistory && this.autoListen) window.addEventListener("load", this.loadCall);else if (!this.useHistory && this.autoListen) window.addEventListener("hashchange", this.hashCall);
+        if (!this.autoListen) window.addEventListener("popstate", this.onPopState.bind(this));
+      }
+      /**
+       * Clear the registered listeners.
+       */
+
+    }, {
+      key: "clearListeners",
+      value: function clearListeners() {
+        window.removeEventListener("load", this.loadCall);
+        window.removeEventListener("hashchange", this.hashCall);
+        if (!this.autoListen) window.removeEventListener("popstate", this.onPopState);
+      }
+      /**
+       * On popstate call is registered if the auto listen is false. It listens the browsers history change and renders accordingly.
+       */
+
+    }, {
+      key: "onPopState",
+      value: function onPopState() {
+        if (this.useHistory) this.renderRoute(location.pathname);else this.renderRoute(location.hash);
+      }
+      /**
+       * Set the router to use a history implementation or an anchor hash implementation.
+       * If true then the history implementation is used. Default is true.
+       * @param {boolean} use
+       */
+
+    }, {
+      key: "setUseHistory",
+      value: function setUseHistory(use) {
+        this.useHistory = use;
+      }
+      /**
+       * Set the Router to auto listen url change to true or false.
+       * @param {boolean} listen
+       */
+
+    }, {
+      key: "setAutoListen",
+      value: function setAutoListen(listen) {
+        this.autoListen = listen;
+      }
+      /**
+       * Set auto scroll up true or false.
+       * @param {boolean} auto 
+       */
+
+    }, {
+      key: "setAutoScrollUp",
+      value: function setAutoScrollUp(auto) {
+        this.scrolltop = auto;
+      }
+      /**
+       * Set the app instance that the Router invokes on update.
+       * @param {object} appInstance 
+       */
+
+    }, {
+      key: "setApp",
+      value: function setApp(appInstance) {
+        this.app = appInstance;
+      }
+      /**
+       * Resolves the root and the first page.
+       */
+
+    }, {
+      key: "resolveRoutes",
+      value: function resolveRoutes() {
+        if (Util.isString(this.root.elem)) {
+          this.root.elem = this.resolveElem(this.root.elem);
+        } else if (Util.isEmpty(this.root)) {
+          this.root = this.routes.shift();
+          this.root.elem = this.resolveElem(this.root.elem);
+          this.origRoot = this.root.elem;
+        }
+
+        if (this.useHash) {
+          this.renderRoute(location.hash);
+        } else {
+          this.renderRoute(location.pathname);
+        }
+      }
+      /**
+       * Set the routes and if a root is not set then the first element will be the root route element.
+       * @param {array} routes
+       */
+
+    }, {
+      key: "setRoutes",
+      value: function setRoutes(routes) {
+        this.routes = routes;
+      }
+      /**
+       * Add a route into the Router. {route: "url", elem: elemObject}
+       * @param {object} route
+       */
+
+    }, {
+      key: "addRoute",
+      value: function addRoute(route) {
+        this.routes.push(route);
+      }
+      /**
+       * Set a root route object into the Router. {route: "url", elem: elemObject}
+       * @param {object} route
+       */
+
+    }, {
+      key: "setRoot",
+      value: function setRoot(route) {
+        this.root = route;
+        this.origRoot = route.elem;
+      }
+      /**
+       * @deprecated
+       * Resolve route elements.
+       * @param {array} routes 
+       */
+
+    }, {
+      key: "resolveRouteElems",
+      value: function resolveRouteElems(routes) {
+        var i = 0;
+
+        while (i < routes.length) {
+          routes[i].elem = this.resolveElem(routes[i].elem);
+          i++;
+        }
+
+        return routes;
+      }
+      /**
+       * Method resolves element. If elem is string gets a component of the name if exist otherwise creates a new elemen of the name.
+       * If both does not apply then method assumes the elem to be an element and returns it.
+       * @param {*} elem 
+       */
+
+    }, {
+      key: "resolveElem",
+      value: function resolveElem(elem, props) {
+        if (Util.isString(elem) && RME.hasComponent(elem)) {
+          return RME.component(elem, props);
+        } else if (Util.isString(elem) && this.isSelector(elem)) {
+          return Tree.getFirst(elem);
+        } else if (elem instanceof Elem) {
+          return elem;
+        } else if (Util.isEmpty(elem)) {
+          return elem;
+        }
+
+        throw new Error("Could not resolve a route elem: ".concat(elem));
+      }
+      /**
+       * Function checks if a tag starts with a dot or hashtag or is a HTML tag.
+       * If described conditions are met then the tag is supposed to be a selector.
+       * @param {string} tag 
+       * @returns True if the tag is a selector otherwise false.
+       */
+
+    }, {
+      key: "isSelector",
+      value: function isSelector(tag) {
+        return tag.charAt(0) === '.' || tag.charAt(0) === '#' || Template.isTag(tag);
+      }
+      /**
+       * Method navigates to the url and renders a route element inside the root route element if found.
+       * @param {string} url
+       */
+
+    }, {
+      key: "navigateUrl",
+      value: function navigateUrl(url) {
+        var route = this.findRoute(url);
+
+        if (!Util.isEmpty(route) && this.useHistory && !route.hide) {
+          history.pushState(null, null, url);
+        } else if (!Util.isEmpty(route) && !route.hide) {
+          location.href = url;
+        }
+
+        if (!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
+          if (route.scrolltop === true || route.scrolltop === undefined && this.scrolltop) Util.setTimeout(function () {
+            return Browser.scrollTo(0, 0);
+          });
+          this.prevUrl = this.getUrlPath(url);
+          this.currentRoute = route;
+
+          if (Util.isEmpty(this.app)) {
+            if (!Util.isEmpty(route.onBefore)) route.onBefore();
+            this.root.elem.render(this.resolveElem(route.elem, route.compProps));
+            if (!Util.isEmpty(route.onAfter)) route.onAfter();
+          } else {
+            if (!Util.isEmpty(route.onBefore)) route.onBefore();
+            this.app.refresh();
+          }
+        }
+      }
+      /**
+       * Method looks for a route by the url. If the router is found then it will be returned otherwise returns null
+       * @param {string} url
+       * @param {boolean} force
+       * @returns The found router or null if not found.
+       */
+
+    }, {
+      key: "findRoute",
+      value: function findRoute(url, force) {
+        var i = 0;
+
+        if (!Util.isEmpty(url) && (this.prevUrl !== this.getUrlPath(url) || force)) {
+          while (i < this.routes.length) {
+            if (this.matches(this.routes[i].route, url)) return this.routes[i];
+            i++;
+          }
+        }
+
+        return null;
+      }
+      /**
+       * Method will look for a route by the url and if the route is found then it will be rendered 
+       * inside the root route element.
+       * @param {string} url
+       */
+
+    }, {
+      key: "renderRoute",
+      value: function renderRoute(url) {
+        var route = this.findRoute(url, true);
+
+        if (!Util.isEmpty(route) && Util.isEmpty(this.app)) {
+          if (!Util.isEmpty(route.onBefore)) route.onBefore();
+          this.root.elem.render(this.resolveElem(route.elem, route.compProps));
+          this.currentRoute = route;
+          if (!Util.isEmpty(route.onAfter)) route.onAfter();
+        } else if (Util.isEmpty(this.app)) {
+          this.root.elem.render();
+        } else if (!Util.isEmpty(route) && !Util.isEmpty(this.app)) {
+          if (!Util.isEmpty(route.onBefore)) route.onBefore();
+          this.app.refresh();
+          this.currentRoute = route;
+        }
+
+        this.prevUrl = location.pathname;
+      }
+      /**
+       * Method matches a given url parameters and returns true if the urls matches.
+       * @param {string} url
+       * @param {string} newUrl
+       * @returns True if the given urls matches otherwise false.
+       */
+
+    }, {
+      key: "matches",
+      value: function matches(url, newUrl) {
+        if (this.useHistory) {
+          url = Util.isString(url) ? url.replace(/\*/g, '.*').replace(/\/{2,}/g, '/') : url;
+          var path = this.getUrlPath(newUrl);
+          var found = path.match(url);
+          if (!Util.isEmpty(found)) found = found.join();
+          return found === path && new RegExp(url).test(newUrl);
+        } else {
+          if (Util.isString(url)) {
+            url = url.replace(/\*/g, '.*');
+            if (url.charAt(0) !== '#') url = "#".concat(url);
+          }
+
+          var hash = newUrl.match(/\#{1}.*/).join();
+
+          var _found = hash.match(url);
+
+          if (!Util.isEmpty(_found)) _found = _found.join();
+          return _found === hash && new RegExp(url).test(newUrl);
+        }
+      }
+      /**
+       * Cut the protocol and domain of the url off if exist.
+       * For example https://www.example.com/example -> /example
+       * @param {string} url 
+       * @returns The path of the url.
+       */
+
+    }, {
+      key: "getUrlPath",
+      value: function getUrlPath(url) {
+        return this.useHash ? url : url.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
+      }
+      /**
+       * @returns The current status of the Router in an object.
+       */
+
+    }, {
+      key: "getCurrentState",
+      value: function getCurrentState() {
+        return {
+          root: this.origRoot,
+          rootElem: this.root.elem,
+          current: this.resolveElem(this.currentRoute.elem, this.currentRoute.compProps),
+          onAfter: this.currentRoute.onAfter
+        };
+      }
+      /**
+       * Method will try to find a route according to the given parameter. The supported parameter combinations are url, event or elem & event. 
+       * The first paramter can either be an URL or an Event or an Elem. The second parameter is an Event if the first parameter is an Elem.
+       * If the route is found, then the Router will update a new url to the browser and render the found route element.
+       * @param {string} url
+       * @param {object} url type event
+       * @param {object} url type Elem
+       * @param {object} event
+       */
+
+    }], [{
+      key: "navigate",
+      value: function navigate(url, event) {
+        if (Util.isString(url)) Router.getInstance().navigateUrl(url);else if (Util.isObject(url) && url instanceof Event) {
+          if (!Router.getInstance().autoListen || Router.getInstance().useHash) url.preventDefault();
+          Router.getInstance().navigateUrl(url.target.href);
+        } else if (Util.isObject(url) && url instanceof Elem && !Util.isEmpty(event) && Util.isObject(event) && event instanceof Event) {
+          if (!Router.getInstance().autoListen || Router.getInstance().useHash) event.preventDefault();
+          Router.getInstance().navigateUrl(url.getHref());
+        }
+      }
+      /**
+       * Set a root element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
+       * @param {object} elem
+       * @returns Router
+       */
+
+    }, {
+      key: "root",
+      value: function root(elem) {
+        Router.getInstance().setRoot({
+          elem: elem
+        });
+        return Router;
+      }
+      /**
+       * Add a new route element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
+       * @param {string} url
+       * @param {object} elem
+       * @param {boolean} hide
+       */
+
+    }, {
+      key: "add",
+      value: function add(url, elem, hide) {
+        Router.getInstance().addRoute({
+          route: url,
+          elem: elem,
+          hide: hide
+        });
+        return Router;
+      }
+      /**
+       * Set an array of routes that the Router uses. If a root is not set then the first item in the given routes array will be the root route element.
+       * @param {array} routes
+       */
+
+    }, {
+      key: "routes",
+      value: function routes(_routes) {
+        if (!Util.isArray(_routes)) throw "Could not set routes. Given parameter: \"" + _routes + "\" is not an array.";
+        Router.getInstance().setRoutes(_routes);
+        return Router;
+      }
+      /**
+       * Method sets the Router to use an url implementation. The url implementation defaults to HTML standard that pressing a link
+       * will cause the browser reload a new page. After reload the new page is rendered. If you wish to skip reload then you should 
+       * set the parameter manual to true.
+       * @param {boolean} manual
+       * @returns Router
+       */
+
+    }, {
+      key: "url",
+      value: function url(manual) {
+        Router.getInstance().setUseHistory(true);
+        Router.getInstance().registerListeners();
+
+        if (Util.isBoolean(manual) && manual) {
+          Router.manual();
+        }
+
+        return Router;
+      }
+      /**
+       * Method sets the Router not to automatically follow url changes. If this method is invoked 
+       * the user must explicitly define a method that calls Router.navigate in order to have navigation working
+       * properly when going forward and backward in the history. The method will not 
+       * do anything if the url implementation is not used.
+       * @returns Router
+       */
+
+    }, {
+      key: "manual",
+      value: function manual() {
+        if (Router.getInstance().useHistory) {
+          Router.getInstance().clearListeners();
+          Router.getInstance().setAutoListen(false);
+          Router.getInstance().registerListeners();
+        }
+
+        return Router;
+      }
+      /**
+       * Method sets the Router to use a hash implementation. When this implementation is used 
+       * there is no need to manually use Router.navigate function because change
+       * of the hash is automatically followed.
+       * @returns Router
+       */
+
+    }, {
+      key: "hash",
+      value: function hash() {
+        Router.getInstance().setUseHistory(false);
+        Router.getInstance().setAutoListen(true);
+        Router.getInstance().registerListeners();
+        Router.getInstance().useHash = true;
+        return Router;
+      }
+      /**
+       * Method sets default level behavior for route naviagation. If the given value is true then the Browser auto-scrolls up 
+       * when navigating to a new resource. If set false then the Browser does not auto-scroll up. Default value is true.
+       * @param {boolean} auto 
+       * @returns Router
+       */
+
+    }, {
+      key: "scroll",
+      value: function scroll(auto) {
+        if (Util.isBoolean(auto)) {
+          Router.getInstance().setAutoScrollUp(auto);
+        }
+
+        return Router;
+      }
+      /**
+       * Set the app instance to be invoked on the Router update.
+       * @param {object} appInstance 
+       * @returns Router
+       */
+
+    }, {
+      key: "setApp",
+      value: function setApp(appInstance) {
+        if (!Util.isEmpty(appInstance)) Router.getInstance().setApp(appInstance);
+        return Router;
+      }
+      /**
+       * @returns The current status of the router.
+       */
+
+    }, {
+      key: "getCurrentState",
+      value: function getCurrentState() {
+        return Router.getInstance().getCurrentState();
+      }
+    }, {
+      key: "getInstance",
+      value: function getInstance() {
+        if (Util.isEmpty(this.instance)) this.instance = new Router();
+        return this.instance;
+      }
+    }]);
+
+    return Router;
+  }();
+
+  return {
+    navigate: Router.navigate,
+    root: Router.root,
+    add: Router.add,
+    routes: Router.routes,
+    url: Router.url,
+    hash: Router.hash,
+    scroll: Router.scroll,
+    getCurrentState: Router.getCurrentState,
+    setApp: Router.setApp
+  };
+}();
+/**
+ * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
+ */
+
+
+var Session =
+/*#__PURE__*/
+function () {
+  function Session() {
+    _classCallCheck(this, Session);
+  }
+
+  _createClass(Session, null, [{
+    key: "set",
+
+    /**
+     * Save data into the Session.
+     * @param {string} key
+     * @param {*} value
+     */
+    value: function set(key, value) {
+      sessionStorage.setItem(key, value);
+    }
+    /**
+     * Get the saved data from the Session.
+     * @param {string} key
+     */
+
+  }, {
+    key: "get",
+    value: function get(key) {
+      return sessionStorage.getItem(key);
+    }
+    /**
+     * Remove data from the Session.
+     * @param {string} key
+     */
+
+  }, {
+    key: "remove",
+    value: function remove(key) {
+      sessionStorage.removeItem(key);
+    }
+    /**
+     * Clears the Session.
+     */
+
+  }, {
+    key: "clear",
+    value: function clear() {
+      sessionStorage.clear();
+    }
+  }]);
+
+  return Session;
 }();
 
 var Template = function () {
@@ -6942,6 +6888,62 @@ var Template = function () {
     isFragment: Template.isFragment,
     resolveToParent: Template.resolveToParent
   };
+}();
+/**
+ * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
+ */
+
+
+var Storage =
+/*#__PURE__*/
+function () {
+  function Storage() {
+    _classCallCheck(this, Storage);
+  }
+
+  _createClass(Storage, null, [{
+    key: "set",
+
+    /**
+     * Save data into the local storage. 
+     * @param {string} key
+     * @param {*} value
+     */
+    value: function set(key, value) {
+      localStorage.setItem(key, value);
+    }
+    /**
+     * Get the saved data from the local storage.
+     * @param {string} key
+     */
+
+  }, {
+    key: "get",
+    value: function get(key) {
+      return localStorage.getItem(key);
+    }
+    /**
+     * Remove data from the local storage.
+     * @param {string} key
+     */
+
+  }, {
+    key: "remove",
+    value: function remove(key) {
+      localStorage.removeItem(key);
+    }
+    /**
+     * Clears the local storage.
+     */
+
+  }, {
+    key: "clear",
+    value: function clear() {
+      localStorage.clear();
+    }
+  }]);
+
+  return Storage;
 }();
 /**
  * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 

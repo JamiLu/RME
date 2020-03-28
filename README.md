@@ -11,9 +11,9 @@ Links
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.5.9/rme.js](https://github.com/JamiLu/RME/releases/download/v1.5.9/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.5.9/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.5.9/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.5.9/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.5.9/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.10/rme.js](https://github.com/JamiLu/RME/releases/download/v1.5.10/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.10/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.5.10/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.10/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.5.10/rme.es5.min.js)
 
 NPM
 ---
@@ -61,7 +61,7 @@ Basics
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.5.9/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.5.10/rme.es5.min.js"></script>`
 
 __Or use NPM__
 
