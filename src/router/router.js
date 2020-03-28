@@ -215,7 +215,7 @@ let Router = (function() {
             }
             if (!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
                 if ((route.scrolltop === true) || (route.scrolltop === undefined && this.scrolltop))
-                    Browser.scrollTo(0, 0);
+                    Util.setTimeout(() => Browser.scrollTo(0, 0));
                 this.prevUrl = this.getUrlPath(url);
                 this.currentRoute = route;
                 if (Util.isEmpty(this.app)) {
