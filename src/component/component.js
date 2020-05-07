@@ -78,10 +78,10 @@ const Component = (function() {
             App.component({[component.name]: component.comp})(component.appName);
             resolveInitialState(component.initialState, component.name+component.stateRef, component.appName);
         } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
-            RME.component({[component.name]: component});
+            RME.component({[component.valueOf().name]: component});
         } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
             const comp = new component();
-            App.component({[component.name]: comp.render})(comp.appName);
+            App.component({[component.valueOf().name]: comp.render})(comp.appName);
             let state = {};
             if (!Util.isEmpty(comp.onBeforeCreate))
                 state.onBeforeCreate = comp.onBeforeCreate;
@@ -102,7 +102,7 @@ const Component = (function() {
 
     return (...components) => {
         components.forEach(component => 
-            !Util.isEmpty(component.name) && resolveComponent(component));
+            !Util.isEmpty(component.valueOf().name) && resolveComponent(component));
     }
 
 })();
@@ -134,7 +134,7 @@ const bindState = (function() {
 
     return (component, state, appName) => ({
         comp: component,
-        name: component.name,
+        name: component.valueOf().name,
         appName: appName,
         stateRef: getStateRef(state),
         initialState: {
