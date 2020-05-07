@@ -11,9 +11,9 @@ Links
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.5.10/rme.js](https://github.com/JamiLu/RME/releases/download/v1.5.10/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.5.10/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.5.10/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.5.10/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.5.10/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.11/rme.js](https://github.com/JamiLu/RME/releases/download/v1.5.11/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.11/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.5.11/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.11/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.5.11/rme.es5.min.js)
 
 NPM
 ---
@@ -61,13 +61,13 @@ Basics
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.5.10/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.5.11/rme.es5.min.js"></script>`
 
 __Or use NPM__
 
 `npm i rme.js`
 
-`import RME, { App, Component, bindState, Key } from 'rme.js'`
+`import RME, { App, Component, bindState, useState, Key } from 'rme.js'`
 
 Then simply copy paste code clips below to your js file and voilà. 
 
@@ -92,9 +92,9 @@ const TodoExample = props => ({
         'input[type=text][placeholder=Type & Press Enter to Add]': {
             onKeyDown: event => {
                 if(event.key === Key.ENTER) {
-                    App.mergeState(props.stateRef, {
-                        list: {li: event.target.value}
-                    });
+                    useState(props.stateRef, state => ({
+                        list: state.list.concat({li: event.target.value})
+                    }));
                     event.target.value = '';
                 }
             }
@@ -123,7 +123,7 @@ const FormExample = props => ({
         TitleHeader: props,
         Form: {
             input: event => {
-                App.setState(props.stateRef, state => ({
+                useState(props.stateRef, state => ({
                     ...state,
                     [event.target.name]: event.target.value
                 }));
@@ -171,7 +171,7 @@ const FilterExample = props => ({
         h2: 'Filter Example',
         'input[type=text][placeholder=Type to Filter Country]': {
             onInput: event => 
-                App.setState(props.stateRef, {
+                useState(props.stateRef, {
                     rows: RME.storage('countryList')
                         .filter(row => row.country.toLowerCase().search(event.target.value) > -1)
                 })

@@ -1203,6 +1203,162 @@ function () {
 
   return Browser;
 }();
+/**
+ * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
+ * instance might have not been created at the time when components are created so the queue will wait 
+ * until the application instance is created and then sets the state for the components in the queue.
+ */
+
+
+var AppSetInitialStateJob = function () {
+  var InitStateJob =
+  /*#__PURE__*/
+  function () {
+    function InitStateJob() {
+      _classCallCheck(this, InitStateJob);
+
+      this.updateJob;
+      this.updateJobMap = {};
+      this.appNameList = [];
+    }
+
+    _createClass(InitStateJob, [{
+      key: "resolveUpdateJobs",
+      value: function resolveUpdateJobs() {
+        var _this3 = this;
+
+        if (!this.updateJob) this.updateJob = Util.setInterval(function () {
+          var appName = _this3.getAppNameIfPresent();
+
+          if (!Util.isEmpty(appName)) {
+            _this3.updateJobMap[appName].forEach(function (job) {
+              return job();
+            });
+
+            _this3.updateJobMap[appName] = [];
+            _this3.appNameList = _this3.appNameList.filter(function (app) {
+              return app !== appName;
+            });
+
+            if (_this3.appNameList.length === 0) {
+              Util.clearInterval(_this3.updateJob);
+              _this3.updateJob = undefined;
+            }
+          }
+        });
+      }
+    }, {
+      key: "getAppNameIfPresent",
+      value: function getAppNameIfPresent() {
+        return this.appNameList.find(function (appName) {
+          return App.get(appName === "undefined" ? undefined : appName);
+        });
+      }
+    }, {
+      key: "addToQueue",
+      value: function addToQueue(appName, job) {
+        var updateQueue = this.updateJobMap[appName] || [];
+        updateQueue.push(job);
+        this.updateJobMap[appName] = updateQueue;
+        this.appNameList = Object.keys(this.updateJobMap);
+        this.resolveUpdateJobs();
+      }
+    }]);
+
+    return InitStateJob;
+  }();
+
+  var initStateJob = new InitStateJob();
+  return {
+    addToQueue: initStateJob.addToQueue.bind(initStateJob),
+    resolveUpdateJobs: initStateJob.resolveUpdateJobs.bind(initStateJob)
+  };
+}();
+/**
+ * Component resolves comma separated list of components that may be function or class.
+ * Function component example: const Comp = props => ({h1: 'Hello'});
+ * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
+ * Resolve components Component(Comp, Comp2);
+ * @param {function} components commma separated list of components
+ */
+
+
+var Component = function () {
+  var resolveInitialState = function resolveInitialState(initialState, stateRef, appName) {
+    if (!Util.isEmpty(App.get(appName))) {
+      App.get(appName).setState(stateRef, initialState, false);
+    } else {
+      AppSetInitialStateJob.addToQueue(appName, function () {
+        return App.get(appName).setState(stateRef, initialState);
+      });
+    }
+  };
+
+  var resolveComponent = function resolveComponent(component) {
+    if (Util.isObject(component)) {
+      App.component(_defineProperty({}, component.name, component.comp))(component.appName);
+      resolveInitialState(component.initialState, component.name + component.stateRef, component.appName);
+    } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
+      RME.component(_defineProperty({}, component.valueOf().name, component));
+    } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
+      var comp = new component();
+      App.component(_defineProperty({}, component.valueOf().name, comp.render))(comp.appName);
+      var state = {};
+      if (!Util.isEmpty(comp.onBeforeCreate)) state.onBeforeCreate = comp.onBeforeCreate;
+      if (!Util.isEmpty(comp.shouldComponentUpdate)) state.shouldComponentUpdate = comp.shouldComponentUpdate;
+      if (!Util.isEmpty(comp.onAfterCreate)) state.onAfterCreate = comp.onAfterCreate;
+      if (!Util.isEmpty(comp.onAfterRender)) state.onAfterRender = comp.onAfterRender;
+      state = _objectSpread({}, state, {}, comp.initialState);
+      var ref = comp.stateRef || state.stateRef || '';
+      resolveInitialState(state, component.name + ref, comp.appName);
+    }
+  };
+
+  return function () {
+    for (var _len = arguments.length, components = new Array(_len), _key = 0; _key < _len; _key++) {
+      components[_key] = arguments[_key];
+    }
+
+    components.forEach(function (component) {
+      return !Util.isEmpty(component.valueOf().name) && resolveComponent(component);
+    });
+  };
+}();
+/**
+ * A bindState function transfers a function component to a stateful component just like it was created 
+ * using class or App class itself. The function receives three parameters. The function component,
+ * an optional state object and an optinal appName.
+ * Invoking examples:
+ * Component(bindState(StatefulComponent));
+ * Component(bindState(OtherComponent, { initialValue: 'initialText' }));
+ * @param {function} component
+ * @param {object} state
+ * @param {string} appName
+ */
+
+
+var bindState = function () {
+  var getStateRef = function getStateRef(state) {
+    return state && state.stateRef ? state.stateRef : '';
+  };
+
+  var removeStateRef = function removeStateRef(state) {
+    var obj = _objectSpread({}, state);
+
+    delete obj.stateRef;
+    return obj;
+  };
+
+  return function (component, state, appName) {
+    return {
+      comp: component,
+      name: component.valueOf().name,
+      appName: appName,
+      stateRef: getStateRef(state),
+      initialState: _objectSpread({}, removeStateRef(state))
+    };
+  };
+}();
 
 var Cookie = function () {
   /**
@@ -1349,162 +1505,6 @@ var Cookie = function () {
   }();
 
   return Cookie;
-}();
-/**
- * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
- * instance might have not been created at the time when components are created so the queue will wait 
- * until the application instance is created and then sets the state for the components in the queue.
- */
-
-
-var AppSetInitialStateJob = function () {
-  var InitStateJob =
-  /*#__PURE__*/
-  function () {
-    function InitStateJob() {
-      _classCallCheck(this, InitStateJob);
-
-      this.updateJob;
-      this.updateJobMap = {};
-      this.appNameList = [];
-    }
-
-    _createClass(InitStateJob, [{
-      key: "resolveUpdateJobs",
-      value: function resolveUpdateJobs() {
-        var _this3 = this;
-
-        if (!this.updateJob) this.updateJob = Util.setInterval(function () {
-          var appName = _this3.getAppNameIfPresent();
-
-          if (!Util.isEmpty(appName)) {
-            _this3.updateJobMap[appName].forEach(function (job) {
-              return job();
-            });
-
-            _this3.updateJobMap[appName] = [];
-            _this3.appNameList = _this3.appNameList.filter(function (app) {
-              return app !== appName;
-            });
-
-            if (_this3.appNameList.length === 0) {
-              Util.clearInterval(_this3.updateJob);
-              _this3.updateJob = undefined;
-            }
-          }
-        });
-      }
-    }, {
-      key: "getAppNameIfPresent",
-      value: function getAppNameIfPresent() {
-        return this.appNameList.find(function (appName) {
-          return App.get(appName === "undefined" ? undefined : appName);
-        });
-      }
-    }, {
-      key: "addToQueue",
-      value: function addToQueue(appName, job) {
-        var updateQueue = this.updateJobMap[appName] || [];
-        updateQueue.push(job);
-        this.updateJobMap[appName] = updateQueue;
-        this.appNameList = Object.keys(this.updateJobMap);
-        this.resolveUpdateJobs();
-      }
-    }]);
-
-    return InitStateJob;
-  }();
-
-  var initStateJob = new InitStateJob();
-  return {
-    addToQueue: initStateJob.addToQueue.bind(initStateJob),
-    resolveUpdateJobs: initStateJob.resolveUpdateJobs.bind(initStateJob)
-  };
-}();
-/**
- * Component resolves comma separated list of components that may be function or class.
- * Function component example: const Comp = props => ({h1: 'Hello'});
- * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
- * Resolve components Component(Comp, Comp2);
- * @param {function} components commma separated list of components
- */
-
-
-var Component = function () {
-  var resolveInitialState = function resolveInitialState(initialState, stateRef, appName) {
-    if (!Util.isEmpty(App.get(appName))) {
-      App.get(appName).setState(stateRef, initialState, false);
-    } else {
-      AppSetInitialStateJob.addToQueue(appName, function () {
-        return App.get(appName).setState(stateRef, initialState);
-      });
-    }
-  };
-
-  var resolveComponent = function resolveComponent(component) {
-    if (Util.isObject(component)) {
-      App.component(_defineProperty({}, component.name, component.comp))(component.appName);
-      resolveInitialState(component.initialState, component.name + component.stateRef, component.appName);
-    } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
-      RME.component(_defineProperty({}, component.name, component));
-    } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
-      var comp = new component();
-      App.component(_defineProperty({}, component.name, comp.render))(comp.appName);
-      var state = {};
-      if (!Util.isEmpty(comp.onBeforeCreate)) state.onBeforeCreate = comp.onBeforeCreate;
-      if (!Util.isEmpty(comp.shouldComponentUpdate)) state.shouldComponentUpdate = comp.shouldComponentUpdate;
-      if (!Util.isEmpty(comp.onAfterCreate)) state.onAfterCreate = comp.onAfterCreate;
-      if (!Util.isEmpty(comp.onAfterRender)) state.onAfterRender = comp.onAfterRender;
-      state = _objectSpread({}, state, {}, comp.initialState);
-      var ref = comp.stateRef || state.stateRef || '';
-      resolveInitialState(state, component.name + ref, comp.appName);
-    }
-  };
-
-  return function () {
-    for (var _len = arguments.length, components = new Array(_len), _key = 0; _key < _len; _key++) {
-      components[_key] = arguments[_key];
-    }
-
-    components.forEach(function (component) {
-      return !Util.isEmpty(component.name) && resolveComponent(component);
-    });
-  };
-}();
-/**
- * A bindState function transfers a function component to a stateful component just like it was created 
- * using class or App class itself. The function receives three parameters. The function component,
- * an optional state object and an optinal appName.
- * Invoking examples:
- * Component(bindState(StatefulComponent));
- * Component(bindState(OtherComponent, { initialValue: 'initialText' }));
- * @param {function} component
- * @param {object} state
- * @param {string} appName
- */
-
-
-var bindState = function () {
-  var getStateRef = function getStateRef(state) {
-    return state && state.stateRef ? state.stateRef : '';
-  };
-
-  var removeStateRef = function removeStateRef(state) {
-    var obj = _objectSpread({}, state);
-
-    delete obj.stateRef;
-    return obj;
-  };
-
-  return function (component, state, appName) {
-    return {
-      comp: component,
-      name: component.name,
-      appName: appName,
-      stateRef: getStateRef(state),
-      initialState: _objectSpread({}, removeStateRef(state))
-    };
-  };
 }();
 /**
  * A CSS function will either create a new style element containing given css and other parameters 
@@ -4075,89 +4075,6 @@ function () {
 
   return RMEElemTemplater;
 }();
-
-var EventPipe = function () {
-  /**
-   * EventPipe class can be used to multicast and send custom events to registered listeners.
-   * Each event in an event queue will be sent to each registerd listener.
-   */
-  var EventPipe =
-  /*#__PURE__*/
-  function () {
-    function EventPipe() {
-      _classCallCheck(this, EventPipe);
-
-      this.eventsQueue = [];
-      this.callQueue = [];
-      this.loopTimeout;
-    }
-
-    _createClass(EventPipe, [{
-      key: "containsEvent",
-      value: function containsEvent() {
-        return this.eventsQueue.find(function (ev) {
-          return ev.type === event.type;
-        });
-      }
-      /**
-       * Function sends an event object though the EventPipe. The event must have a type attribute
-       * defined otherwise an error is thrown. 
-       * Example defintion of the event object. 
-       * { 
-       *   type: 'some event',
-       *   ...payload
-       * }
-       * If an event listener is defined the sent event will be received on the event listener.
-       * @param {object} event 
-       */
-
-    }, {
-      key: "send",
-      value: function send(event) {
-        if (Util.isEmpty(event.type)) throw new Error('Event must have type attribute.');
-        if (!this.containsEvent()) this.eventsQueue.push(event);
-        this.loopEvents();
-      }
-    }, {
-      key: "loopEvents",
-      value: function loopEvents() {
-        var _this7 = this;
-
-        if (this.loopTimeout) Util.clearTimeout(this.loopTimeout);
-        this.loopTimeout = Util.setTimeout(function () {
-          _this7.callQueue.forEach(function (eventCallback) {
-            return _this7.eventsQueue.forEach(function (ev) {
-              return eventCallback(ev);
-            });
-          });
-
-          _this7.eventsQueue = [];
-          _this7.callQueue = [];
-        });
-      }
-      /**
-       * Function registers an event listener function that receives an event sent through the
-       * EventPipe. Each listener will receive each event that are in an event queue. The listener
-       * function receives the event as a parameter.
-       * @param {function} eventCallback 
-       */
-
-    }, {
-      key: "receive",
-      value: function receive(eventCallback) {
-        this.callQueue.push(eventCallback);
-      }
-    }]);
-
-    return EventPipe;
-  }();
-
-  var eventPipe = new EventPipe();
-  return {
-    send: eventPipe.send.bind(eventPipe),
-    receive: eventPipe.receive.bind(eventPipe)
-  };
-}();
 /**
  * Before using this class you should also be familiar on how to use fetch since usage of this class
  * will be quite similar to fetch except predefined candy that is added on a class.
@@ -4501,15 +4418,15 @@ var Http = function () {
     _createClass(HttpAjax, [{
       key: "then",
       value: function then(successHandler, errorHandler) {
-        var _this8 = this;
+        var _this7 = this;
 
         this.xhr.onload = function () {
-          _this8.xhr.responseJSON = tryParseJSON(_this8.xhr.responseText);
-          isResponseOK(_this8.xhr.status) ? successHandler(resolveResponse(_this8.xhr.response), _this8.xhr) : errorHandler(_this8.xhr);
+          _this7.xhr.responseJSON = tryParseJSON(_this7.xhr.responseText);
+          isResponseOK(_this7.xhr.status) ? successHandler(resolveResponse(_this7.xhr.response), _this7.xhr) : errorHandler(_this7.xhr);
         };
 
         this.xhr.onprogress = function (event) {
-          if (_this8.progressHandler) _this8.progressHandler(event);
+          if (_this7.progressHandler) _this7.progressHandler(event);
         };
 
         if (this.xhr.ontimeout && config.onTimeout) {
@@ -4519,8 +4436,8 @@ var Http = function () {
         }
 
         this.xhr.onerror = function () {
-          _this8.xhr.responseJSON = tryParseJSON(_this8.xhr.responseText);
-          if (errorHandler) errorHandler(_this8.xhr);
+          _this7.xhr.responseJSON = tryParseJSON(_this7.xhr.responseText);
+          if (errorHandler) errorHandler(_this7.xhr);
         };
 
         this.data ? this.xhr.send(this.data) : this.xhr.send();
@@ -4529,11 +4446,11 @@ var Http = function () {
     }, {
       key: "catch",
       value: function _catch(errorHandler) {
-        var _this9 = this;
+        var _this8 = this;
 
         this.xhr.onerror = function () {
-          _this9.xhr.responseJSON = tryParseJSON(_this9.xhr.responrenderseText);
-          if (errorHandler) errorHandler(_this9.xhr);
+          _this8.xhr.responseJSON = tryParseJSON(_this8.xhr.responrenderseText);
+          if (errorHandler) errorHandler(_this8.xhr);
         };
       }
     }]);
@@ -4549,7 +4466,7 @@ var Http = function () {
   /*#__PURE__*/
   function () {
     function HttpPromiseAjax(config) {
-      var _this10 = this;
+      var _this9 = this;
 
       _classCallCheck(this, HttpPromiseAjax);
 
@@ -4580,7 +4497,7 @@ var Http = function () {
           reject(request);
         };
 
-        _this10.data ? request.send(_this10.data) : request.send();
+        _this9.data ? request.send(_this9.data) : request.send();
       });
     }
 
@@ -4629,6 +4546,89 @@ var Http = function () {
   };
 
   return Http;
+}();
+
+var EventPipe = function () {
+  /**
+   * EventPipe class can be used to multicast and send custom events to registered listeners.
+   * Each event in an event queue will be sent to each registerd listener.
+   */
+  var EventPipe =
+  /*#__PURE__*/
+  function () {
+    function EventPipe() {
+      _classCallCheck(this, EventPipe);
+
+      this.eventsQueue = [];
+      this.callQueue = [];
+      this.loopTimeout;
+    }
+
+    _createClass(EventPipe, [{
+      key: "containsEvent",
+      value: function containsEvent() {
+        return this.eventsQueue.find(function (ev) {
+          return ev.type === event.type;
+        });
+      }
+      /**
+       * Function sends an event object though the EventPipe. The event must have a type attribute
+       * defined otherwise an error is thrown. 
+       * Example defintion of the event object. 
+       * { 
+       *   type: 'some event',
+       *   ...payload
+       * }
+       * If an event listener is defined the sent event will be received on the event listener.
+       * @param {object} event 
+       */
+
+    }, {
+      key: "send",
+      value: function send(event) {
+        if (Util.isEmpty(event.type)) throw new Error('Event must have type attribute.');
+        if (!this.containsEvent()) this.eventsQueue.push(event);
+        this.loopEvents();
+      }
+    }, {
+      key: "loopEvents",
+      value: function loopEvents() {
+        var _this10 = this;
+
+        if (this.loopTimeout) Util.clearTimeout(this.loopTimeout);
+        this.loopTimeout = Util.setTimeout(function () {
+          _this10.callQueue.forEach(function (eventCallback) {
+            return _this10.eventsQueue.forEach(function (ev) {
+              return eventCallback(ev);
+            });
+          });
+
+          _this10.eventsQueue = [];
+          _this10.callQueue = [];
+        });
+      }
+      /**
+       * Function registers an event listener function that receives an event sent through the
+       * EventPipe. Each listener will receive each event that are in an event queue. The listener
+       * function receives the event as a parameter.
+       * @param {function} eventCallback 
+       */
+
+    }, {
+      key: "receive",
+      value: function receive(eventCallback) {
+        this.callQueue.push(eventCallback);
+      }
+    }]);
+
+    return EventPipe;
+  }();
+
+  var eventPipe = new EventPipe();
+  return {
+    send: eventPipe.send.bind(eventPipe),
+    receive: eventPipe.receive.bind(eventPipe)
+  };
 }();
 /**
  * Key class does not have any methods as it only contains key mappings for keyevent. For example:
@@ -6138,6 +6138,62 @@ function () {
 
   return Session;
 }();
+/**
+ * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
+ */
+
+
+var Storage =
+/*#__PURE__*/
+function () {
+  function Storage() {
+    _classCallCheck(this, Storage);
+  }
+
+  _createClass(Storage, null, [{
+    key: "set",
+
+    /**
+     * Save data into the local storage. 
+     * @param {string} key
+     * @param {*} value
+     */
+    value: function set(key, value) {
+      localStorage.setItem(key, value);
+    }
+    /**
+     * Get the saved data from the local storage.
+     * @param {string} key
+     */
+
+  }, {
+    key: "get",
+    value: function get(key) {
+      return localStorage.getItem(key);
+    }
+    /**
+     * Remove data from the local storage.
+     * @param {string} key
+     */
+
+  }, {
+    key: "remove",
+    value: function remove(key) {
+      localStorage.removeItem(key);
+    }
+    /**
+     * Clears the local storage.
+     */
+
+  }, {
+    key: "clear",
+    value: function clear() {
+      localStorage.clear();
+    }
+  }]);
+
+  return Storage;
+}();
 
 var Template = function () {
   /**
@@ -6888,62 +6944,6 @@ var Template = function () {
     isFragment: Template.isFragment,
     resolveToParent: Template.resolveToParent
   };
-}();
-/**
- * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
- */
-
-
-var Storage =
-/*#__PURE__*/
-function () {
-  function Storage() {
-    _classCallCheck(this, Storage);
-  }
-
-  _createClass(Storage, null, [{
-    key: "set",
-
-    /**
-     * Save data into the local storage. 
-     * @param {string} key
-     * @param {*} value
-     */
-    value: function set(key, value) {
-      localStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the local storage.
-     * @param {string} key
-     */
-
-  }, {
-    key: "get",
-    value: function get(key) {
-      return localStorage.getItem(key);
-    }
-    /**
-     * Remove data from the local storage.
-     * @param {string} key
-     */
-
-  }, {
-    key: "remove",
-    value: function remove(key) {
-      localStorage.removeItem(key);
-    }
-    /**
-     * Clears the local storage.
-     */
-
-  }, {
-    key: "clear",
-    value: function clear() {
-      localStorage.clear();
-    }
-  }]);
-
-  return Storage;
 }();
 /**
  * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
