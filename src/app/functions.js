@@ -1,4 +1,3 @@
-import RME from '../rme';
 import App from './app';
 import Util from '../util';
 
@@ -13,7 +12,7 @@ import Util from '../util';
 const createApp = (function() {
 
     return (selector, component, appName) => {
-        return App.name(appName).root(selector).create(RME.component(component.name, {}));
+        return App.name(appName).root(selector).create({[component.name]: {}});
     }
 
 })();
