@@ -11,9 +11,9 @@ Links
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.5.11/rme.js](https://github.com/JamiLu/RME/releases/download/v1.5.11/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.5.11/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.5.11/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.5.11/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.5.11/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.12/rme.js](https://github.com/JamiLu/RME/releases/download/v1.5.12/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.12/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.5.12/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.12/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.5.12/rme.es5.min.js)
 
 NPM
 ---
@@ -61,13 +61,13 @@ Basics
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.5.11/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.5.12/rme.es5.min.js"></script>`
 
 __Or use NPM__
 
 `npm i rme.js`
 
-`import RME, { App, Component, bindState, useState, Key } from 'rme.js'`
+`import RME, { App, createApp, Component, bindState, useState, Key } from 'rme.js'`
 
 Then simply copy paste code clips below to your js file and voilà. 
 
@@ -82,6 +82,21 @@ App.root('#app').create({
         {FilterExample: {}}
     ]
 });
+```
+
+An alternative way to create a new application is to create a component function and then 
+invoke the createApp function with a selector and the component function. 
+```javascript
+const Demo = () => ({
+    div: [
+        {TodoExample: {}},
+
+        {FormExample: {}},
+        
+        {FilterExample: {}}
+    ]
+});
+createApp('#app', Demo);
 ```
 
 Now lets create the TodoExample component that will contain other components. This component defines a fragment that contains h2, input, button and also a component named Lister. The Lister component is explained just below. But to mention about `fragment` elements that they are special grouping or encapsuling elements that are not rendered themselves but only their content will be rendered into their parent element.
