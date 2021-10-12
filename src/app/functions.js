@@ -14,6 +14,9 @@ import Util from '../util';
 const createApp = (function() {
 
     return (selector, component, appName) => {
+        if (component.valueOf().name.length === 0) {
+            throw new Error('The app function must be a named function.');
+        }
         if (Util.isFunction(component) && !RME.hasComponent(component.valueOf().name))
             Component(component);
 

@@ -3,7 +3,6 @@ import Util from '../util';
 import RMEElemRenderer from './renderer';
 import Template from '../template';
 import Tree from '../tree';
-import { debug } from 'util';
 
 let App = (function() {
 

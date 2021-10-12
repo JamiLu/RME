@@ -138,10 +138,10 @@ let Messages = (function() {
          * @param {*} params 
          */
         getTranslatedElemIfExist(key, params) {
-            if(Util.isEmpty(this.app)) {
-                let last = params[params.length - 1];
-                if(Util.isObject(last) && last instanceof Elem) {
-                    last = params.pop();
+            let last = params[params.length - 1];
+            if (Util.isObject(last) && last instanceof Elem) {
+                last = params.pop()
+                if (Util.isEmpty(this.app)) {
                     this.translated.push({key: key, params: params, obj: last});
                 }
             }

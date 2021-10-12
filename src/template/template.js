@@ -208,10 +208,8 @@ let Template = (function() {
          * @returns True if the given message is actually a message otherwise returns false.
          */
         isMessage(message) {
-            let params = this.getMessageParams(message);
-            if(!Util.isEmpty(params))
-                message = message.replace(params.join(), "");
-            return !Util.isEmpty(Messages.message(message)) && Messages.message(message) != message;
+            message = this.normalizeMessageString(message);
+            return Util.notEmpty(Messages.message(message)) && Messages.message(message) != message;
         }
 
         /**
@@ -246,7 +244,7 @@ let Template = (function() {
             if (!Util.isEmpty(match)) 
                 resolved.addClasses(match.join(" ").replace(/\./g, ""));
 
-            match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_\/\.&%@!?£$+¤|;\\<\\>\\"]+\]/g); //find attributes
+            match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_\/\.&%@!?£$+¤|;\\<\\>\\{}"]+\]/g); //find attributes
             if (!Util.isEmpty(match))
                 resolved = this.addAttributes(resolved, match);
 
@@ -289,7 +287,7 @@ let Template = (function() {
                 var attr = attrArray[i];
                 let key = attr.substring(attr.indexOf(start) +1, attr.indexOf(eq));
                 let val = attr.substring(attr.indexOf(eq) +1, attr.indexOf(end));
-                elem.setAttribute(key, val);
+                this.resolveAttributes(elem, key, val);
                 i++;
             }
             return elem;
@@ -311,6 +309,12 @@ let Template = (function() {
                     break;
                 case 'text':
                     elem.setText(val || '');
+                    break;
+                case 'message':
+                    this.resolveMessage(elem, val);
+                    break;
+                case 'placeholder':
+                    this.resolvePlaceholder(elem, key, val);
                     break;
                 case 'content':
                     this.resolveContent(elem, key, val);
@@ -339,9 +343,6 @@ let Template = (function() {
                 case 'styles':
                     elem.setStyles(val);
                     break;
-                case 'message':
-                    this.resolveMessage(elem, val);
-                    break;
                 case 'click':
                     elem.click();
                     break;
@@ -360,6 +361,18 @@ let Template = (function() {
                 default: 
                     this.resolveDefault(elem, key, val);
             }
+        }
+
+        /**
+         * Resolves the placeholder. The method will first check if the value is a message.
+         * @param {object} elem 
+         * @param {string} key 
+         * @param {*} val 
+         */
+        resolvePlaceholder(elem, key, val) {
+            const params = this.getMessageParams(val);
+            const message = this.normalizeMessageString(val);
+            elem.setAttribute(key, this.isMessage(val) ? Messages.message(message, params) : val);
         }
 
         /**
@@ -399,33 +412,37 @@ let Template = (function() {
             if(Util.isEmpty(message))
                 throw "message must not be empty";
 
-            let matches = this.getMessageParams(message);
-            if(Util.isEmpty(matches)) {
-                elem.message(message);
-            } else {
-                Util.setTimeout(function() {
-                    let end = message.indexOf(":") > 0 ? message.indexOf(":") : message.indexOf("{");
-                    message = message.substring(0, end);
-                    matches = matches.join().match(/([^\{\}\:\;]*)/g);
-                    let params = [];
-                    let i = 0;
-                    while(i < matches.length) {
-                        if(!Util.isEmpty(matches[i]))
-                            params.push(matches[i]);
-                        i++;
-                    }
-                    elem.message(message, params);
-                });
-            }
+            elem.message(this.normalizeMessageString(message), this.getMessageParams(message));
         }
 
         /**
-         * Function will return message parameters if found.
+         * Function will return message parameters in an array if found.
          * @param {string} message 
-         * @returns Message params in a match array if found.
+         * @returns Message params in the array or null if no params found.
          */
         getMessageParams(message) {
+            let match = this.getMessageParameterString(message);
+            match = match && match.join().replace(/({|}|:|;)/g, match.join()).split(match.join());
+            return match && match.filter(Util.notEmpty);
+        }
+
+        /**
+         * Get the parameter match array from the message string if found.
+         * @param {string} message 
+         * @returns The match array or null.
+         */
+        getMessageParameterString(message) {
             return message.match(/\:?(\{.*\}\;?)/g);
+        }
+
+        /**
+         * Removes parameter string from the message string if present.
+         * @param {string} message 
+         * @returns The normalized message string.
+         */
+        normalizeMessageString(message) {
+            const params = this.getMessageParameterString(message);
+            return Util.notEmpty(params) ? message.replace(params.join(), '') : message;
         }
 
         /**

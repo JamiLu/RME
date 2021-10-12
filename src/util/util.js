@@ -12,6 +12,15 @@ class Util {
     }
 
     /**
+     * Checks is the given value not empty. This function is a negation to the Util.isEmpty function.
+     * @param {*} value 
+     * @returns True if the value is not empty otherwise false.
+     */
+    static notEmpty(value) {
+        return !Util.isEmpty(value)
+    }
+
+    /**
      * Get the type of the given value.
      * @param {*} value
      * @returns The type of the given value.

@@ -11,9 +11,9 @@ Links
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.5.12/rme.js](https://github.com/JamiLu/RME/releases/download/v1.5.12/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.5.12/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.5.12/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.5.12/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.5.12/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.13/rme.js](https://github.com/JamiLu/RME/releases/download/v1.5.13/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.13/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.5.13/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.5.13/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.5.13/rme.es5.min.js)
 
 NPM
 ---
@@ -301,8 +301,8 @@ Classes & Functions
   - url(manual) **Use URL based routing. If manual is true then use Router.navigate to navigate next route.**
   - scroll(auto) **Method sets default level behavior for route naviagation. A value true sets the browser to auto-scroll up when navigating to a new resource and a value false will not auto-scroll up. Default value is true.**
 * EventPipe **_This class is experimental and might be removed later_**
-- send(event) **Can be used to send a custom event through the EventPipe. Method takes one object paremter that must atleast have one attribute "type" otherwise error is thrown**
-- receive(event) **Is used to receive the sent event from the EventPipe. Method takes one paramter function which receives an event as parameter.**
+  - send(event) **Can be used to send a custom event through the EventPipe. Method takes one object paremter that must atleast have one attribute "type" otherwise error is thrown**
+  - receive(event) **Is used to receive the sent event from the EventPipe. Method takes one paramter function which receives an event as parameter.**
 * Key
   - no methods, only **Key** constants for keyevent such as Key.ENTER
 * Cookie
