@@ -1,4 +1,6 @@
-import updateCalculator from '../actions/calculatorAction';
+export const actions = useValue({result: '', statement: ''});
+
+const [getOperation, setOperation] = actions;
 
 const keyPadButton = props => ({
     'button.w3-button.w3-jumbo.keypad-button': {
@@ -6,16 +8,16 @@ const keyPadButton = props => ({
         styles: props.styles,
         class: props.class ? props.class : '',
         onClick: () => {
-            let state = useState('Calculator');
+            let savedStatement = getOperation().statement;
             switch(props.text) {
                 case 'C':
-                    updateCalculator({result: '', statement: ''});
+                    setOperation({result: '', statement: ''});
                 break;
                 case '=':
-                    updateCalculator({result: eval(state.statement), statement: state.statement+' = '});
+                    setOperation({result: eval(savedStatement), statement: savedStatement+' = '});
                 break;
                 default:
-                    updateCalculator({statement: state.statement+props.text});
+                    setOperation({statement: savedStatement+props.text});
             }
         }
     }

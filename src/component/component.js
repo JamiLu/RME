@@ -1,6 +1,6 @@
 import Util from '../util';
-import RME from '../rme';
 import App from '../app';
+import RMEComponentManager from './manager';
 
 
 /**
@@ -78,7 +78,7 @@ const Component = (function() {
             App.component({[component.name]: component.comp})(component.appName);
             resolveInitialState(component.initialState, component.name+component.stateRef, component.appName);
         } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
-            RME.component({[component.valueOf().name]: component});
+            RMEComponentManager.addComponent({[component.valueOf().name]: component});
         } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
             const comp = new component();
             App.component({[component.valueOf().name]: comp.render})(comp.appName);
@@ -144,6 +144,29 @@ const bindState = (function() {
 
 })();
 
+/**
+ * The function will bind an array of getter functions for the component. The getters are invoked
+ * when the component is invoked. The values returend by the getters are set in the component properties.
+ * @param {*} component
+ * @param {Array} mapper Value mapper
+ */
+const bindGetters = (function() {
+
+    return (component, mapper) => {
+        let name;
+        if (Util.isFunction(component))
+            name = component.valueOf().name;
+        else if (Util.isObject(component)) {
+            name = component.name;
+        }
+
+        RMEComponentManager.bindGetters(name, mapper);
+
+        return component;
+    }
+
+})();
+
 export default Component;
 
-export { bindState }
+export { bindState, bindGetters }

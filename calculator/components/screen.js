@@ -1,4 +1,8 @@
-const ResultScreen = ({ statement, result }) => ({
+import { actions } from './keypad';
+
+const [getOperation] = actions;
+
+const ResultScreen = ({operation: {statement, result}}) => ({
     'div.result-screen': () => {
         const OPS = /(\+|\-|\*|\/)/g;
         let matches = statement.match(OPS) || [];
@@ -14,4 +18,6 @@ const ResultScreen = ({ statement, result }) => ({
     }
 });
 
-Component(ResultScreen);
+Component(bindGetters(ResultScreen, {
+    operation: getOperation
+}));

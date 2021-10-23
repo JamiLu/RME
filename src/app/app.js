@@ -1,8 +1,9 @@
-import RME from '../rme';
 import Util from '../util';
 import RMEElemRenderer from './renderer';
 import Template from '../template';
 import Tree from '../tree';
+import AppManager from './manager';
+import RMEComponentManager from '../component/manager';
 
 let App = (function() {
 
@@ -48,7 +49,7 @@ let App = (function() {
             } else {
                 while(Util.isEmpty(App.init().name)) {
                     name = App.init().prefix + App.init().seq;
-                    name = RME.storage(name);
+                    name = AppManager.get(name);
                     if(Util.isEmpty(name)) {
                         App.init().name = App.init().prefix+App.init().seq;
                         break;
@@ -75,10 +76,10 @@ let App = (function() {
          * @returns Created application instance.
          */
         static create(object) {
-            let name = !Util.isEmpty(App.init().name) ? App.init().name : App.checkName();
-            let root = !Util.isEmpty(App.init().root) ? App.init().root : undefined;
+            let name = Util.notEmpty(App.init().name) ? App.init().name : App.checkName();
+            let root = Util.notEmpty(App.init().root) ? App.init().root : undefined;
             let app = new AppInstance(name, root, object);
-            RME.storage(name, app);
+            AppManager.set(name, app);
             App.reset();
             return app;
         }
@@ -89,11 +90,11 @@ let App = (function() {
          * @returns Application instance.
          */
         static get(name) {
-            if(Util.isEmpty(name))
+            if (Util.isEmpty(name))
                return App.name(0).getInstance();
             else {
-                let app = App.name(name).getInstance();
-                if(Util.isEmpty(app))
+                const app = App.name(name).getInstance();
+                if (Util.isEmpty(app))
                     throw "Could not find app with name: "+name;
                 else
                     return app;
@@ -166,7 +167,7 @@ let App = (function() {
         static getInstance() {
             if (Util.isEmpty(App.init().name))
                 throw "No App instance selected, invoke a function name() first";
-            let app = RME.storage(App.init().name);
+            const app = AppManager.get(App.init().name);
             App.reset();
             return app;
         }
@@ -178,7 +179,7 @@ let App = (function() {
         static component(component) {
             const bindState = (appName) => {
                 let updater = Util.isEmpty(appName) ? () => (state) => App.getState(state) : () => (state) => App.get(appName).getState(state);
-                RME.component(component, updater);
+                RMEComponentManager.addComponent(component, updater);
             }
             return bindState;
         }
@@ -276,7 +277,7 @@ let App = (function() {
                 this.afterRefreshCallQueue.push(callback)
             }
         }
-    
+
         /**
          * Function takes three parameters that enable setting state for components.
          * If only one parameter is given then the parameter must be an object or a function. 
@@ -337,22 +338,7 @@ let App = (function() {
          * @returns True if state empty otherwise false.
          */
         isStateEmpty(refName) {
-            if(Util.isEmpty(refName))
-                return this.recursiveCheckMapIsEmpty(this.state);
-            else
-                return this.recursiveCheckMapIsEmpty(this.state[refName]);
-        }
-    
-        recursiveCheckMapIsEmpty(map) {
-            for(let key in map) {
-                if(map.hasOwnProperty(key)) {
-                    if(!Util.isEmpty(map[key]))
-                        return false;
-                    if(Util.isObject(map[key]))
-                        this.recursiveCheckMapIsEmpty(map[key]);
-                }
-            }
-            return true;
+            return Object.keys(Util.isEmpty(refName) ? this.state : this.state[refName]).length === 0;
         }
     
         /**
@@ -363,10 +349,7 @@ let App = (function() {
          * @param {boolean} update 
          */
         clearState(refName, update) {
-            if(Util.isEmpty(refName))
-                this.recursiveClearMap(this.state);
-            else 
-                this.recursiveClearMap(this.state[refName]);
+            this.recursiveClearMap(this.state[refName] || this.state);
     
             if(update !== false) {
                 this.refreshApp();
@@ -374,16 +357,14 @@ let App = (function() {
         }
     
         recursiveClearMap(map) {
-            for(let key in map) {
-                if(map.hasOwnProperty(key)) {
-                    if(Util.isString(map[key]))
-                        map[key] = "";
-                    else if(Util.isArray(map[key]))
-                        map[key] = [];
-                    else if(Util.isObject(map[key]))
-                        this.recursiveClearMap(map[key]);
-                }
-            }
+            Object.keys(map).forEach(key => {
+                if (Util.isArray(map[key]))
+                    map[key] = [];
+                else if (Util.isObject(map[key]))
+                    this.recursiveClearMap(map[key])
+                else
+                    map[key] = '';
+            });
         }
     
         /**

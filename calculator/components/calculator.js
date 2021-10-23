@@ -1,14 +1,10 @@
 import './keypad';
 import './screen';
 
-const Calculator = props => ({
+const Calculator = () => ({
     div: [
-        {ResultScreen: {
-            statement: props.statement,
-            result: props.result
-        }},
+        {ResultScreen: {}},
         {KeyPad: {
-            calculatorRef: props.stateRef,
             rows: [
                 {
                     col1: {operationButton: {text: '/'}},
@@ -45,4 +41,4 @@ const Calculator = props => ({
     ]
 });
 
-Component(bindState(Calculator, {statement: '', result: ''}));
+Component(Calculator);

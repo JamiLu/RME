@@ -1,4 +1,11 @@
-import RME, { Component, bindState, useState } from '../../src/index';
+import RME, { Component, bindState, useState, CSS } from '../../src/index';
+
+CSS(`
+table td {
+    padding: 5px;
+    border: 1px solid #000000;
+}
+`);
 
 RME.storage('countryList', [
     {country: 'Finland', capital: 'Helsinki'}, {country: 'Sweden', capital: 'Stockholm'}, {country: 'Norway', capital: 'Oslo'},

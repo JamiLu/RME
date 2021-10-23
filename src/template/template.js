@@ -1,7 +1,7 @@
-import RME from '../rme';
 import Elem from '../elem';
 import Messages from '../messages';
 import Util from '../util';
+import RMEComponentManager from '../component/manager';
 
 let Template = (function() {
     /**
@@ -223,9 +223,9 @@ let Template = (function() {
             let resolved = null;
             var match = [];
             var el = this.getElementName(tag);
-            if (RME.hasComponent(el)) {
+            if (RMEComponentManager.hasComponent(el)) {
                 el = el.replace(/component:/, "");
-                resolved = RME.component(el, obj);
+                resolved = RMEComponentManager.getComponent(el, obj);
                 if (Util.isEmpty(resolved))
                     return resolved;
             } else if (Util.isEmpty(el)) {
@@ -461,7 +461,7 @@ let Template = (function() {
          * @returns True if the component exist or the key contains component keyword and exist, otherwise false.
          */
         isComponent(key) {
-            return RME.hasComponent(this.getElementName(key));
+            return RMEComponentManager.hasComponent(this.getElementName(key));
         }
 
         /**
@@ -565,7 +565,7 @@ let Template = (function() {
          */
         static isTagOrComponent(tag) {
             tag = tag.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join().replace("component:", "");
-            if(RME.hasComponent(tag))
+            if(RMEComponentManager.hasComponent(tag))
                 return true;
             
             return Template.isTag(tag);
@@ -633,13 +633,13 @@ let Template = (function() {
                 return true;
             else if(key === "form" && (Template.isElem(elem.getTagName(), ["button", "fieldset", "input", "label", "meter", "object", "output", "select", "textarea"])))
                 return true;
-            else if(key.indexOf("data") === 0 && (!RME.hasComponent(key) && !Template.isElem(elem.getTagName(), ["data"]) || Template.isElem(elem.getTagName(), ["object"])))
+            else if(key.indexOf("data") === 0 && (!RMEComponentManager.hasComponent(key) && !Template.isElem(elem.getTagName(), ["data"]) || Template.isElem(elem.getTagName(), ["object"])))
                 return true;
 
             let attrs = {
                 a: ["alt", "async", "autocomplete", "autofocus", "autoplay", "accept", "accept-charset", "accpetCharset", "accesskey", "action"],
                 b: ["blur"],
-                c: ["class", "checked", "content", "contenteditable", "click", "charset", "cols", "colspan", "controls", "coords"],
+                c: ["class", "checked", "content", "contenteditable", "crossorigin", "crossOrigin", "click", "charset", "cols", "colspan", "controls", "coords"],
                 d: ["disabled", "display", "draggable", "dropzone", "datetime", "default", "defer", "dir", "dirname", "download"],
                 e: ["editable", "enctype"],
                 f: ["for", "focus", "formaction"],

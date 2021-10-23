@@ -1,5 +1,5 @@
-import Component, { bindState } from './component';
+import Component, { bindState, bindGetters } from './component';
 
 export default Component;
 
-export { bindState }
+export { bindState, bindGetters }

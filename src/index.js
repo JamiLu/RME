@@ -1,6 +1,6 @@
-import RME, { configure } from './rme';
-import App, { createApp, useState } from './app';
-import Component, { bindState } from './component';
+import RME, { configure, script, ready } from './rme';
+import App, { createApp, useState, useValue } from './app';
+import Component, { bindState, bindGetters } from './component';
 import CSS from './css';
 import Elem from './elem';
 import Tree from './tree';
@@ -21,9 +21,13 @@ export {
     configure,
     createApp,
     useState,
+    useValue,
     Component,
     bindState,
+    bindGetters,
     CSS,
+    script,
+    ready,
     App,
     Elem,
     Tree,

@@ -1,5 +1,5 @@
 import RME from './rme';
-import configure from './functions';
+import configure, { script, ready } from './functions';
 
 export default RME;
-export { configure }
+export { configure, script, ready }

@@ -1,7 +1,8 @@
-import RME from '../rme';
 import Component from '../component';
 import App from './app';
 import Util from '../util';
+import RMEComponentManager from '../component/manager';
+import ValueStore from './valueStore';
 
 
 /**
@@ -17,7 +18,7 @@ const createApp = (function() {
         if (component.valueOf().name.length === 0) {
             throw new Error('The app function must be a named function.');
         }
-        if (Util.isFunction(component) && !RME.hasComponent(component.valueOf().name))
+        if (Util.isFunction(component) && !RMEComponentManager.hasComponent(component.valueOf().name))
             Component(component);
 
         return App.name(appName).root(selector).create({[component.valueOf().name]: {}});
@@ -38,19 +39,27 @@ const createApp = (function() {
  */
 const useState = (function() {
 
-    const resolveAppName = (update, appName) => {
-        if (Util.isString(update))
-            return update;
-        return appName;
-    }
-
     return (refName, value, update, appName) => {
-        let name = resolveAppName(update, appName);
-        App.get(name).setState(refName, value, update);
-        return App.get(name).getState(refName);
+        const name = Util.isString(update) ? update : appName;
+        const stateRef = Util.isString(refName) ? refName : refName.stateRef;
+        App.get(name).setState(stateRef, value, update);
+        return App.get(name).getState(stateRef);
     }
 
 })();
 
+/**
+ * The function will set the given value in the app value state. The value is accessible by
+ * a returned getter and a setter function.
+ * @param {*} value Value to set in the app state
+ * @param {string} appName Optional app name
+ * @returns An array containing the getter and the setter functions for the given value.
+ */
+const useValue = (function() {
 
-export { createApp, useState }
+    return (value, appName) => ValueStore.useValue(value, appName);
+
+})();
+
+
+export { createApp, useState, useValue }

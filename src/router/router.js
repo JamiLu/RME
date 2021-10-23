@@ -1,9 +1,9 @@
-import RME from '../rme';
 import Elem from '../elem';
 import Tree from '../tree';
 import Template from '../template';
 import Browser from '../browser';
 import Util from '../util';
+import RMEComponentManager from '../component/manager';
 
 let Router = (function() {
     /**
@@ -178,8 +178,10 @@ let Router = (function() {
          * @param {*} elem 
          */
         resolveElem(elem, props) {
-            if (Util.isString(elem) && RME.hasComponent(elem)) {
-                return RME.component(elem, props);
+            if (Util.isFunction(elem) && RMEComponentManager.hasComponent(elem.valueOf().name)) {
+                return RMEComponentManager.getComponent(elem.valueOf().name, props);
+            } else if (Util.isString(elem) && RMEComponentManager.hasComponent(elem)) {
+                return RMEComponentManager.getComponent(elem, props);
             } else if (Util.isString(elem) && this.isSelector(elem)) {
                 return Tree.getFirst(elem);
             } else if (elem instanceof Elem) {

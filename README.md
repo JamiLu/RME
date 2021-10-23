@@ -28,9 +28,13 @@ import RME, {
     configure,
     createApp,
     useState,
+    useValue,
     Component,
     bindState,
+    bindGetters,
     CSS,
+    script,
+    ready,
     App,
     Elem,
     Tree,
@@ -99,7 +103,44 @@ const Demo = () => ({
 createApp('#app', Demo);
 ```
 
-Now lets create the TodoExample component that will contain other components. This component defines a fragment that contains h2, input, button and also a component named Lister. The Lister component is explained just below. But to mention about `fragment` elements that they are special grouping or encapsuling elements that are not rendered themselves but only their content will be rendered into their parent element.
+First we create a shared value using the useValue function. The function will return an array containing the getter and the setter function for the specific value.
+```javascript
+const [getValue, setValue] = useValue(0);
+```
+Next we can create following components by function declaration. The main component contains a fragment which contains `h2` text element and then a div which contains a `Clicker` and a `ShowValue` component. The `fragment` is a special element which only renders its content into the parent html dom element.
+```javascript
+const ClickAndShowExample = () => ({
+    fragment: {
+        h2: 'Click and Show Example',
+        div: {
+            Clicker: {},
+            ShowValue: {}
+        }
+    }
+});
+
+const Clicker = () => ({
+    div: {
+        button: {
+            text: 'Add one',
+            onClick: () => setValue(val => val+1)
+        }
+    }
+});
+
+const ShowValue = (props) => ({
+    div: props.value
+});
+```
+Register the components to the RME. The `bindGetters` function can be used to bind external values to the component props. The function can be used with the statefull and the stateless components.
+```javascript
+Component(ClickAndShowExample, Clicker);
+Component(bindGetters(ShowValue, {
+    value: getValue
+}));
+```
+
+Now lets create the TodoExample component that will contain other components. This component defines a fragment that contains h2, input, button and also a component named Lister. The Lister component is explained just below.
 ```javascript
 const TodoExample = props => ({
     fragment: {
@@ -215,19 +256,21 @@ Classes & Functions
 >Not comprehensive. Just to name few.
 
 * Special global functions
+  - configure(appInstance, Messages, Router) **Configure the RME to use the App, Messages and Router all together**
+  - createApp(#locator, appFunction) **Create a new App and insert it into the given locator**
+  - useState(props, (state) => {}) **Get or set the component state**
+  - useValue(initialValue) **Create a shareable value that can be used between any component**
   - Component(...components) **Component function receives a comma separate list of component functions.**
   - bindState(component, initialState, appName) **bindState function binds state into the given component. InitialState and appName attributes are not necessary.**
+  - bindGetters(componentFunction, getterMapperObject) **Bind getters that give properties to the component before rendering**,
   - CSS(content, properties) **Creates a dynamic style component with content and optional properties if given.**
+  - script(src, options) **Attach a script file to the dom header**
+  - ready(callback) **Add a callback function to be run when the DOM tree is ready. Calling the ready twice will create two callback functions.**
 * RME
-  - run(runnable) **Runs application script type fuction _(runnable)_ immediately**
-  - ready(runnable) **Runs application script type function _(runnable)_ when body is ready _MAX 1 ready per RME application_**
-  - use({config}) **Configures RME to use _Router_, _Messages_ and _App_ classes together**
   - component(object|function(){}) **Create and return created component on the callback**
   - component("componentName", {param: 1, param: 2}) **Get and invoke the component**
   - storage(key, val) **Store data in RME instance**
   - storage(key) **Read data from RME instance storage**
-  - onStorageChange(rmeState) **If defined, will be invoked every time when something was saved into the storage. Changed state will be given as parameter to the callback**
-  - script(source, id, type, text, defer, crossOrigin, charset, async) **Add a script file on the go _source is required other parameters are optional_**
 * App **_Handles default application_**
   - root(selector) **Selects a root element for an application to work in**
   - name(appName) **Gives an applicatian a name**
@@ -254,7 +297,6 @@ Classes & Functions
   - fetch().put()...
   - fetch().delete()....
   - fetch().do(custom).then(success).then(response).catch(error)
-  > Side note, fetch having two **then** is just how it works, dont believe check fetch manual. 
 * Elem
   - constructor(type|html) **If type is string creates a new JavaScript element of that type _OR_ If type is JavaScript html object then only wraps that object inside of this Elem object**
   - render(elem, elem, elem|arrayOfElems|arrayOfElems, arrayOfElems, elem) **Renders the Elem instance objects that contain html data to insert into the HTML document tree. Can render multiple elements.**
@@ -322,6 +364,7 @@ Classes & Functions
 * Util
   - many utility methods that this Framework also uses such as.
   - isEmpty(value) **Returns true if null | undefined | ""**
+  - notEmpty(value) **Returns true if the value is not empty !Util.isEmpty**
   - getType(value) **Returns the type of the given value**
   - isType(value, type) **Checks if value is a given type and returns true false accordigly**
   - isFunction(value) 

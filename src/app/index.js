@@ -1,5 +1,5 @@
 import App from './app';
-import { createApp, useState } from './functions';
+import { createApp, useState, useValue } from './functions';
 
 export default App;
-export { createApp, useState }
+export { createApp, useState, useValue }
