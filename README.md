@@ -157,7 +157,7 @@ const TodoExample = props => ({
         },
         button: {
             text: 'Clear list',
-            onClick: () => App.clearState(props.stateRef)
+            onClick: () => App.clearState(props)
         },
         Lister: {
             list: props.list
