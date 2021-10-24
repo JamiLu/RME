@@ -6,7 +6,7 @@ const FormExample = props => ({
         TitleHeader: props,
         Form: {
             input: event => {
-                useState(props.stateRef, state => ({
+                useState(props, state => ({
                     ...state,
                     [event.target.name]: event.target.value
                 }));

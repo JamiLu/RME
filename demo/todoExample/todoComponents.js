@@ -6,7 +6,7 @@ const TodoExample = props => ({
         'input[type=text][placeholder=Type & Press Enter to Add]': {
             onKeyDown: event => {
                 if(event.key === Key.ENTER) {
-                    useState(props.stateRef, state => ({
+                    useState(props, state => ({
                         list: state.list.concat({li: event.target.value})
                     }));
                     event.target.value = '';
@@ -15,7 +15,7 @@ const TodoExample = props => ({
         },
         button: {
             text: 'Clear list',
-            onClick: () => App.clearState(props.stateRef)
+            onClick: () => App.clearState(props)
         },
         Lister: {
             list: props.list

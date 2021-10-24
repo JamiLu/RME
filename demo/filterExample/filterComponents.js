@@ -18,7 +18,7 @@ const FilterExample = props => ({
         h2: 'Filter Example',
         'input[type=text][placeholder=Type to Filter Country]': {
             onInput: event => 
-                useState(props.stateRef, {
+                useState(props, {
                     rows: RME.storage('countryList')
                         .filter(row => row.country.toLowerCase().search(event.target.value) > -1)
                 })
