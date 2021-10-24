@@ -6,101 +6,15 @@ function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (O
 
 function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-
 /** RME BUILD FILE **/
-
-/**
- * The createApp function is a shortcut function to create an RME application.
- * @param {string} selector
- * @param {function} component
- * @param {string} appName
- * @returns a created app instance.
- */
-var createApp = function () {
-  return function (selector, component, appName) {
-    if (component.valueOf().name.length === 0) {
-      throw new Error('The app function must be a named function.');
-    }
-
-    if (Util.isFunction(component) && !RMEComponentManager.hasComponent(component.valueOf().name)) Component(component);
-    return App.name(appName).root(selector).create(_defineProperty({}, component.valueOf().name, {}));
-  };
-}();
-/**
- * The useState function is a srhotcut function to set application component state.
- * @param {*} refName string, orbject or function. String is the stateRef. Object is the new state object.
- * Function receives a previous state as parameter and returns a new state object.
- * @param {*} value function or object. Object is the new state. Function receives a previous state as 
- * parameter and returns a new state object.
- * @param {*} update optional string or boolean. If string then works as appName otherwise works as normal.
- * @param {string} appName optional if not set default app is used .
- * @returns the new state
- */
-
-
-var useState = function () {
-  return function (refName, value, update, appName) {
-    var name = Util.isString(update) ? update : appName;
-    var stateRef = Util.isString(refName) ? refName : refName.stateRef;
-    App.get(name).setState(stateRef, value, update);
-    return App.get(name).getState(stateRef);
-  };
-}();
-/**
- * The function will set the given value in the app value state. The value is accessible by
- * a returned getter and a setter function.
- * @param {*} value Value to set in the app state
- * @param {string} appName Optional app name
- * @returns An array containing the getter and the setter functions for the given value.
- */
-
-
-var useValue = function () {
-  return function (value, appName) {
-    return ValueStore.useValue(value, appName);
-  };
-}();
-/**
- * Keeps app instances in memory
- */
-
-
-var AppManager = function () {
-  var AppManager =
-  /*#__PURE__*/
-  function () {
-    function AppManager() {
-      _classCallCheck(this, AppManager);
-
-      this.apps = {};
-    }
-
-    _createClass(AppManager, [{
-      key: "set",
-      value: function set(name, value) {
-        this.apps[name] = value;
-      }
-    }, {
-      key: "get",
-      value: function get(name) {
-        return this.apps[name];
-      }
-    }]);
-
-    return AppManager;
-  }();
-
-  var manager = new AppManager();
-  return manager;
-}();
-
 var App = function () {
   var App =
   /*#__PURE__*/
@@ -480,26 +394,40 @@ var App = function () {
       /**
        * Function takes one optional parameter. If refName is given then only a state of a component referred by the refName is checked.
        * Otherwise whole application state of this application instance is checked.
-       * @param {string} refName 
+       * @param {*} refName String or props object
        * @returns True if state empty otherwise false.
        */
 
     }, {
       key: "isStateEmpty",
       value: function isStateEmpty(refName) {
-        return Object.keys(Util.isEmpty(refName) ? this.state : this.state[refName]).length === 0;
+        refName = Util.isString(refName) ? refName : refName.stateRef;
+        return this.recursiveCheckMapIsEmpty(Util.isEmpty(refName) ? this.state : this.state[refName]);
+      }
+    }, {
+      key: "recursiveCheckMapIsEmpty",
+      value: function recursiveCheckMapIsEmpty(map) {
+        for (var key in map) {
+          if (map.hasOwnProperty(key)) {
+            if (Util.notEmpty(map[key])) return false;
+            if (Util.isObject(map[key])) this.recursiveCheckMapIsEmpty(map[key]);
+          }
+        }
+
+        return true;
       }
       /**
        * Function takes two optional parameters. If refName is given then only a state of the component with the refName is cleared otherwise 
        * whole application state of this application instance is cleared. The application is updated unless the update parameter is 
        * explicitly set false.
-       * @param {string} refName 
+       * @param {*} refName String or props object 
        * @param {boolean} update 
        */
 
     }, {
       key: "clearState",
       value: function clearState(refName, update) {
+        refName = Util.isString(refName) ? refName : refName.stateRef;
         this.recursiveClearMap(this.state[refName] || this.state);
 
         if (update !== false) {
@@ -582,87 +510,90 @@ var App = function () {
   };
 }();
 /**
- * Manages between component shareable values.
+ * The createApp function is a shortcut function to create an RME application.
+ * @param {string} selector
+ * @param {function} component
+ * @param {string} appName
+ * @returns a created app instance.
  */
 
 
-var ValueStore = function () {
-  var ValueStore =
+var createApp = function () {
+  return function (selector, component, appName) {
+    if (component.valueOf().name.length === 0) {
+      throw new Error('The app function must be a named function.');
+    }
+
+    if (Util.isFunction(component) && !RMEComponentManager.hasComponent(component.valueOf().name)) Component(component);
+    return App.name(appName).root(selector).create(_defineProperty({}, component.valueOf().name, {}));
+  };
+}();
+/**
+ * The useState function is a srhotcut function to set application component state.
+ * @param {*} refName string, orbject or function. String is the stateRef. Object is the new state object.
+ * Function receives a previous state as parameter and returns a new state object.
+ * @param {*} value function or object. Object is the new state. Function receives a previous state as 
+ * parameter and returns a new state object.
+ * @param {*} update optional string or boolean. If string then works as appName otherwise works as normal.
+ * @param {string} appName optional if not set default app is used .
+ * @returns the new state
+ */
+
+
+var useState = function () {
+  return function (refName, value, update, appName) {
+    var name = Util.isString(update) ? update : appName;
+    var stateRef = Util.isString(refName) ? refName : refName.stateRef;
+    App.get(name).setState(stateRef, value, update);
+    return App.get(name).getState(stateRef);
+  };
+}();
+/**
+ * The function will set the given value in the app value state. The value is accessible by
+ * a returned getter and a setter function.
+ * @param {*} value Value to set in the app state
+ * @param {string} appName Optional app name
+ * @returns An array containing the getter and the setter functions for the given value.
+ */
+
+
+var useValue = function () {
+  return function (value, appName) {
+    return ValueStore.useValue(value, appName);
+  };
+}();
+/**
+ * Keeps app instances in memory
+ */
+
+
+var AppManager = function () {
+  var AppManager =
   /*#__PURE__*/
   function () {
-    function ValueStore() {
-      _classCallCheck(this, ValueStore);
+    function AppManager() {
+      _classCallCheck(this, AppManager);
 
-      this.values = {};
-      this.valueRefGenerator = new RefGenerator('val');
+      this.apps = {};
     }
-    /**
-     * The function will set the given value to the app instance and return a getter and a setter function
-     * for the given value. Values can be shared and used in between any component.
-     * @param {*} value 
-     * @returns An array containing the getter and the setter functions for the given value.
-     */
 
-
-    _createClass(ValueStore, [{
-      key: "useValue",
-      value: function useValue(value, appName) {
-        var _this4 = this;
-
-        if (Util.isFunction(value)) {
-          value = value(value);
-        }
-
-        var ref = this.valueRefGenerator.next();
-        this.values[ref] = value;
-
-        var getter = function getter() {
-          return _this4.values[ref];
-        };
-
-        var setter = function setter(next, update) {
-          if (Util.isFunction(next)) {
-            next = next(getter());
-          }
-
-          _this4.values[ref] = next;
-
-          if (update !== false) {
-            App.get(appName).refresh();
-          }
-        };
-
-        return [getter, setter];
+    _createClass(AppManager, [{
+      key: "set",
+      value: function set(name, value) {
+        this.apps[name] = value;
+      }
+    }, {
+      key: "get",
+      value: function get(name) {
+        return this.apps[name];
       }
     }]);
 
-    return ValueStore;
+    return AppManager;
   }();
 
-  var RefGenerator =
-  /*#__PURE__*/
-  function () {
-    function RefGenerator(feed) {
-      _classCallCheck(this, RefGenerator);
-
-      this.feed = feed || "";
-      this.seq = 0;
-    }
-
-    _createClass(RefGenerator, [{
-      key: "next",
-      value: function next() {
-        var ref = this.feed + this.seq;
-        this.seq++;
-        return ref;
-      }
-    }]);
-
-    return RefGenerator;
-  }();
-
-  var valueStore = new ValueStore();
-  return valueStore;
+  var manager = new AppManager();
+  return manager;
 }();
 
 var RMEElemRenderer =
@@ -781,325 +712,87 @@ function () {
   return RMEElemRenderer;
 }();
 /**
- * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
- * instance might have not been created at the time when components are created so the queue will wait 
- * until the application instance is created and then sets the state for the components in the queue.
+ * Manages between component shareable values.
  */
 
 
-var AppSetInitialStateJob = function () {
-  var InitStateJob =
+var ValueStore = function () {
+  var ValueStore =
   /*#__PURE__*/
   function () {
-    function InitStateJob() {
-      _classCallCheck(this, InitStateJob);
+    function ValueStore() {
+      _classCallCheck(this, ValueStore);
 
-      this.updateJob;
-      this.updateJobMap = {};
-      this.appNameList = [];
+      this.values = {};
+      this.valueRefGenerator = new RefGenerator('val');
     }
-
-    _createClass(InitStateJob, [{
-      key: "resolveUpdateJobs",
-      value: function resolveUpdateJobs() {
-        var _this5 = this;
-
-        if (!this.updateJob) this.updateJob = Util.setInterval(function () {
-          var appName = _this5.getAppNameIfPresent();
-
-          if (!Util.isEmpty(appName)) {
-            _this5.updateJobMap[appName].forEach(function (job) {
-              return job();
-            });
-
-            _this5.updateJobMap[appName] = [];
-            _this5.appNameList = _this5.appNameList.filter(function (app) {
-              return app !== appName;
-            });
-
-            if (_this5.appNameList.length === 0) {
-              Util.clearInterval(_this5.updateJob);
-              _this5.updateJob = undefined;
-            }
-          }
-        });
-      }
-    }, {
-      key: "getAppNameIfPresent",
-      value: function getAppNameIfPresent() {
-        return this.appNameList.find(function (appName) {
-          return App.get(appName === "undefined" ? undefined : appName);
-        });
-      }
-    }, {
-      key: "addToQueue",
-      value: function addToQueue(appName, job) {
-        var updateQueue = this.updateJobMap[appName] || [];
-        updateQueue.push(job);
-        this.updateJobMap[appName] = updateQueue;
-        this.appNameList = Object.keys(this.updateJobMap);
-        this.resolveUpdateJobs();
-      }
-    }]);
-
-    return InitStateJob;
-  }();
-
-  var initStateJob = new InitStateJob();
-  return {
-    addToQueue: initStateJob.addToQueue.bind(initStateJob),
-    resolveUpdateJobs: initStateJob.resolveUpdateJobs.bind(initStateJob)
-  };
-}();
-/**
- * Component resolves comma separated list of components that may be function or class.
- * Function component example: const Comp = props => ({h1: 'Hello'});
- * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
- * Resolve components Component(Comp, Comp2);
- * @param {function} components commma separated list of components
- */
+    /**
+     * The function will set the given value to the app instance and return a getter and a setter function
+     * for the given value. Values can be shared and used in between any component.
+     * @param {*} value 
+     * @returns An array containing the getter and the setter functions for the given value.
+     */
 
 
-var Component = function () {
-  var resolveInitialState = function resolveInitialState(initialState, stateRef, appName) {
-    if (!Util.isEmpty(App.get(appName))) {
-      App.get(appName).setState(stateRef, initialState, false);
-    } else {
-      AppSetInitialStateJob.addToQueue(appName, function () {
-        return App.get(appName).setState(stateRef, initialState);
-      });
-    }
-  };
+    _createClass(ValueStore, [{
+      key: "useValue",
+      value: function useValue(value, appName) {
+        var _this4 = this;
 
-  var resolveComponent = function resolveComponent(component) {
-    if (Util.isObject(component)) {
-      App.component(_defineProperty({}, component.name, component.comp))(component.appName);
-      resolveInitialState(component.initialState, component.name + component.stateRef, component.appName);
-    } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
-      RMEComponentManager.addComponent(_defineProperty({}, component.valueOf().name, component));
-    } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
-      var comp = new component();
-      App.component(_defineProperty({}, component.valueOf().name, comp.render))(comp.appName);
-      var state = {};
-      if (!Util.isEmpty(comp.onBeforeCreate)) state.onBeforeCreate = comp.onBeforeCreate;
-      if (!Util.isEmpty(comp.shouldComponentUpdate)) state.shouldComponentUpdate = comp.shouldComponentUpdate;
-      if (!Util.isEmpty(comp.onAfterCreate)) state.onAfterCreate = comp.onAfterCreate;
-      if (!Util.isEmpty(comp.onAfterRender)) state.onAfterRender = comp.onAfterRender;
-      state = _objectSpread({}, state, {}, comp.initialState);
-      var ref = comp.stateRef || state.stateRef || '';
-      resolveInitialState(state, component.name + ref, comp.appName);
-    }
-  };
+        if (Util.isFunction(value)) {
+          value = value(value);
+        }
 
-  return function () {
-    for (var _len = arguments.length, components = new Array(_len), _key = 0; _key < _len; _key++) {
-      components[_key] = arguments[_key];
-    }
+        var ref = this.valueRefGenerator.next();
+        this.values[ref] = value;
 
-    components.forEach(function (component) {
-      return !Util.isEmpty(component.valueOf().name) && resolveComponent(component);
-    });
-  };
-}();
-/**
- * A bindState function transfers a function component to a stateful component just like it was created 
- * using class or App class itself. The function receives three parameters. The function component,
- * an optional state object and an optinal appName.
- * Invoking examples:
- * Component(bindState(StatefulComponent));
- * Component(bindState(OtherComponent, { initialValue: 'initialText' }));
- * @param {function} component
- * @param {object} state
- * @param {string} appName
- */
+        var getter = function getter() {
+          return _this4.values[ref];
+        };
 
-
-var bindState = function () {
-  var getStateRef = function getStateRef(state) {
-    return state && state.stateRef ? state.stateRef : '';
-  };
-
-  var removeStateRef = function removeStateRef(state) {
-    var obj = _objectSpread({}, state);
-
-    delete obj.stateRef;
-    return obj;
-  };
-
-  return function (component, state, appName) {
-    return {
-      comp: component,
-      name: component.valueOf().name,
-      appName: appName,
-      stateRef: getStateRef(state),
-      initialState: _objectSpread({}, removeStateRef(state))
-    };
-  };
-}();
-/**
- * The function will bind an array of getter functions for the component. The getters are invoked
- * when the component is invoked. The values returend by the getters are set in the component properties.
- * @param {*} component
- * @param {Array} mapper Value mapper
- */
-
-
-var bindGetters = function () {
-  return function (component, mapper) {
-    var name;
-    if (Util.isFunction(component)) name = component.valueOf().name;else if (Util.isObject(component)) {
-      name = component.name;
-    }
-    RMEComponentManager.bindGetters(name, mapper);
-    return component;
-  };
-}();
-
-var Cookie = function () {
-  /**
-   * Cookie interface offers an easy way to get, set or remove cookies in application logic.
-   * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
-   * 
-   * {
-   *    name: "name",
-   *    value: "value",
-   *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-   *    cookiePath: "cookiePath absolute dir",
-   *    cookieDomain: "cookieDomain e.g example.com",
-   *    setSecureBoolean: true|false
-   * }
-   * 
-   * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-   * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-   */
-  var Cookie =
-  /*#__PURE__*/
-  function () {
-    function Cookie() {
-      _classCallCheck(this, Cookie);
-    }
-
-    _createClass(Cookie, null, [{
-      key: "get",
-
-      /**
-       * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
-       * 
-       * @param {String} name 
-       * @returns cookie object
-       */
-      value: function get(name) {
-        if (navigator.cookieEnabled) {
-          var retCookie = null;
-          var cookies = document.cookie.split(";");
-          var i = 0;
-
-          while (i < cookies.length) {
-            var cookie = cookies[i];
-            var eq = cookie.search("=");
-            var cn = cookie.substr(0, eq).trim();
-            var cv = cookie.substr(eq + 1, cookie.length).trim();
-
-            if (cn === name) {
-              retCookie = new CookieInstance(cn, cv);
-              break;
-            }
-
-            i++;
+        var setter = function setter(next, update) {
+          if (Util.isFunction(next)) {
+            next = next(getter());
           }
 
-          return retCookie;
-        }
-      }
-      /**
-       * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
-       * 
-       * @param {string} name
-       * @param {string} value
-       * @param {string} expiresDate
-       * @param {string} cookiePath
-       * @param {string} cookieDomain
-       * @param {boolean} setSecureBoolean
-       */
+          _this4.values[ref] = next;
 
-    }, {
-      key: "set",
-      value: function set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-        if (navigator.cookieEnabled) {
-          document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
-        }
-      }
-      /**
-       * Remove a cookie by name. Method will set the cookie expired and then remove it.
-       * @param {string} name
-       */
+          if (update !== false) {
+            App.get(appName).refresh();
+          }
+        };
 
-    }, {
-      key: "remove",
-      value: function remove(name) {
-        var co = Cookie.get(name);
-
-        if (!Util.isEmpty(co)) {
-          co.setExpired();
-          document.cookie = co.toString();
-        }
+        return [getter, setter];
       }
     }]);
 
-    return Cookie;
+    return ValueStore;
   }();
-  /**
-   * Cookie object may hold following values:
-   *
-   * {
-   *    name: "name",
-   *    value: "value",
-   *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-   *    cookiePath: "cookiePath absolute dir",
-   *    cookieDomain: "cookieDomain e.g example.com",
-   *    setSecureBoolean: true|false
-   * }
-   * 
-   * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-   * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-   */
 
-
-  var CookieInstance =
+  var RefGenerator =
   /*#__PURE__*/
   function () {
-    function CookieInstance(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-      _classCallCheck(this, CookieInstance);
+    function RefGenerator(feed) {
+      _classCallCheck(this, RefGenerator);
 
-      this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
-      this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
-      this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
-      this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
-      this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
-      this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
+      this.feed = feed || "";
+      this.seq = 0;
     }
 
-    _createClass(CookieInstance, [{
-      key: "setExpired",
-      value: function setExpired() {
-        this.cookieExpires = new Date(1970, 0, 1).toString();
-      }
-    }, {
-      key: "toString",
-      value: function toString() {
-        return this.cookieName + "=" + this.cookieValue + "; expires=" + this.cookieExpires + "; path=" + this.cookiePath + "; domain=" + this.cookieDomain + "; " + this.cookieSecurity;
-      }
-    }], [{
-      key: "create",
-      value: function create(name, value, expires, cpath, cdomain, setSecure) {
-        return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
+    _createClass(RefGenerator, [{
+      key: "next",
+      value: function next() {
+        var ref = this.feed + this.seq;
+        this.seq++;
+        return ref;
       }
     }]);
 
-    return CookieInstance;
+    return RefGenerator;
   }();
 
-  return Cookie;
+  var valueStore = new ValueStore();
+  return valueStore;
 }();
 /**
  * Browser class contains all the rest utility functions which JavaScript has to offer from Window, Navigator, Screen, History, Location objects.
@@ -1644,6 +1337,180 @@ function () {
   return Browser;
 }();
 /**
+ * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
+ * instance might have not been created at the time when components are created so the queue will wait 
+ * until the application instance is created and then sets the state for the components in the queue.
+ */
+
+
+var AppSetInitialStateJob = function () {
+  var InitStateJob =
+  /*#__PURE__*/
+  function () {
+    function InitStateJob() {
+      _classCallCheck(this, InitStateJob);
+
+      this.updateJob;
+      this.updateJobMap = {};
+      this.appNameList = [];
+    }
+
+    _createClass(InitStateJob, [{
+      key: "resolveUpdateJobs",
+      value: function resolveUpdateJobs() {
+        var _this5 = this;
+
+        if (!this.updateJob) this.updateJob = Util.setInterval(function () {
+          var appName = _this5.getAppNameIfPresent();
+
+          if (!Util.isEmpty(appName)) {
+            _this5.updateJobMap[appName].forEach(function (job) {
+              return job();
+            });
+
+            _this5.updateJobMap[appName] = [];
+            _this5.appNameList = _this5.appNameList.filter(function (app) {
+              return app !== appName;
+            });
+
+            if (_this5.appNameList.length === 0) {
+              Util.clearInterval(_this5.updateJob);
+              _this5.updateJob = undefined;
+            }
+          }
+        });
+      }
+    }, {
+      key: "getAppNameIfPresent",
+      value: function getAppNameIfPresent() {
+        return this.appNameList.find(function (appName) {
+          return App.get(appName === "undefined" ? undefined : appName);
+        });
+      }
+    }, {
+      key: "addToQueue",
+      value: function addToQueue(appName, job) {
+        var updateQueue = this.updateJobMap[appName] || [];
+        updateQueue.push(job);
+        this.updateJobMap[appName] = updateQueue;
+        this.appNameList = Object.keys(this.updateJobMap);
+        this.resolveUpdateJobs();
+      }
+    }]);
+
+    return InitStateJob;
+  }();
+
+  var initStateJob = new InitStateJob();
+  return {
+    addToQueue: initStateJob.addToQueue.bind(initStateJob),
+    resolveUpdateJobs: initStateJob.resolveUpdateJobs.bind(initStateJob)
+  };
+}();
+/**
+ * Component resolves comma separated list of components that may be function or class.
+ * Function component example: const Comp = props => ({h1: 'Hello'});
+ * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
+ * Resolve components Component(Comp, Comp2);
+ * @param {function} components commma separated list of components
+ */
+
+
+var Component = function () {
+  var resolveInitialState = function resolveInitialState(initialState, stateRef, appName) {
+    if (!Util.isEmpty(App.get(appName))) {
+      App.get(appName).setState(stateRef, initialState, false);
+    } else {
+      AppSetInitialStateJob.addToQueue(appName, function () {
+        return App.get(appName).setState(stateRef, initialState);
+      });
+    }
+  };
+
+  var resolveComponent = function resolveComponent(component) {
+    if (Util.isObject(component)) {
+      App.component(_defineProperty({}, component.name, component.comp))(component.appName);
+      resolveInitialState(component.initialState, component.name + component.stateRef, component.appName);
+    } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
+      RMEComponentManager.addComponent(_defineProperty({}, component.valueOf().name, component));
+    } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
+      var comp = new component();
+      App.component(_defineProperty({}, component.valueOf().name, comp.render))(comp.appName);
+      var state = {};
+      if (!Util.isEmpty(comp.onBeforeCreate)) state.onBeforeCreate = comp.onBeforeCreate;
+      if (!Util.isEmpty(comp.shouldComponentUpdate)) state.shouldComponentUpdate = comp.shouldComponentUpdate;
+      if (!Util.isEmpty(comp.onAfterCreate)) state.onAfterCreate = comp.onAfterCreate;
+      if (!Util.isEmpty(comp.onAfterRender)) state.onAfterRender = comp.onAfterRender;
+      state = _objectSpread({}, state, {}, comp.initialState);
+      var ref = comp.stateRef || state.stateRef || '';
+      resolveInitialState(state, component.name + ref, comp.appName);
+    }
+  };
+
+  return function () {
+    for (var _len = arguments.length, components = new Array(_len), _key = 0; _key < _len; _key++) {
+      components[_key] = arguments[_key];
+    }
+
+    components.forEach(function (component) {
+      return !Util.isEmpty(component.valueOf().name) && resolveComponent(component);
+    });
+  };
+}();
+/**
+ * A bindState function transfers a function component to a stateful component just like it was created 
+ * using class or App class itself. The function receives three parameters. The function component,
+ * an optional state object and an optinal appName.
+ * Invoking examples:
+ * Component(bindState(StatefulComponent));
+ * Component(bindState(OtherComponent, { initialValue: 'initialText' }));
+ * @param {function} component
+ * @param {object} state
+ * @param {string} appName
+ */
+
+
+var bindState = function () {
+  var getStateRef = function getStateRef(state) {
+    return state && state.stateRef ? state.stateRef : '';
+  };
+
+  var removeStateRef = function removeStateRef(state) {
+    var obj = _objectSpread({}, state);
+
+    delete obj.stateRef;
+    return obj;
+  };
+
+  return function (component, state, appName) {
+    return {
+      comp: component,
+      name: component.valueOf().name,
+      appName: appName,
+      stateRef: getStateRef(state),
+      initialState: _objectSpread({}, removeStateRef(state))
+    };
+  };
+}();
+/**
+ * The function will bind an array of getter functions for the component. The getters are invoked
+ * when the component is invoked. The values returend by the getters are set in the component properties.
+ * @param {*} component
+ * @param {Array} mapper Value mapper
+ */
+
+
+var bindGetters = function () {
+  return function (component, mapper) {
+    var name;
+    if (Util.isFunction(component)) name = component.valueOf().name;else if (Util.isObject(component)) {
+      name = component.name;
+    }
+    RMEComponentManager.bindGetters(name, mapper);
+    return component;
+  };
+}();
+/**
  * Manages RME components
  */
 
@@ -1759,6 +1626,153 @@ var RMEComponentManager = function () {
 
   var manager = new RMEComponentManager();
   return manager;
+}();
+
+var Cookie = function () {
+  /**
+   * Cookie interface offers an easy way to get, set or remove cookies in application logic.
+   * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
+   * 
+   * {
+   *    name: "name",
+   *    value: "value",
+   *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+   *    cookiePath: "cookiePath absolute dir",
+   *    cookieDomain: "cookieDomain e.g example.com",
+   *    setSecureBoolean: true|false
+   * }
+   * 
+   * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+   * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+   */
+  var Cookie =
+  /*#__PURE__*/
+  function () {
+    function Cookie() {
+      _classCallCheck(this, Cookie);
+    }
+
+    _createClass(Cookie, null, [{
+      key: "get",
+
+      /**
+       * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
+       * 
+       * @param {String} name 
+       * @returns cookie object
+       */
+      value: function get(name) {
+        if (navigator.cookieEnabled) {
+          var retCookie = null;
+          var cookies = document.cookie.split(";");
+          var i = 0;
+
+          while (i < cookies.length) {
+            var cookie = cookies[i];
+            var eq = cookie.search("=");
+            var cn = cookie.substr(0, eq).trim();
+            var cv = cookie.substr(eq + 1, cookie.length).trim();
+
+            if (cn === name) {
+              retCookie = new CookieInstance(cn, cv);
+              break;
+            }
+
+            i++;
+          }
+
+          return retCookie;
+        }
+      }
+      /**
+       * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
+       * 
+       * @param {string} name
+       * @param {string} value
+       * @param {string} expiresDate
+       * @param {string} cookiePath
+       * @param {string} cookieDomain
+       * @param {boolean} setSecureBoolean
+       */
+
+    }, {
+      key: "set",
+      value: function set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+        if (navigator.cookieEnabled) {
+          document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
+        }
+      }
+      /**
+       * Remove a cookie by name. Method will set the cookie expired and then remove it.
+       * @param {string} name
+       */
+
+    }, {
+      key: "remove",
+      value: function remove(name) {
+        var co = Cookie.get(name);
+
+        if (!Util.isEmpty(co)) {
+          co.setExpired();
+          document.cookie = co.toString();
+        }
+      }
+    }]);
+
+    return Cookie;
+  }();
+  /**
+   * Cookie object may hold following values:
+   *
+   * {
+   *    name: "name",
+   *    value: "value",
+   *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+   *    cookiePath: "cookiePath absolute dir",
+   *    cookieDomain: "cookieDomain e.g example.com",
+   *    setSecureBoolean: true|false
+   * }
+   * 
+   * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+   * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+   */
+
+
+  var CookieInstance =
+  /*#__PURE__*/
+  function () {
+    function CookieInstance(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+      _classCallCheck(this, CookieInstance);
+
+      this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
+      this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
+      this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
+      this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
+      this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
+      this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
+    }
+
+    _createClass(CookieInstance, [{
+      key: "setExpired",
+      value: function setExpired() {
+        this.cookieExpires = new Date(1970, 0, 1).toString();
+      }
+    }, {
+      key: "toString",
+      value: function toString() {
+        return this.cookieName + "=" + this.cookieValue + "; expires=" + this.cookieExpires + "; path=" + this.cookiePath + "; domain=" + this.cookieDomain + "; " + this.cookieSecurity;
+      }
+    }], [{
+      key: "create",
+      value: function create(name, value, expires, cpath, cdomain, setSecure) {
+        return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
+      }
+    }]);
+
+    return CookieInstance;
+  }();
+
+  return Cookie;
 }();
 /**
  * A CSS function will either create a new style element containing given css and other parameters 
@@ -4330,6 +4344,226 @@ function () {
   return RMEElemTemplater;
 }();
 
+var EventPipe = function () {
+  /**
+   * EventPipe class can be used to multicast and send custom events to registered listeners.
+   * Each event in an event queue will be sent to each registerd listener.
+   */
+  var EventPipe =
+  /*#__PURE__*/
+  function () {
+    function EventPipe() {
+      _classCallCheck(this, EventPipe);
+
+      this.eventsQueue = [];
+      this.callQueue = [];
+      this.loopTimeout;
+    }
+
+    _createClass(EventPipe, [{
+      key: "containsEvent",
+      value: function containsEvent() {
+        return this.eventsQueue.find(function (ev) {
+          return ev.type === event.type;
+        });
+      }
+      /**
+       * Function sends an event object though the EventPipe. The event must have a type attribute
+       * defined otherwise an error is thrown. 
+       * Example defintion of the event object. 
+       * { 
+       *   type: 'some event',
+       *   ...payload
+       * }
+       * If an event listener is defined the sent event will be received on the event listener.
+       * @param {object} event 
+       */
+
+    }, {
+      key: "send",
+      value: function send(event) {
+        if (Util.isEmpty(event.type)) throw new Error('Event must have type attribute.');
+        if (!this.containsEvent()) this.eventsQueue.push(event);
+        this.loopEvents();
+      }
+    }, {
+      key: "loopEvents",
+      value: function loopEvents() {
+        var _this10 = this;
+
+        if (this.loopTimeout) Util.clearTimeout(this.loopTimeout);
+        this.loopTimeout = Util.setTimeout(function () {
+          _this10.callQueue.forEach(function (eventCallback) {
+            return _this10.eventsQueue.forEach(function (ev) {
+              return eventCallback(ev);
+            });
+          });
+
+          _this10.eventsQueue = [];
+          _this10.callQueue = [];
+        });
+      }
+      /**
+       * Function registers an event listener function that receives an event sent through the
+       * EventPipe. Each listener will receive each event that are in an event queue. The listener
+       * function receives the event as a parameter.
+       * @param {function} eventCallback 
+       */
+
+    }, {
+      key: "receive",
+      value: function receive(eventCallback) {
+        this.callQueue.push(eventCallback);
+      }
+    }]);
+
+    return EventPipe;
+  }();
+
+  var eventPipe = new EventPipe();
+  return {
+    send: eventPipe.send.bind(eventPipe),
+    receive: eventPipe.receive.bind(eventPipe)
+  };
+}();
+/**
+ * Before using this class you should also be familiar on how to use fetch since usage of this class
+ * will be quite similar to fetch except predefined candy that is added on a class.
+ *
+ * The class is added some predefined candy over the JavaScript Fetch interface.
+ * get|post|put|delete methods will automatically use JSON as a Content-Type
+ * and request methods will be predefined also.
+ *
+ * FOR Fetch
+ * A Config object supports following:
+ *  {
+ *      url: url,
+ *      method: method,
+ *      contentType: contentType,
+ *      init: init
+ *  }
+ *
+ *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
+ *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+ *
+ *  If a total custom request is desired you should use a method do({}) e.g.
+ *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
+ */
+
+
+var HttpFetchRequest =
+/*#__PURE__*/
+function () {
+  function HttpFetchRequest() {
+    _classCallCheck(this, HttpFetchRequest);
+  }
+  /**
+   * Does Fetch GET request. Content-Type JSON is used by default.
+   * @param {stirng} url *Required
+   * @param {*} init 
+   */
+
+
+  _createClass(HttpFetchRequest, [{
+    key: "get",
+    value: function get(url, init) {
+      if (!init) init = {};
+      init.method = "GET";
+      return this["do"]({
+        url: url,
+        init: init,
+        contentType: Http.JSON
+      });
+    }
+    /**
+     * Does Fetch POST request. Content-Type JSON is used by default.
+     * @param {string} url *Required
+     * @param {*} body 
+     * @param {*} init 
+     */
+
+  }, {
+    key: "post",
+    value: function post(url, body, init) {
+      if (!init) init = {};
+      init.method = "POST";
+      init.body = body;
+      return this["do"]({
+        url: url,
+        init: init,
+        contentType: Http.JSON
+      });
+    }
+    /**
+     * Does Fetch PUT request. Content-Type JSON is used by default.
+     * @param {string} url *Required
+     * @param {*} body 
+     * @param {*} init 
+     */
+
+  }, {
+    key: "put",
+    value: function put(url, body, init) {
+      if (!init) init = {};
+      init.method = "PUT";
+      init.body = body;
+      return this["do"]({
+        url: url,
+        init: init,
+        contentType: Http.JSON
+      });
+    }
+    /**
+     * Does Fetch DELETE request. Content-Type JSON is used by default.
+     * @param {string} url 
+     * @param {*} init 
+     */
+
+  }, {
+    key: "delete",
+    value: function _delete(url, init) {
+      if (!init) init = {};
+      init.method = "DELETE";
+      return this["do"]({
+        url: url,
+        init: init,
+        contentType: Http.JSON
+      });
+    }
+    /**
+     * Does any Fetch request a given config object defines.
+     * 
+     * Config object can contain parameters:
+     * {
+     *      url: url,
+     *      method: method,
+     *      contentType: contentType,
+     *      init: init
+     *  }
+     * @param {object} config 
+     */
+
+  }, {
+    key: "do",
+    value: function _do(config) {
+      if (!config.init) config.init = {};
+
+      if (config.contentType) {
+        if (!config.init.headers) config.init.headers = new Headers({});
+        if (!config.init.headers.has("Content-Type")) config.init.headers.set("Content-Type", config.contentType);
+      }
+
+      if (config.method) {
+        config.init.method = config.method;
+      }
+
+      return fetch(config.url, config.init);
+    }
+  }]);
+
+  return HttpFetchRequest;
+}();
+
 var Http = function () {
   /**
    * FOR XmlHttpRequest
@@ -4535,15 +4769,15 @@ var Http = function () {
     _createClass(HttpAjax, [{
       key: "then",
       value: function then(successHandler, errorHandler) {
-        var _this10 = this;
+        var _this11 = this;
 
         this.xhr.onload = function () {
-          _this10.xhr.responseJSON = tryParseJSON(_this10.xhr.responseText);
-          isResponseOK(_this10.xhr.status) ? successHandler(resolveResponse(_this10.xhr.response), _this10.xhr) : errorHandler(_this10.xhr);
+          _this11.xhr.responseJSON = tryParseJSON(_this11.xhr.responseText);
+          isResponseOK(_this11.xhr.status) ? successHandler(resolveResponse(_this11.xhr.response), _this11.xhr) : errorHandler(_this11.xhr);
         };
 
         this.xhr.onprogress = function (event) {
-          if (_this10.progressHandler) _this10.progressHandler(event);
+          if (_this11.progressHandler) _this11.progressHandler(event);
         };
 
         if (this.xhr.ontimeout && config.onTimeout) {
@@ -4553,8 +4787,8 @@ var Http = function () {
         }
 
         this.xhr.onerror = function () {
-          _this10.xhr.responseJSON = tryParseJSON(_this10.xhr.responseText);
-          if (errorHandler) errorHandler(_this10.xhr);
+          _this11.xhr.responseJSON = tryParseJSON(_this11.xhr.responseText);
+          if (errorHandler) errorHandler(_this11.xhr);
         };
 
         this.data ? this.xhr.send(this.data) : this.xhr.send();
@@ -4563,11 +4797,11 @@ var Http = function () {
     }, {
       key: "catch",
       value: function _catch(errorHandler) {
-        var _this11 = this;
+        var _this12 = this;
 
         this.xhr.onerror = function () {
-          _this11.xhr.responseJSON = tryParseJSON(_this11.xhr.responrenderseText);
-          if (errorHandler) errorHandler(_this11.xhr);
+          _this12.xhr.responseJSON = tryParseJSON(_this12.xhr.responrenderseText);
+          if (errorHandler) errorHandler(_this12.xhr);
         };
       }
     }]);
@@ -4583,7 +4817,7 @@ var Http = function () {
   /*#__PURE__*/
   function () {
     function HttpPromiseAjax(config) {
-      var _this12 = this;
+      var _this13 = this;
 
       _classCallCheck(this, HttpPromiseAjax);
 
@@ -4614,7 +4848,7 @@ var Http = function () {
           reject(request);
         };
 
-        _this12.data ? request.send(_this12.data) : request.send();
+        _this13.data ? request.send(_this13.data) : request.send();
       });
     }
 
@@ -4663,226 +4897,6 @@ var Http = function () {
   };
 
   return Http;
-}();
-/**
- * Before using this class you should also be familiar on how to use fetch since usage of this class
- * will be quite similar to fetch except predefined candy that is added on a class.
- *
- * The class is added some predefined candy over the JavaScript Fetch interface.
- * get|post|put|delete methods will automatically use JSON as a Content-Type
- * and request methods will be predefined also.
- *
- * FOR Fetch
- * A Config object supports following:
- *  {
- *      url: url,
- *      method: method,
- *      contentType: contentType,
- *      init: init
- *  }
- *
- *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
- *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
- *
- *  If a total custom request is desired you should use a method do({}) e.g.
- *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
- */
-
-
-var HttpFetchRequest =
-/*#__PURE__*/
-function () {
-  function HttpFetchRequest() {
-    _classCallCheck(this, HttpFetchRequest);
-  }
-  /**
-   * Does Fetch GET request. Content-Type JSON is used by default.
-   * @param {stirng} url *Required
-   * @param {*} init 
-   */
-
-
-  _createClass(HttpFetchRequest, [{
-    key: "get",
-    value: function get(url, init) {
-      if (!init) init = {};
-      init.method = "GET";
-      return this["do"]({
-        url: url,
-        init: init,
-        contentType: Http.JSON
-      });
-    }
-    /**
-     * Does Fetch POST request. Content-Type JSON is used by default.
-     * @param {string} url *Required
-     * @param {*} body 
-     * @param {*} init 
-     */
-
-  }, {
-    key: "post",
-    value: function post(url, body, init) {
-      if (!init) init = {};
-      init.method = "POST";
-      init.body = body;
-      return this["do"]({
-        url: url,
-        init: init,
-        contentType: Http.JSON
-      });
-    }
-    /**
-     * Does Fetch PUT request. Content-Type JSON is used by default.
-     * @param {string} url *Required
-     * @param {*} body 
-     * @param {*} init 
-     */
-
-  }, {
-    key: "put",
-    value: function put(url, body, init) {
-      if (!init) init = {};
-      init.method = "PUT";
-      init.body = body;
-      return this["do"]({
-        url: url,
-        init: init,
-        contentType: Http.JSON
-      });
-    }
-    /**
-     * Does Fetch DELETE request. Content-Type JSON is used by default.
-     * @param {string} url 
-     * @param {*} init 
-     */
-
-  }, {
-    key: "delete",
-    value: function _delete(url, init) {
-      if (!init) init = {};
-      init.method = "DELETE";
-      return this["do"]({
-        url: url,
-        init: init,
-        contentType: Http.JSON
-      });
-    }
-    /**
-     * Does any Fetch request a given config object defines.
-     * 
-     * Config object can contain parameters:
-     * {
-     *      url: url,
-     *      method: method,
-     *      contentType: contentType,
-     *      init: init
-     *  }
-     * @param {object} config 
-     */
-
-  }, {
-    key: "do",
-    value: function _do(config) {
-      if (!config.init) config.init = {};
-
-      if (config.contentType) {
-        if (!config.init.headers) config.init.headers = new Headers({});
-        if (!config.init.headers.has("Content-Type")) config.init.headers.set("Content-Type", config.contentType);
-      }
-
-      if (config.method) {
-        config.init.method = config.method;
-      }
-
-      return fetch(config.url, config.init);
-    }
-  }]);
-
-  return HttpFetchRequest;
-}();
-
-var EventPipe = function () {
-  /**
-   * EventPipe class can be used to multicast and send custom events to registered listeners.
-   * Each event in an event queue will be sent to each registerd listener.
-   */
-  var EventPipe =
-  /*#__PURE__*/
-  function () {
-    function EventPipe() {
-      _classCallCheck(this, EventPipe);
-
-      this.eventsQueue = [];
-      this.callQueue = [];
-      this.loopTimeout;
-    }
-
-    _createClass(EventPipe, [{
-      key: "containsEvent",
-      value: function containsEvent() {
-        return this.eventsQueue.find(function (ev) {
-          return ev.type === event.type;
-        });
-      }
-      /**
-       * Function sends an event object though the EventPipe. The event must have a type attribute
-       * defined otherwise an error is thrown. 
-       * Example defintion of the event object. 
-       * { 
-       *   type: 'some event',
-       *   ...payload
-       * }
-       * If an event listener is defined the sent event will be received on the event listener.
-       * @param {object} event 
-       */
-
-    }, {
-      key: "send",
-      value: function send(event) {
-        if (Util.isEmpty(event.type)) throw new Error('Event must have type attribute.');
-        if (!this.containsEvent()) this.eventsQueue.push(event);
-        this.loopEvents();
-      }
-    }, {
-      key: "loopEvents",
-      value: function loopEvents() {
-        var _this13 = this;
-
-        if (this.loopTimeout) Util.clearTimeout(this.loopTimeout);
-        this.loopTimeout = Util.setTimeout(function () {
-          _this13.callQueue.forEach(function (eventCallback) {
-            return _this13.eventsQueue.forEach(function (ev) {
-              return eventCallback(ev);
-            });
-          });
-
-          _this13.eventsQueue = [];
-          _this13.callQueue = [];
-        });
-      }
-      /**
-       * Function registers an event listener function that receives an event sent through the
-       * EventPipe. Each listener will receive each event that are in an event queue. The listener
-       * function receives the event as a parameter.
-       * @param {function} eventCallback 
-       */
-
-    }, {
-      key: "receive",
-      value: function receive(eventCallback) {
-        this.callQueue.push(eventCallback);
-      }
-    }]);
-
-    return EventPipe;
-  }();
-
-  var eventPipe = new EventPipe();
-  return {
-    send: eventPipe.send.bind(eventPipe),
-    receive: eventPipe.receive.bind(eventPipe)
-  };
 }();
 /**
  * Key class does not have any methods as it only contains key mappings for keyevent. For example:
@@ -6163,62 +6177,6 @@ var Router = function () {
   };
 }();
 /**
- * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
- */
-
-
-var Storage =
-/*#__PURE__*/
-function () {
-  function Storage() {
-    _classCallCheck(this, Storage);
-  }
-
-  _createClass(Storage, null, [{
-    key: "set",
-
-    /**
-     * Save data into the local storage. 
-     * @param {string} key
-     * @param {*} value
-     */
-    value: function set(key, value) {
-      localStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the local storage.
-     * @param {string} key
-     */
-
-  }, {
-    key: "get",
-    value: function get(key) {
-      return localStorage.getItem(key);
-    }
-    /**
-     * Remove data from the local storage.
-     * @param {string} key
-     */
-
-  }, {
-    key: "remove",
-    value: function remove(key) {
-      localStorage.removeItem(key);
-    }
-    /**
-     * Clears the local storage.
-     */
-
-  }, {
-    key: "clear",
-    value: function clear() {
-      localStorage.clear();
-    }
-  }]);
-
-  return Storage;
-}();
-/**
  * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
  */
 
@@ -6275,233 +6233,60 @@ function () {
   return Session;
 }();
 /**
- * General Utility methods.
+ * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
  */
 
 
-var Util =
+var Storage =
 /*#__PURE__*/
 function () {
-  function Util() {
-    _classCallCheck(this, Util);
+  function Storage() {
+    _classCallCheck(this, Storage);
   }
 
-  _createClass(Util, null, [{
-    key: "isEmpty",
+  _createClass(Storage, null, [{
+    key: "set",
 
     /**
-     * Checks is a given value empty.
+     * Save data into the local storage. 
+     * @param {string} key
      * @param {*} value
-     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
      */
-    value: function isEmpty(value) {
-      return value === null || value === undefined || value === "" || Util.isArray(value) && value.length === 0;
+    value: function set(key, value) {
+      localStorage.setItem(key, value);
     }
     /**
-     * Checks is the given value not empty. This function is a negation to the Util.isEmpty function.
-     * @param {*} value 
-     * @returns True if the value is not empty otherwise false.
+     * Get the saved data from the local storage.
+     * @param {string} key
      */
 
   }, {
-    key: "notEmpty",
-    value: function notEmpty(value) {
-      return !Util.isEmpty(value);
+    key: "get",
+    value: function get(key) {
+      return localStorage.getItem(key);
     }
     /**
-     * Get the type of the given value.
-     * @param {*} value
-     * @returns The type of the given value.
+     * Remove data from the local storage.
+     * @param {string} key
      */
 
   }, {
-    key: "getType",
-    value: function getType(value) {
-      return _typeof(value);
+    key: "remove",
+    value: function remove(key) {
+      localStorage.removeItem(key);
     }
     /**
-     * Checks is a given value is a given type.
-     * @param {*} value
-     * @param {string} type
-     * @returns True if the given value is the given type otherwise false.
+     * Clears the local storage.
      */
 
   }, {
-    key: "isType",
-    value: function isType(value, type) {
-      return Util.getType(value) === type;
-    }
-    /**
-     * Checks is a given parameter a function.
-     * @param {*} func 
-     * @returns True if the given parameter is fuction otherwise false.
-     */
-
-  }, {
-    key: "isFunction",
-    value: function isFunction(func) {
-      return Util.isType(func, "function");
-    }
-    /**
-     * Checks is a given parameter a boolean.
-     * @param {*} boolean
-     * @returns True if the given parameter is boolean otherwise false.
-     */
-
-  }, {
-    key: "isBoolean",
-    value: function isBoolean(_boolean8) {
-      return Util.isType(_boolean8, "boolean");
-    }
-    /**
-     * Checks is a given parameter a string.
-     * @param {*} string
-     * @returns True if the given parameter is string otherwise false.
-     */
-
-  }, {
-    key: "isString",
-    value: function isString(string) {
-      return Util.isType(string, "string");
-    }
-    /**
-     * Checks is a given parameter a number.
-     * @param {*} number
-     * @returns True if the given parameter is number otherwise false.
-     */
-
-  }, {
-    key: "isNumber",
-    value: function isNumber(number) {
-      return Util.isType(number, "number");
-    }
-    /**
-     * Checks is a given parameter a symbol.
-     * @param {*} symbol
-     * @returns True if the given parameter is symbol otherwise false.
-     */
-
-  }, {
-    key: "isSymbol",
-    value: function isSymbol(symbol) {
-      return Util.isType(symbol, "symbol");
-    }
-    /**
-     * Checks is a given parameter a object.
-     * @param {*} object
-     * @returns True if the given parameter is object otherwise false.
-     */
-
-  }, {
-    key: "isObject",
-    value: function isObject(object) {
-      return Util.isType(object, "object");
-    }
-    /**
-     * Checks is a given parameter an array.
-     * @param {*} array
-     * @returns True if the given parameter is array otherwise false.
-     */
-
-  }, {
-    key: "isArray",
-    value: function isArray(array) {
-      return Array.isArray(array);
-    }
-    /**
-     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The timeout object.
-     */
-
-  }, {
-    key: "setTimeout",
-    value: function setTimeout(callback, milliseconds) {
-      if (!Util.isFunction(callback)) {
-        throw "callback not fuction";
-      }
-
-      for (var _len7 = arguments.length, params = new Array(_len7 > 2 ? _len7 - 2 : 0), _key7 = 2; _key7 < _len7; _key7++) {
-        params[_key7 - 2] = arguments[_key7];
-      }
-
-      return window.setTimeout(callback, milliseconds, params);
-    }
-    /**
-     * Removes a timeout that was created by setTimeout method.
-     * @param {object} timeoutObject
-     */
-
-  }, {
-    key: "clearTimeout",
-    value: function clearTimeout(timeoutObject) {
-      window.clearTimeout(timeoutObject);
-    }
-    /**
-     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The interval object.
-     */
-
-  }, {
-    key: "setInterval",
-    value: function setInterval(callback, milliseconds) {
-      if (!Util.isFunction(callback)) {
-        throw "callback not fuction";
-      }
-
-      for (var _len8 = arguments.length, params = new Array(_len8 > 2 ? _len8 - 2 : 0), _key8 = 2; _key8 < _len8; _key8++) {
-        params[_key8 - 2] = arguments[_key8];
-      }
-
-      return window.setInterval(callback, milliseconds, params);
-    }
-    /**
-     * Removes an interval that was created by setInterval method.
-     */
-
-  }, {
-    key: "clearInterval",
-    value: function clearInterval(intervalObject) {
-      window.clearInterval(intervalObject);
-    }
-    /**
-     * Encodes a string to Base64.
-     * @param {string} string
-     * @returns The base64 encoded string.
-     */
-
-  }, {
-    key: "encodeBase64String",
-    value: function encodeBase64String(string) {
-      if (!Util.isString(string)) {
-        throw "the given parameter is not a string: " + string;
-      }
-
-      return window.btoa(string);
-    }
-    /**
-     * Decodes a base 64 encoded string.
-     * @param {string} string
-     * @returns The base64 decoded string.
-     */
-
-  }, {
-    key: "decodeBase64String",
-    value: function decodeBase64String(string) {
-      if (!Util.isString(string)) {
-        throw "the given parameter is not a string: " + string;
-      }
-
-      return window.atob(string);
+    key: "clear",
+    value: function clear() {
+      localStorage.clear();
     }
   }]);
 
-  return Util;
+  return Storage;
 }();
 
 var Template = function () {
@@ -7500,4 +7285,233 @@ function () {
   }]);
 
   return Tree;
+}();
+/**
+ * General Utility methods.
+ */
+
+
+var Util =
+/*#__PURE__*/
+function () {
+  function Util() {
+    _classCallCheck(this, Util);
+  }
+
+  _createClass(Util, null, [{
+    key: "isEmpty",
+
+    /**
+     * Checks is a given value empty.
+     * @param {*} value
+     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
+     */
+    value: function isEmpty(value) {
+      return value === null || value === undefined || value === "" || Util.isArray(value) && value.length === 0;
+    }
+    /**
+     * Checks is the given value not empty. This function is a negation to the Util.isEmpty function.
+     * @param {*} value 
+     * @returns True if the value is not empty otherwise false.
+     */
+
+  }, {
+    key: "notEmpty",
+    value: function notEmpty(value) {
+      return !Util.isEmpty(value);
+    }
+    /**
+     * Get the type of the given value.
+     * @param {*} value
+     * @returns The type of the given value.
+     */
+
+  }, {
+    key: "getType",
+    value: function getType(value) {
+      return _typeof(value);
+    }
+    /**
+     * Checks is a given value is a given type.
+     * @param {*} value
+     * @param {string} type
+     * @returns True if the given value is the given type otherwise false.
+     */
+
+  }, {
+    key: "isType",
+    value: function isType(value, type) {
+      return Util.getType(value) === type;
+    }
+    /**
+     * Checks is a given parameter a function.
+     * @param {*} func 
+     * @returns True if the given parameter is fuction otherwise false.
+     */
+
+  }, {
+    key: "isFunction",
+    value: function isFunction(func) {
+      return Util.isType(func, "function");
+    }
+    /**
+     * Checks is a given parameter a boolean.
+     * @param {*} boolean
+     * @returns True if the given parameter is boolean otherwise false.
+     */
+
+  }, {
+    key: "isBoolean",
+    value: function isBoolean(_boolean8) {
+      return Util.isType(_boolean8, "boolean");
+    }
+    /**
+     * Checks is a given parameter a string.
+     * @param {*} string
+     * @returns True if the given parameter is string otherwise false.
+     */
+
+  }, {
+    key: "isString",
+    value: function isString(string) {
+      return Util.isType(string, "string");
+    }
+    /**
+     * Checks is a given parameter a number.
+     * @param {*} number
+     * @returns True if the given parameter is number otherwise false.
+     */
+
+  }, {
+    key: "isNumber",
+    value: function isNumber(number) {
+      return Util.isType(number, "number");
+    }
+    /**
+     * Checks is a given parameter a symbol.
+     * @param {*} symbol
+     * @returns True if the given parameter is symbol otherwise false.
+     */
+
+  }, {
+    key: "isSymbol",
+    value: function isSymbol(symbol) {
+      return Util.isType(symbol, "symbol");
+    }
+    /**
+     * Checks is a given parameter a object.
+     * @param {*} object
+     * @returns True if the given parameter is object otherwise false.
+     */
+
+  }, {
+    key: "isObject",
+    value: function isObject(object) {
+      return Util.isType(object, "object");
+    }
+    /**
+     * Checks is a given parameter an array.
+     * @param {*} array
+     * @returns True if the given parameter is array otherwise false.
+     */
+
+  }, {
+    key: "isArray",
+    value: function isArray(array) {
+      return Array.isArray(array);
+    }
+    /**
+     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The timeout object.
+     */
+
+  }, {
+    key: "setTimeout",
+    value: function setTimeout(callback, milliseconds) {
+      if (!Util.isFunction(callback)) {
+        throw "callback not fuction";
+      }
+
+      for (var _len7 = arguments.length, params = new Array(_len7 > 2 ? _len7 - 2 : 0), _key7 = 2; _key7 < _len7; _key7++) {
+        params[_key7 - 2] = arguments[_key7];
+      }
+
+      return window.setTimeout(callback, milliseconds, params);
+    }
+    /**
+     * Removes a timeout that was created by setTimeout method.
+     * @param {object} timeoutObject
+     */
+
+  }, {
+    key: "clearTimeout",
+    value: function clearTimeout(timeoutObject) {
+      window.clearTimeout(timeoutObject);
+    }
+    /**
+     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The interval object.
+     */
+
+  }, {
+    key: "setInterval",
+    value: function setInterval(callback, milliseconds) {
+      if (!Util.isFunction(callback)) {
+        throw "callback not fuction";
+      }
+
+      for (var _len8 = arguments.length, params = new Array(_len8 > 2 ? _len8 - 2 : 0), _key8 = 2; _key8 < _len8; _key8++) {
+        params[_key8 - 2] = arguments[_key8];
+      }
+
+      return window.setInterval(callback, milliseconds, params);
+    }
+    /**
+     * Removes an interval that was created by setInterval method.
+     */
+
+  }, {
+    key: "clearInterval",
+    value: function clearInterval(intervalObject) {
+      window.clearInterval(intervalObject);
+    }
+    /**
+     * Encodes a string to Base64.
+     * @param {string} string
+     * @returns The base64 encoded string.
+     */
+
+  }, {
+    key: "encodeBase64String",
+    value: function encodeBase64String(string) {
+      if (!Util.isString(string)) {
+        throw "the given parameter is not a string: " + string;
+      }
+
+      return window.btoa(string);
+    }
+    /**
+     * Decodes a base 64 encoded string.
+     * @param {string} string
+     * @returns The base64 decoded string.
+     */
+
+  }, {
+    key: "decodeBase64String",
+    value: function decodeBase64String(string) {
+      if (!Util.isString(string)) {
+        throw "the given parameter is not a string: " + string;
+      }
+
+      return window.atob(string);
+    }
+  }]);
+
+  return Util;
 }();
