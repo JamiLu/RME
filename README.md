@@ -148,7 +148,7 @@ const TodoExample = props => ({
         'input[type=text][placeholder=Type & Press Enter to Add]': {
             onKeyDown: event => {
                 if(event.key === Key.ENTER) {
-                    useState(props.stateRef, state => ({
+                    useState(props, state => ({
                         list: state.list.concat({li: event.target.value})
                     }));
                     event.target.value = '';
@@ -179,7 +179,7 @@ const FormExample = props => ({
         TitleHeader: props,
         Form: {
             input: event => {
-                useState(props.stateRef, state => ({
+                useState(props, state => ({
                     ...state,
                     [event.target.name]: event.target.value
                 }));
@@ -227,7 +227,7 @@ const FilterExample = props => ({
         h2: 'Filter Example',
         'input[type=text][placeholder=Type to Filter Country]': {
             onInput: event => 
-                useState(props.stateRef, {
+                useState(props, {
                     rows: RME.storage('countryList')
                         .filter(row => row.country.toLowerCase().search(event.target.value) > -1)
                 })
