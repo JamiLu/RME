@@ -334,21 +334,35 @@ let App = (function() {
         /**
          * Function takes one optional parameter. If refName is given then only a state of a component referred by the refName is checked.
          * Otherwise whole application state of this application instance is checked.
-         * @param {string} refName 
+         * @param {*} refName String or props object
          * @returns True if state empty otherwise false.
          */
         isStateEmpty(refName) {
-            return Object.keys(Util.isEmpty(refName) ? this.state : this.state[refName]).length === 0;
+            refName = Util.isString(refName) ? refName : refName.stateRef;
+            return this.recursiveCheckMapIsEmpty(Util.isEmpty(refName) ? this.state : this.state[refName]);
+        }
+
+        recursiveCheckMapIsEmpty(map) {
+            for (let key in map) {
+                if (map.hasOwnProperty(key)) {
+                    if (Util.notEmpty(map[key]))
+                        return false;
+                    if (Util.isObject(map[key]))
+                        this.recursiveCheckMapIsEmpty(map[key]);
+                }
+            }
+            return true;
         }
     
         /**
          * Function takes two optional parameters. If refName is given then only a state of the component with the refName is cleared otherwise 
          * whole application state of this application instance is cleared. The application is updated unless the update parameter is 
          * explicitly set false.
-         * @param {string} refName 
+         * @param {*} refName String or props object 
          * @param {boolean} update 
          */
         clearState(refName, update) {
+            refName = Util.isString(refName) ? refName : refName.stateRef;
             this.recursiveClearMap(this.state[refName] || this.state);
     
             if(update !== false) {
