@@ -2,6 +2,92 @@
 
 
 
+
+/**
+ * The createApp function is a shortcut function to create an RME application.
+ * @param {string} selector
+ * @param {function} component
+ * @param {string} appName
+ * @returns a created app instance.
+ */
+const createApp = (function() {
+
+    return (selector, component, appName) => {
+        if (component.valueOf().name.length === 0) {
+            throw new Error('The app function must be a named function.');
+        }
+        if (Util.isFunction(component) && !RMEComponentManager.hasComponent(component.valueOf().name))
+            Component(component);
+
+        return App.name(appName).root(selector).create({[component.valueOf().name]: {}});
+    }
+
+})();
+
+
+/**
+ * The useState function is a srhotcut function to set application component state.
+ * @param {*} refName string, orbject or function. String is the stateRef. Object is the new state object.
+ * Function receives a previous state as parameter and returns a new state object.
+ * @param {*} value function or object. Object is the new state. Function receives a previous state as 
+ * parameter and returns a new state object.
+ * @param {*} update optional string or boolean. If string then works as appName otherwise works as normal.
+ * @param {string} appName optional if not set default app is used .
+ * @returns the new state
+ */
+const useState = (function() {
+
+    return (refName, value, update, appName) => {
+        const name = Util.isString(update) ? update : appName;
+        const stateRef = Util.isString(refName) ? refName : refName.stateRef;
+        App.get(name).setState(stateRef, value, update);
+        return App.get(name).getState(stateRef);
+    }
+
+})();
+
+/**
+ * The function will set the given value in the app value state. The value is accessible by
+ * a returned getter and a setter function.
+ * @param {*} value Value to set in the app state
+ * @param {string} appName Optional app name
+ * @returns An array containing the getter and the setter functions for the given value.
+ */
+const useValue = (function() {
+
+    return (value, appName) => ValueStore.useValue(value, appName);
+
+})();
+
+
+
+
+/**
+ * Keeps app instances in memory
+ */
+const AppManager = (function() {
+
+    class AppManager {
+        constructor() {
+            this.apps = {};
+        }
+
+        set(name, value) {
+            this.apps[name] = value;
+        }
+
+        get(name) {
+            return this.apps[name];
+        }
+    }
+
+    const manager = new AppManager();
+
+    return manager;
+
+})();
+
+
 let App = (function() {
 
     class App {
@@ -46,7 +132,7 @@ let App = (function() {
             } else {
                 while(Util.isEmpty(App.init().name)) {
                     name = App.init().prefix + App.init().seq;
-                    name = RME.storage(name);
+                    name = AppManager.get(name);
                     if(Util.isEmpty(name)) {
                         App.init().name = App.init().prefix+App.init().seq;
                         break;
@@ -73,10 +159,10 @@ let App = (function() {
          * @returns Created application instance.
          */
         static create(object) {
-            let name = !Util.isEmpty(App.init().name) ? App.init().name : App.checkName();
-            let root = !Util.isEmpty(App.init().root) ? App.init().root : undefined;
+            let name = Util.notEmpty(App.init().name) ? App.init().name : App.checkName();
+            let root = Util.notEmpty(App.init().root) ? App.init().root : undefined;
             let app = new AppInstance(name, root, object);
-            RME.storage(name, app);
+            AppManager.set(name, app);
             App.reset();
             return app;
         }
@@ -87,11 +173,11 @@ let App = (function() {
          * @returns Application instance.
          */
         static get(name) {
-            if(Util.isEmpty(name))
+            if (Util.isEmpty(name))
                return App.name(0).getInstance();
             else {
-                let app = App.name(name).getInstance();
-                if(Util.isEmpty(app))
+                const app = App.name(name).getInstance();
+                if (Util.isEmpty(app))
                     throw "Could not find app with name: "+name;
                 else
                     return app;
@@ -164,7 +250,7 @@ let App = (function() {
         static getInstance() {
             if (Util.isEmpty(App.init().name))
                 throw "No App instance selected, invoke a function name() first";
-            let app = RME.storage(App.init().name);
+            const app = AppManager.get(App.init().name);
             App.reset();
             return app;
         }
@@ -176,7 +262,7 @@ let App = (function() {
         static component(component) {
             const bindState = (appName) => {
                 let updater = Util.isEmpty(appName) ? () => (state) => App.getState(state) : () => (state) => App.get(appName).getState(state);
-                RME.component(component, updater);
+                RMEComponentManager.addComponent(component, updater);
             }
             return bindState;
         }
@@ -274,7 +360,7 @@ let App = (function() {
                 this.afterRefreshCallQueue.push(callback)
             }
         }
-    
+
         /**
          * Function takes three parameters that enable setting state for components.
          * If only one parameter is given then the parameter must be an object or a function. 
@@ -335,22 +421,7 @@ let App = (function() {
          * @returns True if state empty otherwise false.
          */
         isStateEmpty(refName) {
-            if(Util.isEmpty(refName))
-                return this.recursiveCheckMapIsEmpty(this.state);
-            else
-                return this.recursiveCheckMapIsEmpty(this.state[refName]);
-        }
-    
-        recursiveCheckMapIsEmpty(map) {
-            for(let key in map) {
-                if(map.hasOwnProperty(key)) {
-                    if(!Util.isEmpty(map[key]))
-                        return false;
-                    if(Util.isObject(map[key]))
-                        this.recursiveCheckMapIsEmpty(map[key]);
-                }
-            }
-            return true;
+            return Object.keys(Util.isEmpty(refName) ? this.state : this.state[refName]).length === 0;
         }
     
         /**
@@ -361,10 +432,7 @@ let App = (function() {
          * @param {boolean} update 
          */
         clearState(refName, update) {
-            if(Util.isEmpty(refName))
-                this.recursiveClearMap(this.state);
-            else 
-                this.recursiveClearMap(this.state[refName]);
+            this.recursiveClearMap(this.state[refName] || this.state);
     
             if(update !== false) {
                 this.refreshApp();
@@ -372,16 +440,14 @@ let App = (function() {
         }
     
         recursiveClearMap(map) {
-            for(let key in map) {
-                if(map.hasOwnProperty(key)) {
-                    if(Util.isString(map[key]))
-                        map[key] = "";
-                    else if(Util.isArray(map[key]))
-                        map[key] = [];
-                    else if(Util.isObject(map[key]))
-                        this.recursiveClearMap(map[key]);
-                }
-            }
+            Object.keys(map).forEach(key => {
+                if (Util.isArray(map[key]))
+                    map[key] = [];
+                else if (Util.isObject(map[key]))
+                    this.recursiveClearMap(map[key])
+                else
+                    map[key] = '';
+            });
         }
     
         /**
@@ -455,54 +521,64 @@ let App = (function() {
 }());
 
 
-
 /**
- * The createApp function is a shortcut function to create an RME application.
- * @param {string} selector
- * @param {function} component
- * @param {string} appName
- * @returns a created app instance.
+ * Manages between component shareable values.
  */
-const createApp = (function() {
+const ValueStore = (function() {
 
-    return (selector, component, appName) => {
-        if (Util.isFunction(component) && !RME.hasComponent(component.valueOf().name))
-            Component(component);
-
-        return App.name(appName).root(selector).create({[component.valueOf().name]: {}});
+    class ValueStore {
+        constructor() {
+            this.values = {};
+            this.valueRefGenerator = new RefGenerator('val');
+        }
+    
+        /**
+         * The function will set the given value to the app instance and return a getter and a setter function
+         * for the given value. Values can be shared and used in between any component.
+         * @param {*} value 
+         * @returns An array containing the getter and the setter functions for the given value.
+         */
+        useValue(value, appName) {
+            if (Util.isFunction(value)) {
+                value = value(value);
+            }
+            const ref = this.valueRefGenerator.next();
+            this.values[ref] = value;
+    
+            const getter = () => this.values[ref];
+            const setter = (next, update) => {
+                if (Util.isFunction(next)) {
+                    next = next(getter());
+                }
+    
+                this.values[ref] = next;
+                
+                if (update !== false) {
+                    App.get(appName).refresh();
+                }
+            }
+            return [getter, setter];
+        }
     }
+    
+    class RefGenerator {
+        constructor(feed) {
+            this.feed = feed || "";
+            this.seq = 0;
+        }
+    
+        next() {
+            const ref = this.feed+this.seq;
+            this.seq++
+            return ref;
+        }
+    }
+    
+    const valueStore = new ValueStore();
+
+    return valueStore;
 
 })();
-
-
-/**
- * The useState function is a srhotcut function to set application component state.
- * @param {*} refName string, orbject or function. String is the stateRef. Object is the new state object.
- * Function receives a previous state as parameter and returns a new state object.
- * @param {*} value function or object. Object is the new state. Function receives a previous state as 
- * parameter and returns a new state object.
- * @param {*} update optional string or boolean. If string then works as appName otherwise works as normal.
- * @param {string} appName optional if not set default app is used .
- * @returns the new state
- */
-const useState = (function() {
-
-    const resolveAppName = (update, appName) => {
-        if (Util.isString(update))
-            return update;
-        return appName;
-    }
-
-    return (refName, value, update, appName) => {
-        let name = resolveAppName(update, appName);
-        App.get(name).setState(refName, value, update);
-        return App.get(name).getState(refName);
-    }
-
-})();
-
-
-
 
 
 class RMEElemRenderer {
@@ -602,6 +678,288 @@ class RMEElemRenderer {
     }
 
 }
+
+
+
+
+/**
+ * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
+ * instance might have not been created at the time when components are created so the queue will wait 
+ * until the application instance is created and then sets the state for the components in the queue.
+ */
+const AppSetInitialStateJob = (function () {
+    
+    class InitStateJob {
+        constructor() {
+            this.updateJob;
+            this.updateJobMap = {};
+            this.appNameList = [];
+        }
+
+        resolveUpdateJobs() {
+            if (!this.updateJob)
+                this.updateJob = Util.setInterval(() => {
+                    const appName = this.getAppNameIfPresent();
+                    if (!Util.isEmpty(appName)) {
+                        this.updateJobMap[appName].forEach(job => job());
+                        this.updateJobMap[appName] = [];
+                        this.appNameList = this.appNameList.filter(app => app !== appName);
+
+                        if (this.appNameList.length === 0) {
+                            Util.clearInterval(this.updateJob);
+                            this.updateJob = undefined;
+                        }
+                    }
+                });
+        }
+
+        getAppNameIfPresent() {
+            return this.appNameList.find(appName => App.get(appName === "undefined" ? undefined : appName));
+        }
+
+        addToQueue(appName, job) {
+            let updateQueue = this.updateJobMap[appName] || [];
+            updateQueue.push(job);
+            this.updateJobMap[appName] = updateQueue;
+            this.appNameList = Object.keys(this.updateJobMap);
+            this.resolveUpdateJobs();
+        }
+    }
+
+    const initStateJob = new InitStateJob();
+
+    return {
+        addToQueue: initStateJob.addToQueue.bind(initStateJob),
+        resolveUpdateJobs: initStateJob.resolveUpdateJobs.bind(initStateJob)
+    }
+
+})();
+
+/**
+ * Component resolves comma separated list of components that may be function or class.
+ * Function component example: const Comp = props => ({h1: 'Hello'});
+ * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
+ * Resolve components Component(Comp, Comp2);
+ * @param {function} components commma separated list of components
+ */
+const Component = (function() {
+
+    const resolveInitialState = (initialState, stateRef, appName) => {
+        if (!Util.isEmpty(App.get(appName))) {
+            App.get(appName).setState(stateRef, initialState, false);
+        } else {
+            AppSetInitialStateJob.addToQueue(appName, () => App.get(appName).setState(stateRef, initialState));
+        }
+    }
+
+    const resolveComponent = component => {
+        if (Util.isObject(component)) {
+            App.component({[component.name]: component.comp})(component.appName);
+            resolveInitialState(component.initialState, component.name+component.stateRef, component.appName);
+        } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
+            RMEComponentManager.addComponent({[component.valueOf().name]: component});
+        } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
+            const comp = new component();
+            App.component({[component.valueOf().name]: comp.render})(comp.appName);
+            let state = {};
+            if (!Util.isEmpty(comp.onBeforeCreate))
+                state.onBeforeCreate = comp.onBeforeCreate;
+            if (!Util.isEmpty(comp.shouldComponentUpdate))
+                state.shouldComponentUpdate = comp.shouldComponentUpdate;
+            if (!Util.isEmpty(comp.onAfterCreate))
+                state.onAfterCreate = comp.onAfterCreate;
+            if (!Util.isEmpty(comp.onAfterRender))
+                state.onAfterRender = comp.onAfterRender;
+            state = {
+                ...state,
+                ...comp.initialState
+            }
+            const ref = comp.stateRef || state.stateRef || '';
+            resolveInitialState(state, component.name+ref, comp.appName);
+        }
+    }
+
+    return (...components) => {
+        components.forEach(component => 
+            !Util.isEmpty(component.valueOf().name) && resolveComponent(component));
+    }
+
+})();
+
+/**
+ * A bindState function transfers a function component to a stateful component just like it was created 
+ * using class or App class itself. The function receives three parameters. The function component,
+ * an optional state object and an optinal appName.
+ * Invoking examples:
+ * Component(bindState(StatefulComponent));
+ * Component(bindState(OtherComponent, { initialValue: 'initialText' }));
+ * @param {function} component
+ * @param {object} state
+ * @param {string} appName
+ */
+const bindState = (function() {
+
+    const getStateRef = state => {
+        return state && state.stateRef ? state.stateRef : '';
+    }
+
+    const removeStateRef = state => {
+        let obj = {
+            ...state
+        }
+        delete obj.stateRef
+        return obj;
+    }
+
+    return (component, state, appName) => ({
+        comp: component,
+        name: component.valueOf().name,
+        appName: appName,
+        stateRef: getStateRef(state),
+        initialState: {
+            ...removeStateRef(state)
+        }
+    })
+
+})();
+
+/**
+ * The function will bind an array of getter functions for the component. The getters are invoked
+ * when the component is invoked. The values returend by the getters are set in the component properties.
+ * @param {*} component
+ * @param {Array} mapper Value mapper
+ */
+const bindGetters = (function() {
+
+    return (component, mapper) => {
+        let name;
+        if (Util.isFunction(component))
+            name = component.valueOf().name;
+        else if (Util.isObject(component)) {
+            name = component.name;
+        }
+
+        RMEComponentManager.bindGetters(name, mapper);
+
+        return component;
+    }
+
+})();
+
+
+
+
+
+let Cookie = (function() {
+    /**
+     * Cookie interface offers an easy way to get, set or remove cookies in application logic.
+     * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
+     * 
+     * {
+     *    name: "name",
+     *    value: "value",
+     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+     *    cookiePath: "cookiePath absolute dir",
+     *    cookieDomain: "cookieDomain e.g example.com",
+     *    setSecureBoolean: true|false
+     * }
+     * 
+     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+     */
+    class Cookie {
+        /**
+         * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
+         * 
+         * @param {String} name 
+         * @returns cookie object
+         */
+        static get(name) {
+            if(navigator.cookieEnabled) {
+                var retCookie = null;
+                var cookies = document.cookie.split(";");
+                var i = 0;
+                while(i < cookies.length) {
+                    var cookie = cookies[i];
+                    var eq = cookie.search("=");
+                    var cn = cookie.substr(0, eq).trim();
+                    var cv = cookie.substr(eq + 1, cookie.length).trim();
+                    if(cn === name) {
+                        retCookie = new CookieInstance(cn, cv);
+                        break;
+                    }
+                    i++;
+                }
+                return retCookie;
+            }
+        }
+        /**
+         * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
+         * 
+         * @param {string} name
+         * @param {string} value
+         * @param {string} expiresDate
+         * @param {string} cookiePath
+         * @param {string} cookieDomain
+         * @param {boolean} setSecureBoolean
+         */
+        static set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+            if(navigator.cookieEnabled) {
+                document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
+            }
+        }
+        /**
+         * Remove a cookie by name. Method will set the cookie expired and then remove it.
+         * @param {string} name
+         */
+        static remove(name) {
+            var co = Cookie.get(name);
+            if(!Util.isEmpty(co)) {
+                co.setExpired();
+                document.cookie = co.toString();
+            }
+        }
+    }
+
+    /**
+     * Cookie object may hold following values:
+     *
+     * {
+     *    name: "name",
+     *    value: "value",
+     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+     *    cookiePath: "cookiePath absolute dir",
+     *    cookieDomain: "cookieDomain e.g example.com",
+     *    setSecureBoolean: true|false
+     * }
+     * 
+     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+     */
+    class CookieInstance {
+        constructor(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+            this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
+            this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
+            this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
+            this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
+            this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
+            this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
+        }
+
+        setExpired() {
+            this.cookieExpires = new Date(1970,0,1).toString();
+        }
+
+        toString() {
+            return this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity;
+        }
+        static create(name, value, expires, cpath, cdomain, setSecure) {
+                return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
+        }
+    }
+
+    return Cookie;
+}());
 
 /**
  * Browser class contains all the rest utility functions which JavaScript has to offer from Window, Navigator, Screen, History, Location objects.
@@ -1041,266 +1399,114 @@ class Browser {
 }
 
 
-
-
 /**
- * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
- * instance might have not been created at the time when components are created so the queue will wait 
- * until the application instance is created and then sets the state for the components in the queue.
+ * Manages RME components
  */
-const AppSetInitialStateJob = (function () {
-    
-    class InitStateJob {
+const RMEComponentManager = (function() {
+
+    class RMEComponentManager {
         constructor() {
-            this.updateJob;
-            this.updateJobMap = {};
-            this.appNameList = [];
+            this.components = {};
+            this.componentGetters = {};
         }
 
-        resolveUpdateJobs() {
-            if (!this.updateJob)
-                this.updateJob = Util.setInterval(() => {
-                    const appName = this.getAppNameIfPresent();
-                    if (!Util.isEmpty(appName)) {
-                        this.updateJobMap[appName].forEach(job => job());
-                        this.updateJobMap[appName] = [];
-                        this.appNameList = this.appNameList.filter(app => app !== appName);
-
-                        if (this.appNameList.length === 0) {
-                            Util.clearInterval(this.updateJob);
-                            this.updateJob = undefined;
-                        }
-                    }
-                });
-        }
-
-        getAppNameIfPresent() {
-            return this.appNameList.find(appName => App.get(appName === "undefined" ? undefined : appName));
-        }
-
-        addToQueue(appName, job) {
-            let updateQueue = this.updateJobMap[appName] || [];
-            updateQueue.push(job);
-            this.updateJobMap[appName] = updateQueue;
-            this.appNameList = Object.keys(this.updateJobMap);
-            this.resolveUpdateJobs();
-        }
-    }
-
-    const initStateJob = new InitStateJob();
-
-    return {
-        addToQueue: initStateJob.addToQueue.bind(initStateJob),
-        resolveUpdateJobs: initStateJob.resolveUpdateJobs.bind(initStateJob)
-    }
-
-})();
-
-/**
- * Component resolves comma separated list of components that may be function or class.
- * Function component example: const Comp = props => ({h1: 'Hello'});
- * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
- * Resolve components Component(Comp, Comp2);
- * @param {function} components commma separated list of components
- */
-const Component = (function() {
-
-    const resolveInitialState = (initialState, stateRef, appName) => {
-        if (!Util.isEmpty(App.get(appName))) {
-            App.get(appName).setState(stateRef, initialState, false);
-        } else {
-            AppSetInitialStateJob.addToQueue(appName, () => App.get(appName).setState(stateRef, initialState));
-        }
-    }
-
-    const resolveComponent = component => {
-        if (Util.isObject(component)) {
-            App.component({[component.name]: component.comp})(component.appName);
-            resolveInitialState(component.initialState, component.name+component.stateRef, component.appName);
-        } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
-            RME.component({[component.valueOf().name]: component});
-        } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
-            const comp = new component();
-            App.component({[component.valueOf().name]: comp.render})(comp.appName);
-            let state = {};
-            if (!Util.isEmpty(comp.onBeforeCreate))
-                state.onBeforeCreate = comp.onBeforeCreate;
-            if (!Util.isEmpty(comp.shouldComponentUpdate))
-                state.shouldComponentUpdate = comp.shouldComponentUpdate;
-            if (!Util.isEmpty(comp.onAfterCreate))
-                state.onAfterCreate = comp.onAfterCreate;
-            if (!Util.isEmpty(comp.onAfterRender))
-                state.onAfterRender = comp.onAfterRender;
-            state = {
-                ...state,
-                ...comp.initialState
+        addComponent(component, props) {
+            if (Util.isFunction(component)) {
+                component = component.call();
             }
-            const ref = comp.stateRef || state.stateRef || '';
-            resolveInitialState(state, component.name+ref, comp.appName);
+
+            Object.keys(component).forEach((p) => {
+                this.components[p] = {
+                    component: component[p], 
+                    update: Util.isFunction(props) ? props : undefined
+                };
+            });
         }
-    }
 
-    return (...components) => {
-        components.forEach(component => 
-            !Util.isEmpty(component.valueOf().name) && resolveComponent(component));
-    }
+        getComponent(name, props) {
+            let comp = this.components[name];
+            if (!comp) {
+                throw new Error(`Cannot find a component: "${name}"`);
+            }
+            if (Util.notEmpty(props) && Util.isFunction(comp.update)) {
+                let stateRef = props.stateRef;
+                if (Util.isEmpty(props.stateRef))
+                    stateRef = name;
+                else if (props.stateRef.search(name) === -1)
+                    stateRef = `${name}${props.stateRef}`;
 
-})();
-
-/**
- * A bindState function transfers a function component to a stateful component just like it was created 
- * using class or App class itself. The function receives three parameters. The function component,
- * an optional state object and an optinal appName.
- * Invoking examples:
- * Component(bindState(StatefulComponent));
- * Component(bindState(OtherComponent, { initialValue: 'initialText' }));
- * @param {function} component
- * @param {object} state
- * @param {string} appName
- */
-const bindState = (function() {
-
-    const getStateRef = state => {
-        return state && state.stateRef ? state.stateRef : '';
-    }
-
-    const removeStateRef = state => {
-        let obj = {
-            ...state
-        }
-        delete obj.stateRef
-        return obj;
-    }
-
-    return (component, state, appName) => ({
-        comp: component,
-        name: component.valueOf().name,
-        appName: appName,
-        stateRef: getStateRef(state),
-        initialState: {
-            ...removeStateRef(state)
-        }
-    })
-
-})();
-
-
-
-
-
-
-
-
-let Cookie = (function() {
-    /**
-     * Cookie interface offers an easy way to get, set or remove cookies in application logic.
-     * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
-     * 
-     * {
-     *    name: "name",
-     *    value: "value",
-     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-     *    cookiePath: "cookiePath absolute dir",
-     *    cookieDomain: "cookieDomain e.g example.com",
-     *    setSecureBoolean: true|false
-     * }
-     * 
-     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-     */
-    class Cookie {
-        /**
-         * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
-         * 
-         * @param {String} name 
-         * @returns cookie object
-         */
-        static get(name) {
-            if(navigator.cookieEnabled) {
-                var retCookie = null;
-                var cookies = document.cookie.split(";");
-                var i = 0;
-                while(i < cookies.length) {
-                    var cookie = cookies[i];
-                    var eq = cookie.search("=");
-                    var cn = cookie.substr(0, eq).trim();
-                    var cv = cookie.substr(eq + 1, cookie.length).trim();
-                    if(cn === name) {
-                        retCookie = new CookieInstance(cn, cv);
-                        break;
-                    }
-                    i++;
+                props["stateRef"] = stateRef;
+                const newProps = comp.update.call()(stateRef);
+                const nextProps = {...props, ...newProps}; // nextProps is created for the sake of shouldComponentUpdate
+                if (!nextProps.shouldComponentUpdate || nextProps.shouldComponentUpdate(nextProps) !== false) {
+                    props = this.extendProps(props, newProps);
                 }
-                return retCookie;
+            }
+            if (Util.isEmpty(props))
+                props = {};
+
+            this.inflateGetterValues(name, props);
+
+            if (Util.notEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate))
+                props.onBeforeCreate.call(props, props);
+            
+            let ret = comp.component.call(props, props);
+            
+            if (Template.isTemplate(ret))
+                ret = Template.resolve(ret);
+            
+            if (Util.notEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate))
+                props.onAfterCreate.call(props, ret, props);
+            
+            if (Util.notEmpty(this.defaultApp) && Util.notEmpty(props.onAfterRender) && Util.isFunction(props.onAfterRender))
+                this.defaultApp.addAfterRefreshCallback(props.onAfterRender.bind(ret, ret, props));
+
+            return ret;
+        }
+
+        inflateGetterValues(component, props) {
+            const mapper = this.getGetters(component);
+            if (Util.notEmpty(mapper)) {
+                const p = Object.keys(mapper)
+                .reduce((prev, curr) => {
+                    prev[curr] = Util.isFunction(mapper[curr]) ? mapper[curr]() : mapper[curr];
+                    return prev;
+                }, {});
+
+                this.extendProps(props, p);
             }
         }
-        /**
-         * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
-         * 
-         * @param {string} name
-         * @param {string} value
-         * @param {string} expiresDate
-         * @param {string} cookiePath
-         * @param {string} cookieDomain
-         * @param {boolean} setSecureBoolean
-         */
-        static set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-            if(navigator.cookieEnabled) {
-                document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
+
+        extendProps(props, newProps) {
+            if (Util.notEmpty(newProps)) {
+                Object.keys(newProps).forEach(key => props[key] = newProps[key]);
             }
+            return props;
         }
+
         /**
-         * Remove a cookie by name. Method will set the cookie expired and then remove it.
-         * @param {string} name
+         * Function checks if the given components exists or not
+         * @param {string} name 
+         * @returns True if the component exists.
          */
-        static remove(name) {
-            var co = Cookie.get(name);
-            if(!Util.isEmpty(co)) {
-                co.setExpired();
-                document.cookie = co.toString();
-            }
+        hasComponent(name) {
+            return Util.notEmpty(this.components[name.replace('component:', '')]);
+        }
+
+        bindGetters(component, getters) {
+            this.componentGetters[component] = getters;
+        }
+
+        getGetters(component) {
+            return this.componentGetters[component];
         }
     }
 
-    /**
-     * Cookie object may hold following values:
-     *
-     * {
-     *    name: "name",
-     *    value: "value",
-     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-     *    cookiePath: "cookiePath absolute dir",
-     *    cookieDomain: "cookieDomain e.g example.com",
-     *    setSecureBoolean: true|false
-     * }
-     * 
-     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-     */
-    class CookieInstance {
-        constructor(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-            this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
-            this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
-            this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
-            this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
-            this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
-            this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
-        }
+    const manager = new RMEComponentManager();
 
-        setExpired() {
-            this.cookieExpires = new Date(1970,0,1).toString();
-        }
+    return manager;
 
-        toString() {
-            return this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity;
-        }
-        static create(name, value, expires, cpath, cdomain, setSecure) {
-                return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
-        }
-    }
-
-    return Cookie;
-}());
+})();
 
 
 
@@ -1359,429 +1565,6 @@ const CSS = (function() {
             }
         }
     }
-})();
-
-
-
-
-/**
- * RMEElemTemplater class is able to create a Template out of an Elem object.
- */
-class RMEElemTemplater {
-    constructor() {
-        this.instance;
-        this.template = {};
-        this.deep = true;
-    }
-
-    toTemplate(elem, deep) {
-        if(!Util.isEmpty(deep))
-            this.deep = deep;
-        this.resolve(elem, this.template);
-        return this.template;
-    }
-
-    /**
-     * Function is called recursively and resolves an Elem object and its children in recursion
-     * @param {object} elem 
-     * @param {object} parent 
-     */
-    resolve(elem, parent) {
-        let resolved = this.resolveElem(elem, this.resolveProps(elem));
-        for(let p in parent) {
-            if(parent.hasOwnProperty(p)) {
-                if(Util.isArray(parent[p]._rme_type_))
-                    parent[p]._rme_type_.push(resolved);
-                else
-                    this.extendMap(parent[p], resolved);
-            }
-        }
-
-        let i = 0;
-        let children = Util.isArray(elem.getChildren()) ? elem.getChildren() : [elem.getChildren()];
-        if(children && this.deep) {
-            while(i < children.length) {
-                this.resolve(children[i], resolved);
-                i++;
-            }
-        }
-        this.template = resolved;
-    }
-
-    extendMap(map, next) {
-        for(let v in next) {
-            if(next.hasOwnProperty(v)) {
-                map[v] = next[v];
-            }
-        }
-    }
-
-    /**
-     * Function will attach given properties into a given Elem and returns the resolved Elem.
-     * @param {object} elem 
-     * @param {object} props 
-     * @returns The resolved elem with attached properties.
-     */
-    resolveElem(elem, props) {
-        let el = {};
-        let children = elem.getChildren();
-        if(Util.isArray(children) && children.length > 1) {
-            let elTag = elem.getTagName().toLowerCase();
-            let elName = this.resolveId(elTag, props);
-            elName = this.resolveClass(elName, props);
-            elName = this.resolveAttrs(elName, props);
-            el[elName] = {
-                _rme_type_: [],
-                _rme_props_: props
-            };
-        } else {
-            el[elem.getTagName().toLowerCase()] = props
-        }
-        return el;
-    }
-
-    /**
-     * Function will place an ID attribute into an element tag if the ID attribute is found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with the ID or without.
-     */
-    resolveId(tag, props) {
-        if(props.id)
-            return tag+"#"+props.id;
-        else
-            return tag;
-    }
-
-    /**
-     * Function will place a class attribute into an element tag if the class attribute is found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with the classes or without.
-     */
-    resolveClass(tag, props) {
-        if(props.class)
-            return tag+"."+props.class.replace(/ /g, ".");
-        else
-            return tag;
-    }
-
-    /**
-     * Function will resolve all other attributes and place them into an element tag if other attributes are found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with other attributes or without.
-     */
-    resolveAttrs(tag, props) {
-        let tagName = tag;
-        for (let p in props) {
-            if (props.hasOwnProperty(p) && p !== 'id' && p !== 'class' && p.indexOf('on') !== 0) {
-                tagName += `[${p}=${props[p]}]`
-            }
-        }
-        return tagName;
-    }
-
-    /**
-     * Resolves a given Elem object and returns its properties in an object.
-     * @param {object} elem 
-     * @returns The properties object of the given element.
-     */
-    resolveProps(elem) {
-        let props = {};
-        let attributes = elem.dom().attributes;
-        let a = 0;
-        if(attributes) {
-            while(a < attributes.length) {
-                props[this.resolveAttributeNames(attributes[a].name)] = attributes[a].value;
-                a++;
-            }
-        }
-
-        if(elem.dom().hasChildNodes() && elem.dom().childNodes[0].nodeType === 3) {
-            props["text"] = elem.getText();
-        }
-
-        for(let p in elem.dom()) {
-            if(p.indexOf("on") !== 0 || Util.isEmpty(elem.dom()[p]))
-                continue;
-            else
-                props[this.resolveListeners(p)] = elem.dom()[p];
-        }
-
-        return props;
-    }
-
-    /**
-     * Resolves html data-* attributes by removing '-' and setting the next character to uppercase. If the attribute is not 
-     * data-* attribute then it is directly returned.
-     * @param {string} attrName 
-     * @returns Resolved attribute name.
-     */
-    resolveAttributeNames(attrName) {
-        if(attrName.indexOf("data" === 0 && attrName.length > "data".length)) {
-            while(attrName.search("-") > -1) {
-                attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search("-") + 1).toUpperCase());
-            }
-            return attrName
-        } else {
-            return attrName;
-        }
-    }
-
-    resolveListeners(name) {
-        switch(name) {
-            case "onanimationstart":
-                return "onAnimationStart";
-            case "onanimationiteration":
-                return "onAnimationIteration";
-            case "onanimationend":
-                return "onAnimationEnd";
-            case "ontransitionend":
-                return "onTransitionEnd";
-            case "ondrag":
-                return "onDrag"
-            case "ondragend":
-                return "onDragEnd";
-            case "ondragenter":
-                return "onDragEnter";
-            case "ondragover":
-                return "onDragOver";
-            case "ondragstart":
-                return "onDragStart";
-            case "ondrop":
-                return "onDrop"; 
-            case "onclick":
-                return "onClick";
-            case "ondblclick":
-                return "onDoubleClick";
-            case "oncontextmenu":
-                return "onContextMenu";
-            case "onmousedown":
-                return "onMouseDown";
-            case "onmouseenter":
-                return "onMouseEnter";
-            case "onmouseleave":
-                return "onMouseLeave";
-            case "onmousemove":
-                return "onMouseMove";
-            case "onmouseover":
-                return "onMouseOver";
-            case "onmouseout":
-                return "onMouseOut";
-            case "onmouseup":
-                return "onMouseUp";
-            case "onwheel":
-                return "onWheel";
-            case "onscroll":
-                return "onScroll";
-            case "onresize":
-                return "onResize";
-            case "onerror":
-                return "onError";
-            case "onload":
-                return "onLoad";
-            case "onunload":
-                return "onUnload";
-            case "onbeforeunload":
-                return "onBeforeUnload";
-            case "onkeyup":
-                return "onKeyUp";
-            case "onkeydown":
-                return "onKeyDown";
-            case "onkeypress":
-                return "onKeyPress";
-            case "oninput":
-                return "onInput";
-            case "onchange":
-                return "onChange";
-            case "onsubmit":
-                return "onSubmit";
-            case "onselect":
-                return "onSelect";
-            case "onreset":
-                return "onReset"
-            case "onfocus":
-                return "onFocus";
-            case "onfocusin":
-                return "onFocusIn";
-            case "onfocusout":
-                return "onFocusOut";
-            case "onblur":
-                return "onBlur";
-            case "oncopy":
-                return "onCopy";
-            case "oncut":
-                return "onCut";
-            case "onpaste":
-                return "onPaste";
-            case "onabort":
-                return "onAbort";
-            case "onwaiting":
-                return "onWaiting";
-            case "onvolumechange":
-                return "onVolumeChange";
-            case "ontimeupdate":
-                return "onTimeUpdate";
-            case "onseeking":
-                return "onSeeking";
-            case "onseekend":
-                return "onSeekEnd";
-            case "onratechange":
-                return "onRateChange";
-            case "onprogress":
-                return "onProgress";
-            case "onloadmetadata":
-                return "onLoadMetadata";
-            case "onloadeddata":
-                return "onLoadedData";
-            case "onloadstart":
-                return "onLoadStart";
-            case "onplaying":
-                return "onPlaying";
-            case "onplay":
-                return "onPlay";
-            case "onpause":
-                return "onPause";
-            case "onended":
-                return "onEnded";
-            case "ondurationchange":
-                return "onDurationChange";
-            case "oncanplay":
-                return "onCanPlay";
-            case "oncanplaythrough":
-                return "onCanPlayThrough";
-            case "onstalled":
-                return "onStalled";
-            case "onsuspend":
-                return "onSuspend";
-            case "onpopstate":
-                return "onPopState";
-            case "onstorage":
-                return "onStorage";
-            case "onhashchange":
-                return "onHashChange";
-            case "onafterprint":
-                return "onAfterPrint";
-            case "onbeforeprint":
-                return "onBeforePrint";
-            case "onpagehide":
-                return "onPageHide";
-            case "onpageshow":
-                return "onPageShow";
-        }
-    }
-
-    toLiteralString(elem) {
-        const props = this.resolveProps(elem);
-        let string = this.resolveId(elem.getTagName().toLowerCase(), props);
-        string = this.resolveClass(string, props);
-        string = this.resolveAttrs(string, props);
-        return string;
-    }
-
-    /**
-     * Function by default resolves a given element and its' children and returns template representation of the element.
-     * @param {object} elem 
-     * @param {boolean} deep 
-     * @returns Template object representation of the Elem
-     */
-    static toTemplate(elem, deep) {
-        return RMEElemTemplater.getInstance().toTemplate(elem, deep);
-    }
-
-    /**
-     * Function resolves and returns properties of a given Elem object.
-     * @param {object} elem 
-     * @returns The properties object of the given Elem.
-     */
-    static getElementProps(elem) {
-        return RMEElemTemplater.getInstance().resolveProps(elem);
-    }
-
-    static toLiteralString(elem) {
-        return RMEElemTemplater.getInstance().toLiteralString(elem);
-    }
-
-    static getInstance() {
-        if(!this.instance)
-            this.instance = new RMEElemTemplater();
-        return this.instance;
-    }
-}
-
-
-
-const EventPipe = (function() {
-
-    /**
-     * EventPipe class can be used to multicast and send custom events to registered listeners.
-     * Each event in an event queue will be sent to each registerd listener.
-     */
-    class EventPipe {
-        constructor() {
-            this.eventsQueue = [];
-            this.callQueue = [];
-            this.loopTimeout;
-        }
-
-        containsEvent() {
-            return this.eventsQueue.find(ev => ev.type === event.type);
-        }
-
-        /**
-         * Function sends an event object though the EventPipe. The event must have a type attribute
-         * defined otherwise an error is thrown. 
-         * Example defintion of the event object. 
-         * { 
-         *   type: 'some event',
-         *   ...payload
-         * }
-         * If an event listener is defined the sent event will be received on the event listener.
-         * @param {object} event 
-         */
-        send(event) {
-            if (Util.isEmpty(event.type))
-                throw new Error('Event must have type attribute.');
-            
-            if (!this.containsEvent())
-                this.eventsQueue.push(event);
-
-            this.loopEvents();
-        }
-
-        loopEvents() {
-            if (this.loopTimeout)
-                Util.clearTimeout(this.loopTimeout);
-
-            this.loopTimeout = Util.setTimeout(() => {
-                this.callQueue.forEach(eventCallback => 
-                    this.eventsQueue.forEach(ev => eventCallback(ev)));
-
-                this.eventsQueue = [];
-                this.callQueue = [];
-            });
-        }
-
-        /**
-         * Function registers an event listener function that receives an event sent through the
-         * EventPipe. Each listener will receive each event that are in an event queue. The listener
-         * function receives the event as a parameter.
-         * @param {function} eventCallback 
-         */
-        receive(eventCallback) {
-            this.callQueue.push(eventCallback);
-        }
-
-    }
-
-    const eventPipe = new EventPipe();
-
-    return {
-        send: eventPipe.send.bind(eventPipe),
-        receive: eventPipe.receive.bind(eventPipe)
-    }
-
 })();
 
 
@@ -3511,102 +3294,356 @@ let Elem = (function() {
 }());
 
 
-
 /**
- * Before using this class you should also be familiar on how to use fetch since usage of this class
- * will be quite similar to fetch except predefined candy that is added on a class.
- *
- * The class is added some predefined candy over the JavaScript Fetch interface.
- * get|post|put|delete methods will automatically use JSON as a Content-Type
- * and request methods will be predefined also.
- *
- * FOR Fetch
- * A Config object supports following:
- *  {
- *      url: url,
- *      method: method,
- *      contentType: contentType,
- *      init: init
- *  }
- *
- *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
- *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
- *
- *  If a total custom request is desired you should use a method do({}) e.g.
- *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
+ * RMEElemTemplater class is able to create a Template out of an Elem object.
  */
-class HttpFetchRequest {
-    constructor() {}
-    /**
-     * Does Fetch GET request. Content-Type JSON is used by default.
-     * @param {stirng} url *Required
-     * @param {*} init 
-     */
-    get(url, init) {
-        if(!init) init = {};
-        init.method = "GET";
-        return this.do({url: url, init: init, contentType: Http.JSON});
+class RMEElemTemplater {
+    constructor() {
+        this.instance;
+        this.template = {};
+        this.deep = true;
     }
-    /**
-     * Does Fetch POST request. Content-Type JSON is used by default.
-     * @param {string} url *Required
-     * @param {*} body 
-     * @param {*} init 
-     */
-    post(url, body, init) {
-        if(!init) init = {};
-        init.method = "POST";
-        init.body = body;
-        return this.do({url: url, init: init, contentType: Http.JSON});
+
+    toTemplate(elem, deep) {
+        if(!Util.isEmpty(deep))
+            this.deep = deep;
+        this.resolve(elem, this.template);
+        return this.template;
     }
+
     /**
-     * Does Fetch PUT request. Content-Type JSON is used by default.
-     * @param {string} url *Required
-     * @param {*} body 
-     * @param {*} init 
+     * Function is called recursively and resolves an Elem object and its children in recursion
+     * @param {object} elem 
+     * @param {object} parent 
      */
-    put(url, body, init) {
-        if(!init) init = {};
-        init.method = "PUT";
-        init.body = body;
-        return this.do({url: url, init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does Fetch DELETE request. Content-Type JSON is used by default.
-     * @param {string} url 
-     * @param {*} init 
-     */
-    delete(url, init) {
-        if(!init) init = {};
-        init.method = "DELETE";
-        return this.do({url: url,  init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does any Fetch request a given config object defines.
-     * 
-     * Config object can contain parameters:
-     * {
-     *      url: url,
-     *      method: method,
-     *      contentType: contentType,
-     *      init: init
-     *  }
-     * @param {object} config 
-     */
-    do(config) {
-        if(!config.init) config.init = {};
-        if(config.contentType) {
-            if(!config.init.headers)
-                config.init.headers = new Headers({});
-            if(!config.init.headers.has("Content-Type"))
-                config.init.headers.set("Content-Type", config.contentType);
+    resolve(elem, parent) {
+        let resolved = this.resolveElem(elem, this.resolveProps(elem));
+        for(let p in parent) {
+            if(parent.hasOwnProperty(p)) {
+                if(Util.isArray(parent[p]._rme_type_))
+                    parent[p]._rme_type_.push(resolved);
+                else
+                    this.extendMap(parent[p], resolved);
+            }
         }
-        if(config.method) {
-            config.init.method = config.method;
+
+        let i = 0;
+        let children = Util.isArray(elem.getChildren()) ? elem.getChildren() : [elem.getChildren()];
+        if(children && this.deep) {
+            while(i < children.length) {
+                this.resolve(children[i], resolved);
+                i++;
+            }
         }
-        return fetch(config.url, config.init);
+        this.template = resolved;
+    }
+
+    extendMap(map, next) {
+        for(let v in next) {
+            if(next.hasOwnProperty(v)) {
+                map[v] = next[v];
+            }
+        }
+    }
+
+    /**
+     * Function will attach given properties into a given Elem and returns the resolved Elem.
+     * @param {object} elem 
+     * @param {object} props 
+     * @returns The resolved elem with attached properties.
+     */
+    resolveElem(elem, props) {
+        let el = {};
+        let children = elem.getChildren();
+        if(Util.isArray(children) && children.length > 1) {
+            let elTag = elem.getTagName().toLowerCase();
+            let elName = this.resolveId(elTag, props);
+            elName = this.resolveClass(elName, props);
+            elName = this.resolveAttrs(elName, props);
+            el[elName] = {
+                _rme_type_: [],
+                _rme_props_: props
+            };
+        } else {
+            el[elem.getTagName().toLowerCase()] = props
+        }
+        return el;
+    }
+
+    /**
+     * Function will place an ID attribute into an element tag if the ID attribute is found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with the ID or without.
+     */
+    resolveId(tag, props) {
+        if(props.id)
+            return tag+"#"+props.id;
+        else
+            return tag;
+    }
+
+    /**
+     * Function will place a class attribute into an element tag if the class attribute is found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with the classes or without.
+     */
+    resolveClass(tag, props) {
+        if(props.class)
+            return tag+"."+props.class.replace(/ /g, ".");
+        else
+            return tag;
+    }
+
+    /**
+     * Function will resolve all other attributes and place them into an element tag if other attributes are found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with other attributes or without.
+     */
+    resolveAttrs(tag, props) {
+        let tagName = tag;
+        for (let p in props) {
+            if (props.hasOwnProperty(p) && p !== 'id' && p !== 'class' && p.indexOf('on') !== 0) {
+                tagName += `[${p}=${props[p]}]`
+            }
+        }
+        return tagName;
+    }
+
+    /**
+     * Resolves a given Elem object and returns its properties in an object.
+     * @param {object} elem 
+     * @returns The properties object of the given element.
+     */
+    resolveProps(elem) {
+        let props = {};
+        let attributes = elem.dom().attributes;
+        let a = 0;
+        if(attributes) {
+            while(a < attributes.length) {
+                props[this.resolveAttributeNames(attributes[a].name)] = attributes[a].value;
+                a++;
+            }
+        }
+
+        if(elem.dom().hasChildNodes() && elem.dom().childNodes[0].nodeType === 3) {
+            props["text"] = elem.getText();
+        }
+
+        for(let p in elem.dom()) {
+            if(p.indexOf("on") !== 0 || Util.isEmpty(elem.dom()[p]))
+                continue;
+            else
+                props[this.resolveListeners(p)] = elem.dom()[p];
+        }
+
+        return props;
+    }
+
+    /**
+     * Resolves html data-* attributes by removing '-' and setting the next character to uppercase. If the attribute is not 
+     * data-* attribute then it is directly returned.
+     * @param {string} attrName 
+     * @returns Resolved attribute name.
+     */
+    resolveAttributeNames(attrName) {
+        if(attrName.indexOf("data" === 0 && attrName.length > "data".length)) {
+            while(attrName.search("-") > -1) {
+                attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search("-") + 1).toUpperCase());
+            }
+            return attrName
+        } else {
+            return attrName;
+        }
+    }
+
+    resolveListeners(name) {
+        switch(name) {
+            case "onanimationstart":
+                return "onAnimationStart";
+            case "onanimationiteration":
+                return "onAnimationIteration";
+            case "onanimationend":
+                return "onAnimationEnd";
+            case "ontransitionend":
+                return "onTransitionEnd";
+            case "ondrag":
+                return "onDrag"
+            case "ondragend":
+                return "onDragEnd";
+            case "ondragenter":
+                return "onDragEnter";
+            case "ondragover":
+                return "onDragOver";
+            case "ondragstart":
+                return "onDragStart";
+            case "ondrop":
+                return "onDrop"; 
+            case "onclick":
+                return "onClick";
+            case "ondblclick":
+                return "onDoubleClick";
+            case "oncontextmenu":
+                return "onContextMenu";
+            case "onmousedown":
+                return "onMouseDown";
+            case "onmouseenter":
+                return "onMouseEnter";
+            case "onmouseleave":
+                return "onMouseLeave";
+            case "onmousemove":
+                return "onMouseMove";
+            case "onmouseover":
+                return "onMouseOver";
+            case "onmouseout":
+                return "onMouseOut";
+            case "onmouseup":
+                return "onMouseUp";
+            case "onwheel":
+                return "onWheel";
+            case "onscroll":
+                return "onScroll";
+            case "onresize":
+                return "onResize";
+            case "onerror":
+                return "onError";
+            case "onload":
+                return "onLoad";
+            case "onunload":
+                return "onUnload";
+            case "onbeforeunload":
+                return "onBeforeUnload";
+            case "onkeyup":
+                return "onKeyUp";
+            case "onkeydown":
+                return "onKeyDown";
+            case "onkeypress":
+                return "onKeyPress";
+            case "oninput":
+                return "onInput";
+            case "onchange":
+                return "onChange";
+            case "onsubmit":
+                return "onSubmit";
+            case "onselect":
+                return "onSelect";
+            case "onreset":
+                return "onReset"
+            case "onfocus":
+                return "onFocus";
+            case "onfocusin":
+                return "onFocusIn";
+            case "onfocusout":
+                return "onFocusOut";
+            case "onblur":
+                return "onBlur";
+            case "oncopy":
+                return "onCopy";
+            case "oncut":
+                return "onCut";
+            case "onpaste":
+                return "onPaste";
+            case "onabort":
+                return "onAbort";
+            case "onwaiting":
+                return "onWaiting";
+            case "onvolumechange":
+                return "onVolumeChange";
+            case "ontimeupdate":
+                return "onTimeUpdate";
+            case "onseeking":
+                return "onSeeking";
+            case "onseekend":
+                return "onSeekEnd";
+            case "onratechange":
+                return "onRateChange";
+            case "onprogress":
+                return "onProgress";
+            case "onloadmetadata":
+                return "onLoadMetadata";
+            case "onloadeddata":
+                return "onLoadedData";
+            case "onloadstart":
+                return "onLoadStart";
+            case "onplaying":
+                return "onPlaying";
+            case "onplay":
+                return "onPlay";
+            case "onpause":
+                return "onPause";
+            case "onended":
+                return "onEnded";
+            case "ondurationchange":
+                return "onDurationChange";
+            case "oncanplay":
+                return "onCanPlay";
+            case "oncanplaythrough":
+                return "onCanPlayThrough";
+            case "onstalled":
+                return "onStalled";
+            case "onsuspend":
+                return "onSuspend";
+            case "onpopstate":
+                return "onPopState";
+            case "onstorage":
+                return "onStorage";
+            case "onhashchange":
+                return "onHashChange";
+            case "onafterprint":
+                return "onAfterPrint";
+            case "onbeforeprint":
+                return "onBeforePrint";
+            case "onpagehide":
+                return "onPageHide";
+            case "onpageshow":
+                return "onPageShow";
+        }
+    }
+
+    toLiteralString(elem) {
+        const props = this.resolveProps(elem);
+        let string = this.resolveId(elem.getTagName().toLowerCase(), props);
+        string = this.resolveClass(string, props);
+        string = this.resolveAttrs(string, props);
+        return string;
+    }
+
+    /**
+     * Function by default resolves a given element and its' children and returns template representation of the element.
+     * @param {object} elem 
+     * @param {boolean} deep 
+     * @returns Template object representation of the Elem
+     */
+    static toTemplate(elem, deep) {
+        return RMEElemTemplater.getInstance().toTemplate(elem, deep);
+    }
+
+    /**
+     * Function resolves and returns properties of a given Elem object.
+     * @param {object} elem 
+     * @returns The properties object of the given Elem.
+     */
+    static getElementProps(elem) {
+        return RMEElemTemplater.getInstance().resolveProps(elem);
+    }
+
+    static toLiteralString(elem) {
+        return RMEElemTemplater.getInstance().toLiteralString(elem);
+    }
+
+    static getInstance() {
+        if(!this.instance)
+            this.instance = new RMEElemTemplater();
+        return this.instance;
     }
 }
+
+
+
+
+
 
 
 let Http = (function() {
@@ -3868,6 +3905,179 @@ let Http = (function() {
 }());
 
 
+/**
+ * Before using this class you should also be familiar on how to use fetch since usage of this class
+ * will be quite similar to fetch except predefined candy that is added on a class.
+ *
+ * The class is added some predefined candy over the JavaScript Fetch interface.
+ * get|post|put|delete methods will automatically use JSON as a Content-Type
+ * and request methods will be predefined also.
+ *
+ * FOR Fetch
+ * A Config object supports following:
+ *  {
+ *      url: url,
+ *      method: method,
+ *      contentType: contentType,
+ *      init: init
+ *  }
+ *
+ *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
+ *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+ *
+ *  If a total custom request is desired you should use a method do({}) e.g.
+ *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
+ */
+class HttpFetchRequest {
+    constructor() {}
+    /**
+     * Does Fetch GET request. Content-Type JSON is used by default.
+     * @param {stirng} url *Required
+     * @param {*} init 
+     */
+    get(url, init) {
+        if(!init) init = {};
+        init.method = "GET";
+        return this.do({url: url, init: init, contentType: Http.JSON});
+    }
+    /**
+     * Does Fetch POST request. Content-Type JSON is used by default.
+     * @param {string} url *Required
+     * @param {*} body 
+     * @param {*} init 
+     */
+    post(url, body, init) {
+        if(!init) init = {};
+        init.method = "POST";
+        init.body = body;
+        return this.do({url: url, init: init, contentType: Http.JSON});
+    }
+    /**
+     * Does Fetch PUT request. Content-Type JSON is used by default.
+     * @param {string} url *Required
+     * @param {*} body 
+     * @param {*} init 
+     */
+    put(url, body, init) {
+        if(!init) init = {};
+        init.method = "PUT";
+        init.body = body;
+        return this.do({url: url, init: init, contentType: Http.JSON});
+    }
+    /**
+     * Does Fetch DELETE request. Content-Type JSON is used by default.
+     * @param {string} url 
+     * @param {*} init 
+     */
+    delete(url, init) {
+        if(!init) init = {};
+        init.method = "DELETE";
+        return this.do({url: url,  init: init, contentType: Http.JSON});
+    }
+    /**
+     * Does any Fetch request a given config object defines.
+     * 
+     * Config object can contain parameters:
+     * {
+     *      url: url,
+     *      method: method,
+     *      contentType: contentType,
+     *      init: init
+     *  }
+     * @param {object} config 
+     */
+    do(config) {
+        if(!config.init) config.init = {};
+        if(config.contentType) {
+            if(!config.init.headers)
+                config.init.headers = new Headers({});
+            if(!config.init.headers.has("Content-Type"))
+                config.init.headers.set("Content-Type", config.contentType);
+        }
+        if(config.method) {
+            config.init.method = config.method;
+        }
+        return fetch(config.url, config.init);
+    }
+}
+
+
+
+
+
+
+
+const EventPipe = (function() {
+
+    /**
+     * EventPipe class can be used to multicast and send custom events to registered listeners.
+     * Each event in an event queue will be sent to each registerd listener.
+     */
+    class EventPipe {
+        constructor() {
+            this.eventsQueue = [];
+            this.callQueue = [];
+            this.loopTimeout;
+        }
+
+        containsEvent() {
+            return this.eventsQueue.find(ev => ev.type === event.type);
+        }
+
+        /**
+         * Function sends an event object though the EventPipe. The event must have a type attribute
+         * defined otherwise an error is thrown. 
+         * Example defintion of the event object. 
+         * { 
+         *   type: 'some event',
+         *   ...payload
+         * }
+         * If an event listener is defined the sent event will be received on the event listener.
+         * @param {object} event 
+         */
+        send(event) {
+            if (Util.isEmpty(event.type))
+                throw new Error('Event must have type attribute.');
+            
+            if (!this.containsEvent())
+                this.eventsQueue.push(event);
+
+            this.loopEvents();
+        }
+
+        loopEvents() {
+            if (this.loopTimeout)
+                Util.clearTimeout(this.loopTimeout);
+
+            this.loopTimeout = Util.setTimeout(() => {
+                this.callQueue.forEach(eventCallback => 
+                    this.eventsQueue.forEach(ev => eventCallback(ev)));
+
+                this.eventsQueue = [];
+                this.callQueue = [];
+            });
+        }
+
+        /**
+         * Function registers an event listener function that receives an event sent through the
+         * EventPipe. Each listener will receive each event that are in an event queue. The listener
+         * function receives the event as a parameter.
+         * @param {function} eventCallback 
+         */
+        receive(eventCallback) {
+            this.callQueue.push(eventCallback);
+        }
+
+    }
+
+    const eventPipe = new EventPipe();
+
+    return {
+        send: eventPipe.send.bind(eventPipe),
+        receive: eventPipe.receive.bind(eventPipe)
+    }
+
+})();
 
 /**
  * Key class does not have any methods as it only contains key mappings for keyevent. For example:
@@ -4036,6 +4246,7 @@ Key.ARROW_LEFT = "ArrowLeft";
 Key.COMMA = ",";
 /** . */
 Key.DOT = ".";
+
 
 
 
@@ -4286,20 +4497,14 @@ let Messages = (function() {
 
 
 /**
- * The configure function will configure given Components. This is a shortcut function of the
- * RME.use(config) function. Advantage of this function is that the Compoments can be given in 
+ * The configure function will configure given Components. Advantage of this function is that the Compoments can be given in 
  * any order and they will be recognized automatically.
  * 
- * Example use case would be to invoke configure(App.get(), Router, Messages); which would equal to
- * RME.use({
- *  messages: Messages,
- *  router: Router,
- *  app: App.get()
- * });
+ * Example use case would be to invoke configure(App.get(), Router, Messages);
  * 
  * This function can be conbined with a createApp('#app', AppComponent) function as follows:
  * configure(createApp('#app', AppComponent), Router, Messages); This is probably the shortest way to 
- * create an RME application.
+ * create the RME application.
  * @param {*} params comma separated list of components
  */
 const configure = (function() {
@@ -4324,7 +4529,79 @@ const configure = (function() {
                 }
             } 
         });
-        RME.use(config);
+
+        if (Util.notEmpty(config.router))
+            config.router.setApp(config.app);
+
+        if (Util.notEmpty(config.messages))
+            config.messages.setApp(config.app);
+
+        if (Util.notEmpty(config.app))
+            config.app.setRouter(config.router);
+    }
+
+})();
+
+
+/**
+ * Adds a script file on runtime into the head of the current html document where the method is called on.
+ * Source is required options can be omitted.
+ * @param {String} source URL or file name. *Requied
+ * @param {object} options Optional settings object.
+ * 
+ * Option settings:
+ * -------
+ *  @param {String} id 
+ *  @param {String} type 
+ *  @param {String} text Content of the script element if any.
+ *  @param {boolean} defer If true script is executed when page has finished parsing.
+ *  @param {*} crossOrigin 
+ *  @param {String} charset 
+ *  @param {boolean} async If true script is executed asynchronously when available.
+ */
+const script = (function() {
+
+    const addScript = (elem) => {
+        const scripts = Tree.getHead().getByTag('script');
+        if (scripts.length > 0) {
+            const lastScript = scripts[scripts.length -1];
+            lastScript.after(elem);
+        } else {
+            Tree.getHead().append(elem);
+        }
+    }
+
+    return (source, options) => {
+        if (Util.notEmpty(source)) {
+            addScript(Template.resolve({
+                script: {
+                    src: source,
+                    ...options
+                }
+            }));
+        }
+    }
+})();
+
+
+/**
+ * The function adds a callback function into the callback queue. The queue is invoked in the
+ * function definition order. The queue will be run when the DOM tree is ready and
+ * then the it is cleared.
+ */
+const ready = (function() {
+
+    const callbacks = [];
+
+    document.addEventListener("readystatechange", () => {
+        if(document.readyState === "complete") {
+            callbacks.forEach(callback => callback());
+            callbacks.length = 0;
+        }
+    });
+
+    return (callback) => {
+        callbacks.push(callback);
     }
 
 })();
@@ -4332,289 +4609,68 @@ const configure = (function() {
 
 
 
-let RME = (function() {
-    /**
-     * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create RESTfull webpages with ease and speed.
-     * This library is free to use under the MIT License.
-     * 
-     * RME class is a core of the RME library. The RME class offers functionality to start a RME application, control components, external script files and rme storage.
-     */
-    class RME {
+/**
+ * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create
+ * RESTfull webpages with ease and speed.
+ * 
+ * This library is free to use under the MIT License.
+ */
+const RME = (function() {
+
+    class RMEStorage {
         constructor() {
-            this.instance = this;
-            this.completeRun = function() {};
-            this.runner = function() {};
-            this.onStorageChange = function(state) {};
-            this.components = {};
             this.rmeState = {};
-            this.router;
-            this.messages;
-            this.defaultApp;
         }
 
-        complete() {
-            this.completeRun.call();
-        }
-
-        start() {
-            this.runner.call();
-        }
-
-        setComplete(runnable) {
-            this.completeRun = runnable;
-        }
-
-        setRunner(runnable) {
-            this.runner = runnable;
-            return this.instance;
-        }
-
-        addComponent(runnable, props) {
-            var comp;
-            if(Util.isFunction(runnable))
-                comp = runnable.call();
-            else if(Util.isObject(runnable))
-                comp = runnable;
-            for(var p in comp) {
-                if(comp.hasOwnProperty(p)) {
-                    this.components[p] = {component: comp[p], update: Util.isFunction(props) ? props : undefined};
-                }
-            }
-            comp = null;
-        }
-
-        getComponent(name, props) {
-            let comp = this.components[name];
-            if (!comp)
-                throw "Cannot find a component: \""+name+"\"";
-            if (!Util.isEmpty(props) && Util.isFunction(comp.update)) {
-                let stateRef = props.stateRef;
-                if (Util.isEmpty(props.stateRef))
-                    stateRef = name;
-                else if (props.stateRef.search(name) === -1)
-                    stateRef = `${name}${props.stateRef}`;
-
-                props["stateRef"] = stateRef;
-                const newProps = comp.update.call()(stateRef);
-                const nextProps = {...props, ...newProps};
-                if (!nextProps.shouldComponentUpdate || nextProps.shouldComponentUpdate(nextProps) !== false) {
-                    props = this.extendProps(props, newProps);
-                }
-            }
-            if (Util.isEmpty(props))
-                props = {};
-            if (!Util.isEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate))
-                props.onBeforeCreate.call(props, props);
-            let ret = comp.component.call(props, props);
-            if (Template.isTemplate(ret))
-                ret = Template.resolve(ret);
-            if (!Util.isEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate))
-                props.onAfterCreate.call(props, ret, props);
-            if (!Util.isEmpty(this.defaultApp) && !Util.isEmpty(props.onAfterRender) && Util.isFunction(props.onAfterRender))
-                this.defaultApp.addAfterRefreshCallback(props.onAfterRender.bind(ret, ret, props));
-
-            return ret;
-        }
-
-        extendProps(props, newProps) {
-            if(!Util.isEmpty(newProps)) {
-                for(let p in newProps) {
-                    if(newProps.hasOwnProperty(p)) {
-                        props[p] = newProps[p];
-                    }
-                }
-            }
-            return props;
-        }
-
-        setRmeState(key, value) {
+        setRmeStateProp(key, value) {
             this.rmeState[key] = value;
-            this.onStorageChange.call(this, this.rmeState);
         }
 
-        getRmeState(key) {
+        getRmeStateProp(key) {
             return this.rmeState[key];
         }
 
-        configure(config) {
-            this.router = config.router;
-            this.messages = config.messages;
-            this.defaultApp = config.app;
-            
-            if(!Util.isEmpty(this.router))
-                this.router.setApp(this.defaultApp);
-            if(!Util.isEmpty(this.messages))
-                this.messages.setApp(this.defaultApp);
-            if(!Util.isEmpty(this.defaultApp))
-                this.defaultApp.setRouter(this.router);
-        }
-
-        /** 
-         * Runs a runnable script immedeately. If multpile run functions are declared they will be invoked by the declaration order.
-         */
-        static run(runnable) {
-            if(runnable && Util.isFunction(runnable))
-                RME.getInstance().setRunner(runnable).start();
-        }
-
-        /**
-         * Waits until body has been loaded and then runs a runnable script. 
-         * If multiple ready functions are declared the latter one is invoked.
-         */
-        static ready(runnable) {
-            if(runnable && Util.isFunction(runnable))
-                RME.getInstance().setComplete(runnable);
-        }
-
-        /**
-         * Creates or retrieves a RME component. 
-         * If the first parameter is a function then this method will try to create a RME component and store it
-         * in the RME instance.
-         * If the first parameter is a string then this method will try to retrieve a RME component from the 
-         * RME instance.
-         * @param {*} runnable Type function or String.
-         * @param {Object} props 
-         */
-        static component(runnable, props) {
-            if(runnable && (Util.isFunction(runnable) || Util.isObject(runnable)))
-                RME.getInstance().addComponent(runnable, props);
-            else if(runnable && Util.isString(runnable))
-                return RME.getInstance().getComponent(runnable, props);
-        }
-
-        /**
-         * Saves data to or get data from the RME instance storage.
-         * If key and value parameters are not empty then this method will try to save the give value by the given key
-         * into to the RME instance storage.
-         * If key is not empty and value is empty then this method will try to get data from the RME instance storage
-         * by the given key.
-         * @param {String} key 
-         * @param {Object} value 
-         */
-        static storage(key, value) {
-            if(!Util.isEmpty(key) && !Util.isEmpty(value))
-                RME.getInstance().setRmeState(key, value);
-            else if(!Util.isEmpty(key) && Util.isEmpty(value))
-                return RME.getInstance().getRmeState(key);
-        }
-
-        /**
-         * Adds a script file on runtime into the head of the current html document where the method is called on.
-         * Source is required other properties can be omitted.
-         * @param {String} source URL or file name. *Requied
-         * @param {String} id 
-         * @param {String} type 
-         * @param {String} text Content of the script element if any.
-         * @param {boolean} defer If true script is executed when page has finished parsing.
-         * @param {*} crossOrigin 
-         * @param {String} charset 
-         * @param {boolean} async If true script is executed asynchronously when available.
-         */
-        static script(source, id, type, text, defer, crossOrigin, charset, async) {
-            if(!Util.isEmpty(source)) {
-                var sc = new Elem("script").setSource(source);
-                if(!Util.isEmpty(id))
-                    sc.setId(id);
-                if(!Util.isEmpty(type))
-                    sc.setType(type);
-                if(!Util.isEmpty(text))
-                    sc.setText(text);
-                if(!Util.isEmpty(defer))
-                    sc.setAttribute("defer", defer);
-                if(!Util.isEmpty(crossOrigin))
-                    sc.setAttribute("crossOrigin", crossOrigin);
-                if(!Util.isEmpty(charset))
-                    sc.setAttribute("charset", charset);
-                if(!Util.isEmpty(async))
-                    sc.setAttribute("async", async);
-                RME.addScript(sc);
-            }
-        }
-
-        /**
-         * This is called when ever a new data is saved into the RME instance storage.
-         * Callback function has one paramater newState that is the latest snapshot of the 
-         * current instance storage.
-         * @param {function} listener 
-         */
-        static onStorageChange(listener) {
-            if(listener && Util.isFunction(listener))
-                RME.getInstance().onrmestoragechange = listener;
-        }
-
-        /**
-         * Function checks if a component with the given name exists.
-         * @param {string} name 
-         * @returns True if the component exist otherwise false
-         */
-        static hasComponent(name) {
-            return !Util.isEmpty(RME.getInstance().components[name.replace("component:", "")]);
-        }
-
-        /**
-         * Function receives an object as a parameter that holds three properties router, messages and app. The function will
-         * autoconfigure the Router, the Messages and the App instance to be used as default.
-         * 
-         * The config object represented
-         * {
-         * router: Router reference
-         * messages: Messages reference
-         * app: App instance
-         * }
-         * @param {object} config 
-         */
-        static use(config) {
-            RME.getInstance().configure(config);
-        }
-
-        static addScript(elem) {
-            let scripts = Tree.getHead().getByTag('script');
-            if (scripts.length > 0) {
-                let lastScript = scripts[scripts.length -1];
-                lastScript.after(elem);
-            } else {
-                Tree.getHead().append(elem);
-            }
-        }
-
-        static removeScript(sourceOrId) {
-            if(sourceOrId.indexOf("#") === 0) {
-                Tree.getHead().remove(Tree.get(sourceOrId));
-            } else {
-                let scripts = Tree.getHead().getByTag('script');
-                for(let s in scripts) {
-                    if(scripts.hasOwnProperty(s)) {
-                        let src = !Util.isEmpty(scripts[s].getSource()) ? scripts[s].getSource() : "";
-                        if(src.search(sourceOrId) > -1 && src.search(sourceOrId) === src.length - sourceOrId.length) {
-                            Tree.getHead().remove(scripts[s]);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        static getInstance() {
-            if(!this.instance)
-                this.instance = new RME();
-            return this.instance;
-        }
     }
-    
-    document.addEventListener("readystatechange", () => {
-        if(document.readyState === "complete")
-            RME.getInstance().complete();
-    });
+
+    const rmeStorage = new RMEStorage();
+
+    /**
+     * This function is not the recommended way to use components and is for legacy support
+     * and will be removed in later releases. The recommended way to use components is the 
+     * Component function.
+     * 
+     * The function creates or retrieves a component. 
+     * If the first parameter is a string the function will try to get the component from the 
+     * component storage. Otherwise the function will set the component in the component storage.
+     * @param {*} component function, object or string.
+     * @param {Object} props 
+     */
+    const component = (component, props) => {
+        if (component && (Util.isFunction(component) || Util.isObject(component)))
+            RMEComponentManager.addComponent(component, props);
+        else if (component && Util.isString(component))
+            return RMEComponentManager.getComponent(component, props);
+    }
+
+    /**
+     * Saves data to or get data from the RME instance storage.
+     * If key and value parameters are not empty then this method will try to save the give value by the given key
+     * into to the RME instance storage.
+     * If key is not empty and value is empty then this method will try to get data from the RME instance storage
+     * by the given key.
+     * @param {String} key 
+     * @param {Object} value 
+     */
+    const storage = (key, value) => {
+        if (Util.notEmpty(key) && Util.notEmpty(value))
+            rmeStorage.setRmeStateProp(key, value);
+        else if (Util.notEmpty(key) && Util.isEmpty(value))
+            return rmeStorage.getRmeStateProp(key);
+    }
 
     return {
-        run: RME.run,
-        ready: RME.ready,
-        component: RME.component,
-        storage: RME.storage,
-        script: RME.script,
-        onStorageChange: RME.onStorageChange,
-        hasComponent: RME.hasComponent,
-        use: RME.use
+        component,
+        storage,
     }
 }());
 
@@ -4793,8 +4849,10 @@ let Router = (function() {
          * @param {*} elem 
          */
         resolveElem(elem, props) {
-            if (Util.isString(elem) && RME.hasComponent(elem)) {
-                return RME.component(elem, props);
+            if (Util.isFunction(elem) && RMEComponentManager.hasComponent(elem.valueOf().name)) {
+                return RMEComponentManager.getComponent(elem.valueOf().name, props);
+            } else if (Util.isString(elem) && RMEComponentManager.hasComponent(elem)) {
+                return RMEComponentManager.getComponent(elem, props);
             } else if (Util.isString(elem) && this.isSelector(elem)) {
                 return Tree.getFirst(elem);
             } else if (elem instanceof Elem) {
@@ -5087,40 +5145,6 @@ let Router = (function() {
 }());
 
 
-/**
- * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
- */
-class Session {
-    /**
-     * Save data into the Session.
-     * @param {string} key
-     * @param {*} value
-     */
-    static set(key, value) {
-        sessionStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the Session.
-     * @param {string} key
-     */
-    static get(key) {
-        return sessionStorage.getItem(key);
-    }
-    /**
-     * Remove data from the Session.
-     * @param {string} key
-     */
-    static remove(key) {
-        sessionStorage.removeItem(key);
-    }
-    /**
-     * Clears the Session.
-     */
-    static clear() {
-        sessionStorage.clear();
-    }
-}
-
 
 /**
  * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
@@ -5157,6 +5181,213 @@ class Storage {
 }
 
 
+
+
+/**
+ * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
+ */
+class Session {
+    /**
+     * Save data into the Session.
+     * @param {string} key
+     * @param {*} value
+     */
+    static set(key, value) {
+        sessionStorage.setItem(key, value);
+    }
+    /**
+     * Get the saved data from the Session.
+     * @param {string} key
+     */
+    static get(key) {
+        return sessionStorage.getItem(key);
+    }
+    /**
+     * Remove data from the Session.
+     * @param {string} key
+     */
+    static remove(key) {
+        sessionStorage.removeItem(key);
+    }
+    /**
+     * Clears the Session.
+     */
+    static clear() {
+        sessionStorage.clear();
+    }
+}
+
+/**
+ * General Utility methods.
+ */
+class Util {
+    /**
+     * Checks is a given value empty.
+     * @param {*} value
+     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
+     */
+    static isEmpty(value) {
+        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
+    }
+
+    /**
+     * Checks is the given value not empty. This function is a negation to the Util.isEmpty function.
+     * @param {*} value 
+     * @returns True if the value is not empty otherwise false.
+     */
+    static notEmpty(value) {
+        return !Util.isEmpty(value)
+    }
+
+    /**
+     * Get the type of the given value.
+     * @param {*} value
+     * @returns The type of the given value.
+     */
+    static getType(value) {
+        return typeof value;
+    }
+
+    /**
+     * Checks is a given value is a given type.
+     * @param {*} value
+     * @param {string} type
+     * @returns True if the given value is the given type otherwise false.
+     */
+    static isType(value, type) {
+        return (Util.getType(value) === type);
+    }
+
+    /**
+     * Checks is a given parameter a function.
+     * @param {*} func 
+     * @returns True if the given parameter is fuction otherwise false.
+     */
+    static isFunction(func) {
+        return Util.isType(func, "function");
+    }
+
+    /**
+     * Checks is a given parameter a boolean.
+     * @param {*} boolean
+     * @returns True if the given parameter is boolean otherwise false.
+     */
+    static isBoolean(boolean) {
+        return Util.isType(boolean, "boolean");
+    }
+
+    /**
+     * Checks is a given parameter a string.
+     * @param {*} string
+     * @returns True if the given parameter is string otherwise false.
+     */
+    static isString(string) {
+        return Util.isType(string, "string");
+    }
+
+    /**
+     * Checks is a given parameter a number.
+     * @param {*} number
+     * @returns True if the given parameter is number otherwise false.
+     */
+    static isNumber(number) {
+        return Util.isType(number, "number");
+    }
+
+    /**
+     * Checks is a given parameter a symbol.
+     * @param {*} symbol
+     * @returns True if the given parameter is symbol otherwise false.
+     */
+    static isSymbol(symbol) {
+        return Util.isType(symbol, "symbol");
+    }
+
+    /**
+     * Checks is a given parameter a object.
+     * @param {*} object
+     * @returns True if the given parameter is object otherwise false.
+     */
+    static isObject(object) {
+        return Util.isType(object, "object");
+    }
+
+    /**
+     * Checks is a given parameter an array.
+     * @param {*} array
+     * @returns True if the given parameter is array otherwise false.
+     */
+    static isArray(array) {
+        return Array.isArray(array);
+    }
+
+    /**
+     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The timeout object.
+     */
+    static setTimeout(callback, milliseconds, ...params) {
+        if(!Util.isFunction(callback)) {
+            throw "callback not fuction";
+        }
+        return window.setTimeout(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes a timeout that was created by setTimeout method.
+     * @param {object} timeoutObject
+     */
+    static clearTimeout(timeoutObject) {
+        window.clearTimeout(timeoutObject);
+    }
+
+    /**
+     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The interval object.
+     */
+    static setInterval(callback, milliseconds, ...params) {
+        if(!Util.isFunction(callback)) {
+            throw "callback not fuction";
+        }
+        return window.setInterval(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes an interval that was created by setInterval method.
+     */
+    static clearInterval(intervalObject) {
+        window.clearInterval(intervalObject);
+    }
+
+    /**
+     * Encodes a string to Base64.
+     * @param {string} string
+     * @returns The base64 encoded string.
+     */
+    static encodeBase64String(string) {
+        if(!Util.isString(string)) {
+            throw "the given parameter is not a string: " +string;
+        }
+        return window.btoa(string);
+    }
+
+    /**
+     * Decodes a base 64 encoded string.
+     * @param {string} string
+     * @returns The base64 decoded string.
+     */
+    static decodeBase64String(string) {
+        if(!Util.isString(string)) {
+            throw "the given parameter is not a string: " +string;
+        }
+        return window.atob(string);
+    }
+}
 
 
 let Template = (function() {
@@ -5379,9 +5610,9 @@ let Template = (function() {
             let resolved = null;
             var match = [];
             var el = this.getElementName(tag);
-            if (RME.hasComponent(el)) {
+            if (RMEComponentManager.hasComponent(el)) {
                 el = el.replace(/component:/, "");
-                resolved = RME.component(el, obj);
+                resolved = RMEComponentManager.getComponent(el, obj);
                 if (Util.isEmpty(resolved))
                     return resolved;
             } else if (Util.isEmpty(el)) {
@@ -5617,7 +5848,7 @@ let Template = (function() {
          * @returns True if the component exist or the key contains component keyword and exist, otherwise false.
          */
         isComponent(key) {
-            return RME.hasComponent(this.getElementName(key));
+            return RMEComponentManager.hasComponent(this.getElementName(key));
         }
 
         /**
@@ -5721,7 +5952,7 @@ let Template = (function() {
          */
         static isTagOrComponent(tag) {
             tag = tag.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join().replace("component:", "");
-            if(RME.hasComponent(tag))
+            if(RMEComponentManager.hasComponent(tag))
                 return true;
             
             return Template.isTag(tag);
@@ -5789,13 +6020,13 @@ let Template = (function() {
                 return true;
             else if(key === "form" && (Template.isElem(elem.getTagName(), ["button", "fieldset", "input", "label", "meter", "object", "output", "select", "textarea"])))
                 return true;
-            else if(key.indexOf("data") === 0 && (!RME.hasComponent(key) && !Template.isElem(elem.getTagName(), ["data"]) || Template.isElem(elem.getTagName(), ["object"])))
+            else if(key.indexOf("data") === 0 && (!RMEComponentManager.hasComponent(key) && !Template.isElem(elem.getTagName(), ["data"]) || Template.isElem(elem.getTagName(), ["object"])))
                 return true;
 
             let attrs = {
                 a: ["alt", "async", "autocomplete", "autofocus", "autoplay", "accept", "accept-charset", "accpetCharset", "accesskey", "action"],
                 b: ["blur"],
-                c: ["class", "checked", "content", "contenteditable", "click", "charset", "cols", "colspan", "controls", "coords"],
+                c: ["class", "checked", "content", "contenteditable", "crossorigin", "crossOrigin", "click", "charset", "cols", "colspan", "controls", "coords"],
                 d: ["disabled", "display", "draggable", "dropzone", "datetime", "default", "defer", "dir", "dirname", "download"],
                 e: ["editable", "enctype"],
                 f: ["for", "focus", "formaction"],
@@ -6028,179 +6259,6 @@ class Tree {
      */
     static getForms() {
         return Elem.wrapElems(document.forms);
-    }
-}
-
-
-/**
- * General Utility methods.
- */
-class Util {
-    /**
-     * Checks is a given value empty.
-     * @param {*} value
-     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
-     */
-    static isEmpty(value) {
-        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
-    }
-
-    /**
-     * Checks is the given value not empty. This function is a negation to the Util.isEmpty function.
-     * @param {*} value 
-     * @returns True if the value is not empty otherwise false.
-     */
-    static notEmpty(value) {
-        return !Util.isEmpty(value)
-    }
-
-    /**
-     * Get the type of the given value.
-     * @param {*} value
-     * @returns The type of the given value.
-     */
-    static getType(value) {
-        return typeof value;
-    }
-
-    /**
-     * Checks is a given value is a given type.
-     * @param {*} value
-     * @param {string} type
-     * @returns True if the given value is the given type otherwise false.
-     */
-    static isType(value, type) {
-        return (Util.getType(value) === type);
-    }
-
-    /**
-     * Checks is a given parameter a function.
-     * @param {*} func 
-     * @returns True if the given parameter is fuction otherwise false.
-     */
-    static isFunction(func) {
-        return Util.isType(func, "function");
-    }
-
-    /**
-     * Checks is a given parameter a boolean.
-     * @param {*} boolean
-     * @returns True if the given parameter is boolean otherwise false.
-     */
-    static isBoolean(boolean) {
-        return Util.isType(boolean, "boolean");
-    }
-
-    /**
-     * Checks is a given parameter a string.
-     * @param {*} string
-     * @returns True if the given parameter is string otherwise false.
-     */
-    static isString(string) {
-        return Util.isType(string, "string");
-    }
-
-    /**
-     * Checks is a given parameter a number.
-     * @param {*} number
-     * @returns True if the given parameter is number otherwise false.
-     */
-    static isNumber(number) {
-        return Util.isType(number, "number");
-    }
-
-    /**
-     * Checks is a given parameter a symbol.
-     * @param {*} symbol
-     * @returns True if the given parameter is symbol otherwise false.
-     */
-    static isSymbol(symbol) {
-        return Util.isType(symbol, "symbol");
-    }
-
-    /**
-     * Checks is a given parameter a object.
-     * @param {*} object
-     * @returns True if the given parameter is object otherwise false.
-     */
-    static isObject(object) {
-        return Util.isType(object, "object");
-    }
-
-    /**
-     * Checks is a given parameter an array.
-     * @param {*} array
-     * @returns True if the given parameter is array otherwise false.
-     */
-    static isArray(array) {
-        return Array.isArray(array);
-    }
-
-    /**
-     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The timeout object.
-     */
-    static setTimeout(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setTimeout(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes a timeout that was created by setTimeout method.
-     * @param {object} timeoutObject
-     */
-    static clearTimeout(timeoutObject) {
-        window.clearTimeout(timeoutObject);
-    }
-
-    /**
-     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The interval object.
-     */
-    static setInterval(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setInterval(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes an interval that was created by setInterval method.
-     */
-    static clearInterval(intervalObject) {
-        window.clearInterval(intervalObject);
-    }
-
-    /**
-     * Encodes a string to Base64.
-     * @param {string} string
-     * @returns The base64 encoded string.
-     */
-    static encodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.btoa(string);
-    }
-
-    /**
-     * Decodes a base 64 encoded string.
-     * @param {string} string
-     * @returns The base64 decoded string.
-     */
-    static decodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.atob(string);
     }
 }
 
