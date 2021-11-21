@@ -71,7 +71,7 @@ __Or use NPM__
 
 `npm i rme.js`
 
-`import RME, { App, createApp, Component, bindState, useState, Key } from 'rme.js'`
+`import RME, { App, createApp, Component, bindState, useState, useValue, bindGetters, Key } from 'rme.js'`
 
 Then simply copy paste code clips below to your js file and voilà. 
 
@@ -79,6 +79,8 @@ Start by creating a new application. Default application does not need to be nam
 ```javascript
 App.root('#app').create({
     div: [
+        {ClickAndShowExample: {}},
+
         {TodoExample: {}},
 
         {FormExample: {}},
