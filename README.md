@@ -6,8 +6,7 @@ JavaScript.
 
 Links
 -----
- - [https://jamilu.github.io/RME/](https://jamilu.github.io/RME/) Online documentation
- - [https://jamilu.github.io/RME/#howto](https://jamilu.github.io/RME/#howto) Examples online
+ - [https://jamilu.github.io/RME/](https://jamilu.github.io/RME/) Online Docs & Examples
 
 Download
 -----
@@ -95,6 +94,8 @@ invoke the createApp function with a selector and the component function.
 ```javascript
 const Demo = () => ({
     div: [
+        {ClickAndShowExample: {}},
+
         {TodoExample: {}},
 
         {FormExample: {}},
