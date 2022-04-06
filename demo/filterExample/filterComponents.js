@@ -20,7 +20,7 @@ const FilterExample = props => ({
             onInput: event => 
                 useState(props, {
                     rows: RME.storage('countryList')
-                        .filter(row => row.country.toLowerCase().search(event.target.value) > -1)
+                        .filter(row => `${row.country}${row.capital}`.toLowerCase().search(event.target.value) > -1)
                 })
         },
         MyTable: {rows: props.rows}
