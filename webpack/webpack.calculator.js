@@ -1,33 +1,35 @@
-const Path = require('path');
-const CleanWebpackPlugin = require('clean-webpack-plugin');
+const path = require('path');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
-const Merge = require('webpack-merge');
+const { merge } = require('webpack-merge');
 const modules = require('./webpack.modules.js');
 
-module.exports = Merge(modules, {
+module.exports = merge(modules, {
     entry: {
-        calculator: ['@babel/polyfill', './calculator/calculator.js']
+        calculator: ['core-js/stable', 'regenerator-runtime/runtime', './calculator/calculator.js']
     },
     plugins: [
-        new CopyWebpackPlugin([
-            {from: './rme-build-current/rme.js', to: Path.resolve(__dirname, '../dist/')}
-        ]),
+        new CopyWebpackPlugin({
+            patterns: [
+                {from: './rme-build-current/rme.js', to: path.resolve(__dirname, '../dist/')}
+            ]
+        }),
         new HtmlWebpackPlugin({
             template: './calculator/calculator.html'
         }),
-        new CleanWebpackPlugin(['dist'], {
-            root: Path.resolve(__dirname, '../')
-        }),
+        new CleanWebpackPlugin(),
     ],
     output: {
         filename: '[name].bundle.js',
-        path: Path.resolve(__dirname, '../dist'),
+        path: path.resolve(__dirname, '../dist'),
     },
     mode: 'development',
     devtool: 'inline-source-map',
     devServer: {
-        contentBase: '../dist',
+        static: {
+            directory: path.resolve(__dirname, '../dist')
+        },
         port: 8070,
         historyApiFallback: true,
     },

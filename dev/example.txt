@@ -1,47 +1,51 @@
 //Create an index.js file inside dev folder and copy paste this following code in the file and run npm run dev
-import RME, { App, Router, Messages } from '../src/index';
+import { Router, Messages, configure, Component, useValue, createApp } from '../src/index';
 
-//First lets create a default application.
-App.root('#app').create({
+// First lets create a default application.
+const TheFirstApp = () => ({
     div: {
         'div.menu': [
-            {a: {href: 'en', text: 'English', onClick: Messages.lang}},
-            {a: {href: 'fi', text: 'Suomi', onClick: Messages.lang}},
-            {a: {href: '/', text: 'Page 1', onClick: Router.navigate}},
-            {a: {href: '/page2', text: 'Page 2', onClick: Router.navigate}}
+            {NavLink: {href: 'en', text: 'English', onClick: Messages.lang}},
+            {NavLink: {href: 'fi', text: 'Suomi', onClick: Messages.lang}},
+            {hr: {}},
+            {NavLink: {href: '/', text: 'Page 1', onClick: Router.navigate}},
+            {NavLink: {href: '/page2', text: 'Page 2', onClick: Router.navigate}},
+            {hr: {}}
         ],
         'div#root': {}
     }
 });
 
-//Tell the RME that we want to use these components together.
-RME.use({
-    router: Router,      //Give static reference
-    messages: Messages,  //Give static reference
-    app: App.get(),      //Give default app instance
-});
+// Tell the RME that we want to use these components together.
+configure(createApp('#app', TheFirstApp), Router, Messages);
 
-//Then let's create a router.
+// Then let's create a router.
 Router.url(true).root('#root').routes([
     {route: '/', elem: 'Page1'},
     {route: '/page2', elem: 'Page2'}
 ]);
 
-//For this example we hard code some example messages.
-RME.storage('en', {
-    'message.hello.world': 'Hello World Page 1',
-    'message.page2':'Page 2'
-});
-RME.storage('fi', {
-    'message.hello.world': 'Terve Maailma Sivu 1',
-    'message.page2':'Sivu 2'
+// For this example we hard code some example messages.
+const [getMessages] = useValue({
+    'en': {
+        'message.hello.world': 'Hello World Page 1',
+        'message.page2':'Page 2'
+    },
+    'fi': {
+        'message.hello.world': 'Terve Maailma Sivu 1',
+        'message.page2':'Sivu 2'
+    }
 });
 
-//Then define a message loader function.
-Messages.load((locale, setMessages) => setMessages(RME.storage(locale)));
-//And load the messages.
+// Then define a message loader function.
+Messages.load((locale, setMessages) => setMessages(getMessages()[locale]));
+// And load the messages.
 Messages.lang('en');
 
-//Now we create page components for the router.
-RME.component({Page1: () => ({div: {span: () => 'message.hello.world'}}) });
-RME.component({Page2: () => ({div: {span: () => 'message.page2'}}) });
+// Now we create page components for the router.
+const Page1 = () => ({ div: {span: 'message.hello.world'} });
+const Page2 = () => ({ div: {span: 'message.page2'} });
+const NavLink = props => ({ 'a[style=margin: 0px 5px]': props });
+
+// Register the components.
+Component(Page1, Page2, NavLink);

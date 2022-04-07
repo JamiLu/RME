@@ -1,10 +1,10 @@
 "use strict";
 
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
 
-function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
 
-function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = null != arguments[i] ? arguments[i] : {}; i % 2 ? ownKeys(Object(source), !0).forEach(function (key) { _defineProperty(target, key, source[key]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)) : ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } return target; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
@@ -12,13 +12,11 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
 /** RME BUILD FILE **/
 var App = function () {
-  var App =
-  /*#__PURE__*/
-  function () {
+  var App = /*#__PURE__*/function () {
     function App() {
       _classCallCheck(this, App);
 
@@ -236,9 +234,7 @@ var App = function () {
     return App;
   }();
 
-  var AppInstance =
-  /*#__PURE__*/
-  function () {
+  var AppInstance = /*#__PURE__*/function () {
     function AppInstance(name, root, object) {
       _classCallCheck(this, AppInstance);
 
@@ -568,9 +564,7 @@ var useValue = function () {
 
 
 var AppManager = function () {
-  var AppManager =
-  /*#__PURE__*/
-  function () {
+  var AppManager = /*#__PURE__*/function () {
     function AppManager() {
       _classCallCheck(this, AppManager);
 
@@ -596,9 +590,7 @@ var AppManager = function () {
   return manager;
 }();
 
-var RMEElemRenderer =
-/*#__PURE__*/
-function () {
+var RMEElemRenderer = /*#__PURE__*/function () {
   function RMEElemRenderer(root) {
     _classCallCheck(this, RMEElemRenderer);
 
@@ -717,9 +709,7 @@ function () {
 
 
 var ValueStore = function () {
-  var ValueStore =
-  /*#__PURE__*/
-  function () {
+  var ValueStore = /*#__PURE__*/function () {
     function ValueStore() {
       _classCallCheck(this, ValueStore);
 
@@ -769,9 +759,7 @@ var ValueStore = function () {
     return ValueStore;
   }();
 
-  var RefGenerator =
-  /*#__PURE__*/
-  function () {
+  var RefGenerator = /*#__PURE__*/function () {
     function RefGenerator(feed) {
       _classCallCheck(this, RefGenerator);
 
@@ -799,22 +787,20 @@ var ValueStore = function () {
  */
 
 
-var Browser =
-/*#__PURE__*/
-function () {
+var Browser = /*#__PURE__*/function () {
   function Browser() {
     _classCallCheck(this, Browser);
   }
 
   _createClass(Browser, null, [{
     key: "scrollTo",
-
+    value:
     /**
      * Scroll once to a given location (xPos, yPos)
      * @param {number} xPos
      * @param {number} yPos
      */
-    value: function scrollTo(xPos, yPos) {
+    function scrollTo(xPos, yPos) {
       window.scrollTo(xPos, yPos);
     }
     /**
@@ -1344,9 +1330,7 @@ function () {
 
 
 var AppSetInitialStateJob = function () {
-  var InitStateJob =
-  /*#__PURE__*/
-  function () {
+  var InitStateJob = /*#__PURE__*/function () {
     function InitStateJob() {
       _classCallCheck(this, InitStateJob);
 
@@ -1441,7 +1425,7 @@ var Component = function () {
       if (!Util.isEmpty(comp.shouldComponentUpdate)) state.shouldComponentUpdate = comp.shouldComponentUpdate;
       if (!Util.isEmpty(comp.onAfterCreate)) state.onAfterCreate = comp.onAfterCreate;
       if (!Util.isEmpty(comp.onAfterRender)) state.onAfterRender = comp.onAfterRender;
-      state = _objectSpread({}, state, {}, comp.initialState);
+      state = _objectSpread(_objectSpread({}, state), comp.initialState);
       var ref = comp.stateRef || state.stateRef || '';
       resolveInitialState(state, component.name + ref, comp.appName);
     }
@@ -1516,9 +1500,7 @@ var bindGetters = function () {
 
 
 var RMEComponentManager = function () {
-  var RMEComponentManager =
-  /*#__PURE__*/
-  function () {
+  var RMEComponentManager = /*#__PURE__*/function () {
     function RMEComponentManager() {
       _classCallCheck(this, RMEComponentManager);
 
@@ -1557,7 +1539,7 @@ var RMEComponentManager = function () {
           props["stateRef"] = stateRef;
           var newProps = comp.update.call()(stateRef);
 
-          var nextProps = _objectSpread({}, props, {}, newProps); // nextProps is created for the sake of shouldComponentUpdate
+          var nextProps = _objectSpread(_objectSpread({}, props), newProps); // nextProps is created for the sake of shouldComponentUpdate
 
 
           if (!nextProps.shouldComponentUpdate || nextProps.shouldComponentUpdate(nextProps) !== false) {
@@ -1645,23 +1627,21 @@ var Cookie = function () {
    * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
    * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
    */
-  var Cookie =
-  /*#__PURE__*/
-  function () {
+  var Cookie = /*#__PURE__*/function () {
     function Cookie() {
       _classCallCheck(this, Cookie);
     }
 
     _createClass(Cookie, null, [{
       key: "get",
-
+      value:
       /**
        * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
        * 
        * @param {String} name 
        * @returns cookie object
        */
-      value: function get(name) {
+      function get(name) {
         if (navigator.cookieEnabled) {
           var retCookie = null;
           var cookies = document.cookie.split(";");
@@ -1738,9 +1718,7 @@ var Cookie = function () {
    */
 
 
-  var CookieInstance =
-  /*#__PURE__*/
-  function () {
+  var CookieInstance = /*#__PURE__*/function () {
     function CookieInstance(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
       _classCallCheck(this, CookieInstance);
 
@@ -1850,9 +1828,7 @@ var Elem = function () {
    * The most notabled method of this class is probably render method. This method is very special method that renders other Elem objects. 
    * The main principle is that only an Elem object may render other child Elem objects. The render method renders objects dynamically.
    */
-  var Elem =
-  /*#__PURE__*/
-  function () {
+  var Elem = /*#__PURE__*/function () {
     function Elem(type) {
       _classCallCheck(this, Elem);
 
@@ -3846,9 +3822,7 @@ var Elem = function () {
    */
 
 
-  var RenderHelper =
-  /*#__PURE__*/
-  function () {
+  var RenderHelper = /*#__PURE__*/function () {
     function RenderHelper() {
       _classCallCheck(this, RenderHelper);
 
@@ -3906,9 +3880,7 @@ var Elem = function () {
  */
 
 
-var RMEElemTemplater =
-/*#__PURE__*/
-function () {
+var RMEElemTemplater = /*#__PURE__*/function () {
   function RMEElemTemplater() {
     _classCallCheck(this, RMEElemTemplater);
 
@@ -4349,9 +4321,7 @@ var EventPipe = function () {
    * EventPipe class can be used to multicast and send custom events to registered listeners.
    * Each event in an event queue will be sent to each registerd listener.
    */
-  var EventPipe =
-  /*#__PURE__*/
-  function () {
+  var EventPipe = /*#__PURE__*/function () {
     function EventPipe() {
       _classCallCheck(this, EventPipe);
 
@@ -4451,9 +4421,7 @@ var EventPipe = function () {
  */
 
 
-var HttpFetchRequest =
-/*#__PURE__*/
-function () {
+var HttpFetchRequest = /*#__PURE__*/function () {
   function HttpFetchRequest() {
     _classCallCheck(this, HttpFetchRequest);
   }
@@ -4585,9 +4553,7 @@ var Http = function () {
    * Http class automatically tries to parse reuqest.responseText to JSON using JSON.parse().
    * If parsing succeeds, parsed JSON will be set on request.responseJSON attribute.
    */
-  var Http =
-  /*#__PURE__*/
-  function () {
+  var Http = /*#__PURE__*/function () {
     function Http(config) {
       _classCallCheck(this, Http);
 
@@ -4752,9 +4718,7 @@ var Http = function () {
    * Old Fashion XMLHttpRequest made into the Promise pattern.
    */
 
-  var HttpAjax =
-  /*#__PURE__*/
-  function () {
+  var HttpAjax = /*#__PURE__*/function () {
     function HttpAjax(config) {
       _classCallCheck(this, HttpAjax);
 
@@ -4813,9 +4777,7 @@ var Http = function () {
    */
 
 
-  var HttpPromiseAjax =
-  /*#__PURE__*/
-  function () {
+  var HttpPromiseAjax = /*#__PURE__*/function () {
     function HttpPromiseAjax(config) {
       var _this13 = this;
 
@@ -4908,9 +4870,9 @@ var Http = function () {
  */
 
 
-var Key = function Key() {
+var Key = /*#__PURE__*/_createClass(function Key() {
   _classCallCheck(this, Key);
-};
+});
 /** Enter */
 
 
@@ -5156,9 +5118,7 @@ var Messages = function () {
    * Messages class handles internationalization. The class offers public methods that enable easy 
    * using of translated content.
    */
-  var Messages =
-  /*#__PURE__*/
-  function () {
+  var Messages = /*#__PURE__*/function () {
     function Messages() {
       _classCallCheck(this, Messages);
 
@@ -5474,15 +5434,15 @@ var configure = function () {
 
     params.forEach(function (param) {
       if (param.routes) {
-        config = _objectSpread({}, config, {
+        config = _objectSpread(_objectSpread({}, config), {}, {
           router: param
         });
       } else if (param.load) {
-        config = _objectSpread({}, config, {
+        config = _objectSpread(_objectSpread({}, config), {}, {
           messages: param
         });
       } else if (param.name) {
-        config = _objectSpread({}, config, {
+        config = _objectSpread(_objectSpread({}, config), {}, {
           app: param
         });
       }
@@ -5562,9 +5522,7 @@ var ready = function () {
 
 
 var RME = function () {
-  var RMEStorage =
-  /*#__PURE__*/
-  function () {
+  var RMEStorage = /*#__PURE__*/function () {
     function RMEStorage() {
       _classCallCheck(this, RMEStorage);
 
@@ -5630,9 +5588,7 @@ var Router = function () {
    * The first element the array of route objects is by default the root route object in which all other route objects 
    * are rendered into.
    */
-  var Router =
-  /*#__PURE__*/
-  function () {
+  var Router = /*#__PURE__*/function () {
     function Router() {
       var _this16 = this;
 
@@ -6181,22 +6137,20 @@ var Router = function () {
  */
 
 
-var Session =
-/*#__PURE__*/
-function () {
+var Session = /*#__PURE__*/function () {
   function Session() {
     _classCallCheck(this, Session);
   }
 
   _createClass(Session, null, [{
     key: "set",
-
+    value:
     /**
      * Save data into the Session.
      * @param {string} key
      * @param {*} value
      */
-    value: function set(key, value) {
+    function set(key, value) {
       sessionStorage.setItem(key, value);
     }
     /**
@@ -6237,22 +6191,20 @@ function () {
  */
 
 
-var Storage =
-/*#__PURE__*/
-function () {
+var Storage = /*#__PURE__*/function () {
   function Storage() {
     _classCallCheck(this, Storage);
   }
 
   _createClass(Storage, null, [{
     key: "set",
-
+    value:
     /**
      * Save data into the local storage. 
      * @param {string} key
      * @param {*} value
      */
-    value: function set(key, value) {
+    function set(key, value) {
       localStorage.setItem(key, value);
     }
     /**
@@ -6295,9 +6247,7 @@ var Template = function () {
    * The Template class has only one public method resolve that takes the template as parameter and returns 
    * the created element tree.
    */
-  var Template =
-  /*#__PURE__*/
-  function () {
+  var Template = /*#__PURE__*/function () {
     function Template() {
       _classCallCheck(this, Template);
 
@@ -6894,7 +6844,7 @@ var Template = function () {
           }
         }
 
-        props = _objectSpread({}, props, {}, newProps);
+        props = _objectSpread(_objectSpread({}, props), newProps);
         return props;
       }
     }, {
@@ -7071,16 +7021,14 @@ var Template = function () {
  */
 
 
-var Tree =
-/*#__PURE__*/
-function () {
+var Tree = /*#__PURE__*/function () {
   function Tree() {
     _classCallCheck(this, Tree);
   }
 
   _createClass(Tree, null, [{
     key: "get",
-
+    value:
     /**
      * Uses CSS selector to find elements on the HTML Document Tree. 
      * Found elements will be wrapped in an Elem instance.
@@ -7088,7 +7036,7 @@ function () {
      * @param {string} selector 
      * @returns An array of Elem instances or a single Elem instance.
      */
-    value: function get(selector) {
+    function get(selector) {
       return Elem.wrapElems(document.querySelectorAll(selector));
     }
     /**
@@ -7291,22 +7239,20 @@ function () {
  */
 
 
-var Util =
-/*#__PURE__*/
-function () {
+var Util = /*#__PURE__*/function () {
   function Util() {
     _classCallCheck(this, Util);
   }
 
   _createClass(Util, null, [{
     key: "isEmpty",
-
+    value:
     /**
      * Checks is a given value empty.
      * @param {*} value
      * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
      */
-    value: function isEmpty(value) {
+    function isEmpty(value) {
       return value === null || value === undefined || value === "" || Util.isArray(value) && value.length === 0;
     }
     /**

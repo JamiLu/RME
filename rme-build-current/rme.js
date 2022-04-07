@@ -4690,6 +4690,7 @@ const RME = (function() {
 
 
 
+
 let Router = (function() {
     /**
      * Router class handles and renders route elements that are given by Router.routes() method.
@@ -5158,7 +5159,6 @@ let Router = (function() {
     }
 }());
 
-
 /**
  * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
  */
@@ -5227,7 +5227,6 @@ class Storage {
         localStorage.clear();
     }
 }
-
 
 
 
@@ -5926,6 +5925,7 @@ let Template = (function() {
         resolveToParent: Template.resolveToParent
     }
 }());
+
 
 
 /**
