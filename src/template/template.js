@@ -2,6 +2,7 @@ import Elem from '../elem';
 import Messages from '../messages';
 import Util from '../util';
 import RMEComponentManager from '../component/manager';
+import RMETemplateFragmentHelper from './fragment';
 
 let Template = (function() {
     /**
@@ -47,7 +48,7 @@ let Template = (function() {
                         if (this.isArray(template[obj])) {
                             ++round;
                             this.resolveArray(template[obj], this.root, round);
-                        } else if (!this.isComponent(obj) && Util.isObject(template[obj])) {
+                        } else if (!Template.isComponent(obj) && Util.isObject(template[obj])) {
                             ++round;
                             this.resolve(template[obj], this.root, round);
                         } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
@@ -69,13 +70,13 @@ let Template = (function() {
                         } else {
                             ++round;
                             var child = this.resolveElement(obj, template[obj]);
-                            if (Template.isFragment(child)) {
-                                this.resolveFragment(child.fragment || template[obj], parent, round);
+                            if (RMETemplateFragmentHelper.isFragment(child)) {
+                                this.resolveFragment(RMETemplateFragmentHelper.resolveFragmentValue(child, template[obj]), parent, round);
                             } else {
                                 parent.append(child);
                                 if (this.isArray(template[obj])) {
                                     this.resolveArray(template[obj], child, round);
-                                } else if (!this.isComponent(obj) && Util.isObject(template[obj])) {
+                                } else if (!Template.isComponent(obj) && Util.isObject(template[obj])) {
                                     this.resolve(template[obj], child, round);
                                 } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
                                     this.resolveStringNumber(child, template[obj]);
@@ -222,7 +223,7 @@ let Template = (function() {
         resolveElement(tag, obj) {
             let resolved = null;
             var match = [];
-            var el = this.getElementName(tag);
+            var el = Template.getElementName(tag);
             if (RMEComponentManager.hasComponent(el)) {
                 el = el.replace(/component:/, "");
                 resolved = RMEComponentManager.getComponent(el, obj);
@@ -230,8 +231,8 @@ let Template = (function() {
                     return resolved;
             } else if (Util.isEmpty(el)) {
                 throw `Template resolver could not find element: ${el} from the given tag: ${tag}`;
-            } else if (el.indexOf('fragment') === 0) {
-                return el.match(/fragment/).join();
+            } else if (RMETemplateFragmentHelper.isFragmentKey(el)) {
+                return 'fragment'
             } else {
                 resolved = new Elem(el);
             }
@@ -259,17 +260,6 @@ let Template = (function() {
         cutAttributesIfFound(tag) {
             const idx = tag.indexOf('[');
             return tag.substring(0, idx > 0 ? idx : tag.length);
-        }
-
-        /**
-         * Function will try to parse an element name from the given string. If the given string
-         * is no empty a matched string is returned. If the given string is empty nothing is returned
-         * @param {string} str 
-         * @returns The matched string.
-         */
-        getElementName(str) {
-            if(!Util.isEmpty(str))
-                return str.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join();
         }
 
         /**
@@ -456,12 +446,23 @@ let Template = (function() {
         }
 
         /**
+         * Function will try to parse an element name from the given string. If the given string
+         * is no empty a matched string is returned. If the given string is empty nothing is returned
+         * @param {string} str 
+         * @returns The matched string.
+         */
+        static getElementName(str) {
+            if (Util.notEmpty(str))
+                return str.match(/component:?[a-zA-Z0-9_]+|[a-zA-Z0-9_]+/).join();
+        }
+
+        /**
          * Checks that the given component exist with the given key or the key starts with component keyword and the component exist. 
          * @param {string} key
          * @returns True if the component exist or the key contains component keyword and exist, otherwise false.
          */
-        isComponent(key) {
-            return RMEComponentManager.hasComponent(this.getElementName(key));
+        static isComponent(key) {
+            return RMEComponentManager.hasComponent(Template.getElementName(key));
         }
 
         /**
@@ -486,6 +487,9 @@ let Template = (function() {
         }
 
         /**
+         * @deprecated
+         * Will be removed in next releases
+         * 
          * Method takes a parameter and checks if the parameter is type fragment. 
          * If the parameter is type fragment the method will return true
          * otherwise false is returned.
@@ -493,7 +497,7 @@ let Template = (function() {
          * @returns True if the parameter is type fragment otherwise false is returned.
          */
         static isFragment(child) {
-            return !Util.isEmpty(child) && (child === 'fragment' || !Util.isEmpty(child.fragment))
+            return RMETemplateFragmentHelper.isFragment(child);
         }
 
         /**
@@ -561,14 +565,10 @@ let Template = (function() {
         /**
          * Method takes a string and returns true if the given string is a html tag or a component, otherwise returns false.
          * @param {string} tag 
-         * @returns True if the given tag is a HTML tag otherwise false.
+         * @returns True if the given tag is a HTML tag or a RME component otherwise false.
          */
         static isTagOrComponent(tag) {
-            tag = tag.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join().replace("component:", "");
-            if(RMEComponentManager.hasComponent(tag))
-                return true;
-            
-            return Template.isTag(tag);
+            return Template.isComponent(tag) || Template.isTag(Template.getElementName(tag));
         }
 
         /**

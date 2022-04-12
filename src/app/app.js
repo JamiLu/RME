@@ -4,6 +4,7 @@ import Template from '../template';
 import Tree from '../tree';
 import AppManager from './manager';
 import RMEComponentManager from '../component/manager';
+import RMETemplateFragmentHelper from '../template/fragment';
 
 let App = (function() {
 
@@ -240,21 +241,21 @@ let App = (function() {
                 this.refreshQueue = Util.setTimeout(() => {
                     let freshStage = Template.isTemplate(this.rawStage) ? Template.resolve(this.rawStage) : this.rawStage.duplicate();
     
-                    if (!Util.isEmpty(this.router)) {
+                    if (Util.notEmpty(this.router)) {
                         let state = this.router.getCurrentState();
-                        if (!Util.isEmpty(state.current)) {
+                        if (Util.notEmpty(state.current)) {
                             let selector = state.root;
                             let element = state.current;
-                            if (Template.isFragment(element)) {
+                            if (RMETemplateFragmentHelper.isFragment(element)) {
                                 const fragment = {};
                                 fragment[state.rootElem.toLiteralString()] = {
-                                    ...element.fragment
+                                    ...RMETemplateFragmentHelper.resolveFragmentValue(element, fragment)
                                 };
                                 freshStage.getFirst(selector).replace(Template.resolve(fragment));
                             } else {
                                 freshStage.getFirst(selector).append(element);
                             }
-                            if (!Util.isEmpty(state.onAfter)) this.afterRefreshCallQueue.push(state.onAfter);
+                            if (Util.notEmpty(state.onAfter)) this.afterRefreshCallQueue.push(state.onAfter);
                         }
                     }
 
