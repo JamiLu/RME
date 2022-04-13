@@ -123,11 +123,10 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         append(elem) {
-            if (!(elem instanceof Elem) && !Template.isTemplate(elem)) {
-                throw new Error(`Could not append element or template: ${elem}`);
+            if (Util.notEmpty(elem)) {
+                this.html.appendChild(Template.isTemplate(elem) ? Template.resolve(elem).dom() : elem.dom());
             }
             
-            this.html.appendChild(Template.isTemplate(elem) ? Template.resolve(elem).dom() : elem.dom());
             return this;
         }
 
