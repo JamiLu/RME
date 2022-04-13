@@ -149,18 +149,21 @@ class RMEElemTemplater {
     }
 
     /**
-     * Resolves html data-* attributes by removing '-' and setting the next character to uppercase. If the attribute is not 
-     * data-* attribute then it is directly returned.
+     * Resolves a html data-* attributes by removing '-' and setting the next character to uppercase. 
+     * Resolves an aria* attirubtes by setting the next character to uppercase.
+     * If the attribute is not a data-* or an aria attribute then it is directly returned.
      * @param {string} attrName 
      * @returns Resolved attribute name.
      */
     resolveAttributeNames(attrName) {
-        if(attrName.indexOf("data" === 0 && attrName.length > "data".length)) {
-            while(attrName.search("-") > -1) {
-                attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search("-") + 1).toUpperCase());
+        if (attrName.indexOf('data') === 0 && attrName.length > 'data'.length) {
+            while(attrName.search('-') > -1) {
+                attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search('-') + 1).toUpperCase());
             }
             return attrName
-        } else {
+        } else if (attrName.indexOf('aria') === 0) {
+            return attrName.replace(attrName.charAt('aria'.length), attrName.charAt('aria'.length).toUpperCase());
+        } else {
             return attrName;
         }
     }

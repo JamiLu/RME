@@ -623,17 +623,17 @@ let Template = (function() {
             /**
              * special cases below.
              */
-            if(key === "span" && (Template.isElem(elem.getTagName(), ["col", "colgroup"]))) //special case, span might be an attribute also for these two elements.
+            if (key === "span" && (Template.isElem(elem.getTagName(), ["col", "colgroup"]))) //special case, span might be an attribute also for these two elements.
                 return true;
-            else if(key === "label" && (Template.isElem(elem.getTagName(), ["track", "option", "optgroup"])))
+            else if (key === "label" && (Template.isElem(elem.getTagName(), ["track", "option", "optgroup"])))
                 return true;
-            else if(key === "title" && (elem.parent() === null || elem.parent().getTagName().toLowerCase() !== "head"))
+            else if (key === "title" && (elem.parent() === null || elem.parent().getTagName().toLowerCase() !== "head"))
                 return true;
-            else if(key === "cite" && (Template.isElem(elem.getTagName(), ["blockquote", "del", "ins", "q"])))
+            else if (key === "cite" && (Template.isElem(elem.getTagName(), ["blockquote", "del", "ins", "q"])))
                 return true;
-            else if(key === "form" && (Template.isElem(elem.getTagName(), ["button", "fieldset", "input", "label", "meter", "object", "output", "select", "textarea"])))
+            else if (key === "form" && (Template.isElem(elem.getTagName(), ["button", "fieldset", "input", "label", "meter", "object", "output", "select", "textarea"])))
                 return true;
-            else if(key.indexOf("data") === 0 && (!RMEComponentManager.hasComponent(key) && !Template.isElem(elem.getTagName(), ["data"]) || Template.isElem(elem.getTagName(), ["object"])))
+            else if (key.indexOf("data") === 0 && (!RMEComponentManager.hasComponent(key) && !Template.isElem(elem.getTagName(), ["data"]) || Template.isElem(elem.getTagName(), ["object"])))
                 return true;
 
             let attrs = {
@@ -661,14 +661,51 @@ let Template = (function() {
 
             let i = 0;
             let keys = attrs[key.substring(0, 1)];
-            if(keys) {
+            if (keys) {
                 while(i < keys.length) {
                     if(keys[i] === key)
                         return true
                     i++;
                 }
             }
+
+            if (Template.isAriaKey(key)) {
+                return true;
+            }
+
             return false;
+        }
+
+        /**
+         * Function takes an attribute key as a parameter and checks if the key is an aria key.
+         * The function will return true if the key is an aria key otheriwise false is returned.
+         * @param {*} key 
+         * @returns True if the given key is an aria key otherwise false is returned.
+         */
+        static isAriaKey(key) {
+            if (key.indexOf('aria') === 0) {
+                const ariaKeys = ['aria-activedescendant', 'aria-atomic', 'aria-autocomplete',
+                                'aria-braillelabel', 'aria-brailleroledescription', 'aria-busy', 'aria-checked',
+                                'aria-colcount', 'aria-colindex', 'aria-colindextext', 'aria-colspan', 'aria-controls',
+                                'aria-current', 'aria-describedby', 'aria-description', 'aria-details', 'aria-disabled',
+                                'aria-dropeffect', 'aria-errormessage', 'aria-expanded', 'aria-flowto', 'aria-grabbed',
+                                'aria-haspopup', 'aria-hidden', 'aria-invalid', 'aria-keyshortcuts', 'aria-label',
+                                'aria-labelledby', 'aria-level', 'aria-live', 'aria-multiline', 'aria-multiselectable',
+                                'aria-orientation', 'aria-owns', 'aria-placeholder', 'aria-posinset', 'aria-pressed',
+                                'aria-readonly', 'aria-relevant', 'aria-required', 'aria-roledescription',
+                                'aria-rowcount', 'aria-rowindex', 'aria-rowindextext', 'aria-rowspan', 'aria-selected',
+                                'aria-setsize', 'aria-sort', 'aria-valuemax', 'aria-valuemin', 'aria-valuenow',
+                                'aria-valuetext'];
+
+                const normalizedKey = Template.normalizeKey(key);
+                return Boolean(ariaKeys.find(ariaKey => ariaKey === normalizedKey));
+            }
+            return false;
+        }
+
+        static normalizeKey(key) {
+            const capital = key.search(/[A-Z]/);
+            return capital > -1 ? `${key.substring(0, capital)}-${key.substr(capital).toLowerCase()}` : key;
         }
 
         /**
