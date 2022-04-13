@@ -487,20 +487,6 @@ let Template = (function() {
         }
 
         /**
-         * @deprecated
-         * Will be removed in next releases
-         * 
-         * Method takes a parameter and checks if the parameter is type fragment. 
-         * If the parameter is type fragment the method will return true
-         * otherwise false is returned.
-         * @param {*} child 
-         * @returns True if the parameter is type fragment otherwise false is returned.
-         */
-        static isFragment(child) {
-            return RMETemplateFragmentHelper.isFragment(child);
-        }
-
-        /**
          * Method will apply the properties given to the element. Old properties are overridden.
          * @param {object} elem 
          * @param {object} props 
@@ -731,7 +717,6 @@ let Template = (function() {
         isTemplate: Template.isTemplate,
         isTag: Template.isTag,
         updateElemProps: Template.updateElemProps,
-        isFragment: Template.isFragment,
         resolveToParent: Template.resolveToParent
     }
 }());
