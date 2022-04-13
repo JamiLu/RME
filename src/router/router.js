@@ -76,7 +76,7 @@ let Router = (function() {
          * On popstate call is registered if the auto listen is false. It listens the browsers history change and renders accordingly.
          */
         onPopState() {
-            if(this.useHistory) {
+            if (this.useHistory) {
                 this.renderRoute(location.pathname);
                 Browser.scrollTo(0, 0);
             } else {
@@ -161,20 +161,6 @@ let Router = (function() {
         }
 
         /**
-         * @deprecated
-         * Resolve route elements.
-         * @param {array} routes 
-         */
-        resolveRouteElems(routes) {
-            let i = 0;
-            while (i < routes.length) {
-                routes[i].elem = this.resolveElem(routes[i].elem);
-                i++;
-            }
-            return routes;
-        }
-
-        /**
          * Method resolves element. If elem is string gets a component of the name if exist otherwise creates a new elemen of the name.
          * If both does not apply then method assumes the elem to be an element and returns it.
          * @param {*} elem 
@@ -237,7 +223,7 @@ let Router = (function() {
         /**
          * Method looks for a route by the url. If the router is found then it will be returned otherwise returns null
          * @param {string} url
-         * @param {boolean} force
+         * @param {boolean} force match route even though the previous url and the current url are the same
          * @returns The found router or null if not found.
          */
         findRoute(url, force) {
