@@ -1,4 +1,4 @@
-import RME, { configure, script, ready } from './rme';
+import { configure, script, ready } from './rme';
 import App, { createApp, useState, useValue } from './app';
 import Component, { bindState, bindGetters } from './component';
 import CSS from './css';
@@ -16,7 +16,6 @@ import Key from './key';
 import Browser from './browser';
 import Util from './util';
 
-export default RME;
 export {
     configure,
     createApp,
