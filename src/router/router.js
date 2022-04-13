@@ -76,10 +76,12 @@ let Router = (function() {
          * On popstate call is registered if the auto listen is false. It listens the browsers history change and renders accordingly.
          */
         onPopState() {
-            if(this.useHistory)
+            if(this.useHistory) {
                 this.renderRoute(location.pathname);
-            else 
+                Browser.scrollTo(0, 0);
+            } else {
                 this.renderRoute(location.hash);
+            }
         }
 
         /**
@@ -210,22 +212,23 @@ let Router = (function() {
          */
         navigateUrl(url) {
             var route = this.findRoute(url);
-            if (!Util.isEmpty(route) && this.useHistory && !route.hide) {
+            if (Util.notEmpty(route) && this.useHistory && !route.hide) {
                 history.pushState(null, null, url);
-            } else if(!Util.isEmpty(route) && !route.hide) {
+            } else if (Util.notEmpty(route) && !route.hide) {
                 location.href = url;
             }
-            if (!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
-                if ((route.scrolltop === true) || (route.scrolltop === undefined && this.scrolltop))
-                    Util.setTimeout(() => Browser.scrollTo(0, 0));
+            if (Util.notEmpty(this.root) && Util.notEmpty(route)) {
+                if ((route.scrolltop === true) || (route.scrolltop === undefined && this.scrolltop)) {
+                    Browser.scrollTo(0, 0);
+                }
                 this.prevUrl = this.getUrlPath(url);
                 this.currentRoute = route;
                 if (Util.isEmpty(this.app)) {
-                    if (!Util.isEmpty(route.onBefore)) route.onBefore();
+                    if (Util.notEmpty(route.onBefore)) route.onBefore();
                     this.root.elem.render(this.resolveElem(route.elem, route.compProps));
-                    if (!Util.isEmpty(route.onAfter)) route.onAfter();
+                    if (Util.notEmpty(route.onAfter)) route.onAfter();
                 } else {
-                    if (!Util.isEmpty(route.onBefore)) route.onBefore();
+                    if (Util.notEmpty(route.onBefore)) route.onBefore();
                     this.app.refresh();
                 }
             }
@@ -402,6 +405,7 @@ let Router = (function() {
          */
         static manual() {
             if(Router.getInstance().useHistory) {
+                history.scrollRestoration = 'manual';
                 Router.getInstance().clearListeners();
                 Router.getInstance().setAutoListen(false);
                 Router.getInstance().registerListeners();
