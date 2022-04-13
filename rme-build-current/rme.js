@@ -1133,174 +1133,6 @@ class Browser {
 
 
 
-/**
- * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
- * instance might have not been created at the time when components are created so the queue will wait 
- * until the application instance is created and then sets the state for the components in the queue.
- */
-const AppSetInitialStateJob = (function () {
-    
-    class InitStateJob {
-        constructor() {
-            this.updateJob;
-            this.updateJobMap = {};
-            this.appNameList = [];
-        }
-
-        resolveUpdateJobs() {
-            if (!this.updateJob)
-                this.updateJob = Util.setInterval(() => {
-                    const appName = this.getAppNameIfPresent();
-                    if (!Util.isEmpty(appName)) {
-                        this.updateJobMap[appName].forEach(job => job());
-                        this.updateJobMap[appName] = [];
-                        this.appNameList = this.appNameList.filter(app => app !== appName);
-
-                        if (this.appNameList.length === 0) {
-                            Util.clearInterval(this.updateJob);
-                            this.updateJob = undefined;
-                        }
-                    }
-                });
-        }
-
-        getAppNameIfPresent() {
-            return this.appNameList.find(appName => App.get(appName === "undefined" ? undefined : appName));
-        }
-
-        addToQueue(appName, job) {
-            let updateQueue = this.updateJobMap[appName] || [];
-            updateQueue.push(job);
-            this.updateJobMap[appName] = updateQueue;
-            this.appNameList = Object.keys(this.updateJobMap);
-            this.resolveUpdateJobs();
-        }
-    }
-
-    const initStateJob = new InitStateJob();
-
-    return {
-        addToQueue: initStateJob.addToQueue.bind(initStateJob),
-        resolveUpdateJobs: initStateJob.resolveUpdateJobs.bind(initStateJob)
-    }
-
-})();
-
-/**
- * Component resolves comma separated list of components that may be function or class.
- * Function component example: const Comp = props => ({h1: 'Hello'});
- * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
- * Resolve components Component(Comp, Comp2);
- * @param {function} components commma separated list of components
- */
-const Component = (function() {
-
-    const resolveInitialState = (initialState, stateRef, appName) => {
-        if (!Util.isEmpty(App.get(appName))) {
-            App.get(appName).setState(stateRef, initialState, false);
-        } else {
-            AppSetInitialStateJob.addToQueue(appName, () => App.get(appName).setState(stateRef, initialState));
-        }
-    }
-
-    const resolveComponent = component => {
-        if (Util.isObject(component)) {
-            App.component({[component.name]: component.comp})(component.appName);
-            resolveInitialState(component.initialState, component.name+component.stateRef, component.appName);
-        } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
-            RMEComponentManager.addComponent({[component.valueOf().name]: component});
-        } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
-            const comp = new component();
-            App.component({[component.valueOf().name]: comp.render})(comp.appName);
-            let state = {};
-            if (!Util.isEmpty(comp.onBeforeCreate))
-                state.onBeforeCreate = comp.onBeforeCreate;
-            if (!Util.isEmpty(comp.shouldComponentUpdate))
-                state.shouldComponentUpdate = comp.shouldComponentUpdate;
-            if (!Util.isEmpty(comp.onAfterCreate))
-                state.onAfterCreate = comp.onAfterCreate;
-            if (!Util.isEmpty(comp.onAfterRender))
-                state.onAfterRender = comp.onAfterRender;
-            state = {
-                ...state,
-                ...comp.initialState
-            }
-            const ref = comp.stateRef || state.stateRef || '';
-            resolveInitialState(state, component.name+ref, comp.appName);
-        }
-    }
-
-    return (...components) => {
-        components.forEach(component => 
-            !Util.isEmpty(component.valueOf().name) && resolveComponent(component));
-    }
-
-})();
-
-/**
- * A bindState function transfers a function component to a stateful component just like it was created 
- * using class or App class itself. The function receives three parameters. The function component,
- * an optional state object and an optinal appName.
- * Invoking examples:
- * Component(bindState(StatefulComponent));
- * Component(bindState(OtherComponent, { initialValue: 'initialText' }));
- * @param {function} component
- * @param {object} state
- * @param {string} appName
- */
-const bindState = (function() {
-
-    const getStateRef = state => {
-        return state && state.stateRef ? state.stateRef : '';
-    }
-
-    const removeStateRef = state => {
-        let obj = {
-            ...state
-        }
-        delete obj.stateRef
-        return obj;
-    }
-
-    return (component, state, appName) => ({
-        comp: component,
-        name: component.valueOf().name,
-        appName: appName,
-        stateRef: getStateRef(state),
-        initialState: {
-            ...removeStateRef(state)
-        }
-    })
-
-})();
-
-/**
- * The function will bind an array of getter functions for the component. The getters are invoked
- * when the component is invoked. The values returend by the getters are set in the component properties.
- * @param {*} component
- * @param {Array} mapper Value mapper
- */
-const bindGetters = (function() {
-
-    return (component, mapper) => {
-        let name;
-        if (Util.isFunction(component))
-            name = component.valueOf().name;
-        else if (Util.isObject(component)) {
-            name = component.name;
-        }
-
-        RMEComponentManager.bindGetters(name, mapper);
-
-        return component;
-    }
-
-})();
-
-
-
-
-
 
 
 /**
@@ -1526,6 +1358,174 @@ let Cookie = (function() {
 
 
 
+/**
+ * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
+ * instance might have not been created at the time when components are created so the queue will wait 
+ * until the application instance is created and then sets the state for the components in the queue.
+ */
+const AppSetInitialStateJob = (function () {
+    
+    class InitStateJob {
+        constructor() {
+            this.updateJob;
+            this.updateJobMap = {};
+            this.appNameList = [];
+        }
+
+        resolveUpdateJobs() {
+            if (!this.updateJob)
+                this.updateJob = Util.setInterval(() => {
+                    const appName = this.getAppNameIfPresent();
+                    if (!Util.isEmpty(appName)) {
+                        this.updateJobMap[appName].forEach(job => job());
+                        this.updateJobMap[appName] = [];
+                        this.appNameList = this.appNameList.filter(app => app !== appName);
+
+                        if (this.appNameList.length === 0) {
+                            Util.clearInterval(this.updateJob);
+                            this.updateJob = undefined;
+                        }
+                    }
+                });
+        }
+
+        getAppNameIfPresent() {
+            return this.appNameList.find(appName => App.get(appName === "undefined" ? undefined : appName));
+        }
+
+        addToQueue(appName, job) {
+            let updateQueue = this.updateJobMap[appName] || [];
+            updateQueue.push(job);
+            this.updateJobMap[appName] = updateQueue;
+            this.appNameList = Object.keys(this.updateJobMap);
+            this.resolveUpdateJobs();
+        }
+    }
+
+    const initStateJob = new InitStateJob();
+
+    return {
+        addToQueue: initStateJob.addToQueue.bind(initStateJob),
+        resolveUpdateJobs: initStateJob.resolveUpdateJobs.bind(initStateJob)
+    }
+
+})();
+
+/**
+ * Component resolves comma separated list of components that may be function or class.
+ * Function component example: const Comp = props => ({h1: 'Hello'});
+ * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
+ * Resolve components Component(Comp, Comp2);
+ * @param {function} components commma separated list of components
+ */
+const Component = (function() {
+
+    const resolveInitialState = (initialState, stateRef, appName) => {
+        if (!Util.isEmpty(App.get(appName))) {
+            App.get(appName).setState(stateRef, initialState, false);
+        } else {
+            AppSetInitialStateJob.addToQueue(appName, () => App.get(appName).setState(stateRef, initialState));
+        }
+    }
+
+    const resolveComponent = component => {
+        if (Util.isObject(component)) {
+            App.component({[component.name]: component.comp})(component.appName);
+            resolveInitialState(component.initialState, component.name+component.stateRef, component.appName);
+        } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
+            RMEComponentManager.addComponent({[component.valueOf().name]: component});
+        } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
+            const comp = new component();
+            App.component({[component.valueOf().name]: comp.render})(comp.appName);
+            let state = {};
+            if (!Util.isEmpty(comp.onBeforeCreate))
+                state.onBeforeCreate = comp.onBeforeCreate;
+            if (!Util.isEmpty(comp.shouldComponentUpdate))
+                state.shouldComponentUpdate = comp.shouldComponentUpdate;
+            if (!Util.isEmpty(comp.onAfterCreate))
+                state.onAfterCreate = comp.onAfterCreate;
+            if (!Util.isEmpty(comp.onAfterRender))
+                state.onAfterRender = comp.onAfterRender;
+            state = {
+                ...state,
+                ...comp.initialState
+            }
+            const ref = comp.stateRef || state.stateRef || '';
+            resolveInitialState(state, component.name+ref, comp.appName);
+        }
+    }
+
+    return (...components) => {
+        components.forEach(component => 
+            !Util.isEmpty(component.valueOf().name) && resolveComponent(component));
+    }
+
+})();
+
+/**
+ * A bindState function transfers a function component to a stateful component just like it was created 
+ * using class or App class itself. The function receives three parameters. The function component,
+ * an optional state object and an optinal appName.
+ * Invoking examples:
+ * Component(bindState(StatefulComponent));
+ * Component(bindState(OtherComponent, { initialValue: 'initialText' }));
+ * @param {function} component
+ * @param {object} state
+ * @param {string} appName
+ */
+const bindState = (function() {
+
+    const getStateRef = state => {
+        return state && state.stateRef ? state.stateRef : '';
+    }
+
+    const removeStateRef = state => {
+        let obj = {
+            ...state
+        }
+        delete obj.stateRef
+        return obj;
+    }
+
+    return (component, state, appName) => ({
+        comp: component,
+        name: component.valueOf().name,
+        appName: appName,
+        stateRef: getStateRef(state),
+        initialState: {
+            ...removeStateRef(state)
+        }
+    })
+
+})();
+
+/**
+ * The function will bind an array of getter functions for the component. The getters are invoked
+ * when the component is invoked. The values returend by the getters are set in the component properties.
+ * @param {*} component
+ * @param {Array} mapper Value mapper
+ */
+const bindGetters = (function() {
+
+    return (component, mapper) => {
+        let name;
+        if (Util.isFunction(component))
+            name = component.valueOf().name;
+        else if (Util.isObject(component)) {
+            name = component.name;
+        }
+
+        RMEComponentManager.bindGetters(name, mapper);
+
+        return component;
+    }
+
+})();
+
+
+
+
+
 
 /**
  * A CSS function will either create a new style element containing given css and other parameters 
@@ -1585,356 +1585,6 @@ const CSS = (function() {
 })();
 
 
-
-
-/**
- * RMEElemTemplater class is able to create a Template out of an Elem object.
- */
-class RMEElemTemplater {
-    constructor() {
-        this.instance;
-        this.template = {};
-        this.deep = true;
-    }
-
-    toTemplate(elem, deep) {
-        if(!Util.isEmpty(deep))
-            this.deep = deep;
-        this.resolve(elem, this.template);
-        return this.template;
-    }
-
-    /**
-     * Function is called recursively and resolves an Elem object and its children in recursion
-     * @param {object} elem 
-     * @param {object} parent 
-     */
-    resolve(elem, parent) {
-        let resolved = this.resolveElem(elem, this.resolveProps(elem));
-        for(let p in parent) {
-            if(parent.hasOwnProperty(p)) {
-                if(Util.isArray(parent[p]._rme_type_))
-                    parent[p]._rme_type_.push(resolved);
-                else
-                    this.extendMap(parent[p], resolved);
-            }
-        }
-
-        let i = 0;
-        let children = Util.isArray(elem.getChildren()) ? elem.getChildren() : [elem.getChildren()];
-        if(children && this.deep) {
-            while(i < children.length) {
-                this.resolve(children[i], resolved);
-                i++;
-            }
-        }
-        this.template = resolved;
-    }
-
-    extendMap(map, next) {
-        for(let v in next) {
-            if(next.hasOwnProperty(v)) {
-                map[v] = next[v];
-            }
-        }
-    }
-
-    /**
-     * Function will attach given properties into a given Elem and returns the resolved Elem.
-     * @param {object} elem 
-     * @param {object} props 
-     * @returns The resolved elem with attached properties.
-     */
-    resolveElem(elem, props) {
-        let el = {};
-        let children = elem.getChildren();
-        if(Util.isArray(children) && children.length > 1) {
-            let elTag = elem.getTagName().toLowerCase();
-            let elName = this.resolveId(elTag, props);
-            elName = this.resolveClass(elName, props);
-            elName = this.resolveAttrs(elName, props);
-            el[elName] = {
-                _rme_type_: [],
-                _rme_props_: props
-            };
-        } else {
-            el[elem.getTagName().toLowerCase()] = props
-        }
-        return el;
-    }
-
-    /**
-     * Function will place an ID attribute into an element tag if the ID attribute is found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with the ID or without.
-     */
-    resolveId(tag, props) {
-        if(props.id)
-            return tag+"#"+props.id;
-        else
-            return tag;
-    }
-
-    /**
-     * Function will place a class attribute into an element tag if the class attribute is found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with the classes or without.
-     */
-    resolveClass(tag, props) {
-        if(props.class)
-            return tag+"."+props.class.replace(/ /g, ".");
-        else
-            return tag;
-    }
-
-    /**
-     * Function will resolve all other attributes and place them into an element tag if other attributes are found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with other attributes or without.
-     */
-    resolveAttrs(tag, props) {
-        let tagName = tag;
-        for (let p in props) {
-            if (props.hasOwnProperty(p) && p !== 'id' && p !== 'class' && p.indexOf('on') !== 0) {
-                tagName += `[${p}=${props[p]}]`
-            }
-        }
-        return tagName;
-    }
-
-    /**
-     * Resolves a given Elem object and returns its properties in an object.
-     * @param {object} elem 
-     * @returns The properties object of the given element.
-     */
-    resolveProps(elem) {
-        let props = {};
-        let attributes = elem.dom().attributes;
-        let a = 0;
-        if(attributes) {
-            while(a < attributes.length) {
-                props[this.resolveAttributeNames(attributes[a].name)] = attributes[a].value;
-                a++;
-            }
-        }
-
-        if(elem.dom().hasChildNodes() && elem.dom().childNodes[0].nodeType === 3) {
-            props["text"] = elem.getText();
-        }
-
-        for(let p in elem.dom()) {
-            if(p.indexOf("on") !== 0 || Util.isEmpty(elem.dom()[p]))
-                continue;
-            else
-                props[this.resolveListeners(p)] = elem.dom()[p];
-        }
-
-        return props;
-    }
-
-    /**
-     * Resolves a html data-* attributes by removing '-' and setting the next character to uppercase. 
-     * Resolves an aria* attirubtes by setting the next character to uppercase.
-     * If the attribute is not a data-* or an aria attribute then it is directly returned.
-     * @param {string} attrName 
-     * @returns Resolved attribute name.
-     */
-    resolveAttributeNames(attrName) {
-        if (attrName.indexOf('data') === 0 && attrName.length > 'data'.length) {
-            while(attrName.search('-') > -1) {
-                attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search('-') + 1).toUpperCase());
-            }
-            return attrName
-        } else if (attrName.indexOf('aria') === 0) {
-            return attrName.replace(attrName.charAt('aria'.length), attrName.charAt('aria'.length).toUpperCase());
-        } else {
-            return attrName;
-        }
-    }
-
-    resolveListeners(name) {
-        switch(name) {
-            case "onanimationstart":
-                return "onAnimationStart";
-            case "onanimationiteration":
-                return "onAnimationIteration";
-            case "onanimationend":
-                return "onAnimationEnd";
-            case "ontransitionend":
-                return "onTransitionEnd";
-            case "ondrag":
-                return "onDrag"
-            case "ondragend":
-                return "onDragEnd";
-            case "ondragenter":
-                return "onDragEnter";
-            case "ondragover":
-                return "onDragOver";
-            case "ondragstart":
-                return "onDragStart";
-            case "ondrop":
-                return "onDrop"; 
-            case "onclick":
-                return "onClick";
-            case "ondblclick":
-                return "onDoubleClick";
-            case "oncontextmenu":
-                return "onContextMenu";
-            case "onmousedown":
-                return "onMouseDown";
-            case "onmouseenter":
-                return "onMouseEnter";
-            case "onmouseleave":
-                return "onMouseLeave";
-            case "onmousemove":
-                return "onMouseMove";
-            case "onmouseover":
-                return "onMouseOver";
-            case "onmouseout":
-                return "onMouseOut";
-            case "onmouseup":
-                return "onMouseUp";
-            case "onwheel":
-                return "onWheel";
-            case "onscroll":
-                return "onScroll";
-            case "onresize":
-                return "onResize";
-            case "onerror":
-                return "onError";
-            case "onload":
-                return "onLoad";
-            case "onunload":
-                return "onUnload";
-            case "onbeforeunload":
-                return "onBeforeUnload";
-            case "onkeyup":
-                return "onKeyUp";
-            case "onkeydown":
-                return "onKeyDown";
-            case "onkeypress":
-                return "onKeyPress";
-            case "oninput":
-                return "onInput";
-            case "onchange":
-                return "onChange";
-            case "onsubmit":
-                return "onSubmit";
-            case "onselect":
-                return "onSelect";
-            case "onreset":
-                return "onReset"
-            case "onfocus":
-                return "onFocus";
-            case "onfocusin":
-                return "onFocusIn";
-            case "onfocusout":
-                return "onFocusOut";
-            case "onblur":
-                return "onBlur";
-            case "oncopy":
-                return "onCopy";
-            case "oncut":
-                return "onCut";
-            case "onpaste":
-                return "onPaste";
-            case "onabort":
-                return "onAbort";
-            case "onwaiting":
-                return "onWaiting";
-            case "onvolumechange":
-                return "onVolumeChange";
-            case "ontimeupdate":
-                return "onTimeUpdate";
-            case "onseeking":
-                return "onSeeking";
-            case "onseekend":
-                return "onSeekEnd";
-            case "onratechange":
-                return "onRateChange";
-            case "onprogress":
-                return "onProgress";
-            case "onloadmetadata":
-                return "onLoadMetadata";
-            case "onloadeddata":
-                return "onLoadedData";
-            case "onloadstart":
-                return "onLoadStart";
-            case "onplaying":
-                return "onPlaying";
-            case "onplay":
-                return "onPlay";
-            case "onpause":
-                return "onPause";
-            case "onended":
-                return "onEnded";
-            case "ondurationchange":
-                return "onDurationChange";
-            case "oncanplay":
-                return "onCanPlay";
-            case "oncanplaythrough":
-                return "onCanPlayThrough";
-            case "onstalled":
-                return "onStalled";
-            case "onsuspend":
-                return "onSuspend";
-            case "onpopstate":
-                return "onPopState";
-            case "onstorage":
-                return "onStorage";
-            case "onhashchange":
-                return "onHashChange";
-            case "onafterprint":
-                return "onAfterPrint";
-            case "onbeforeprint":
-                return "onBeforePrint";
-            case "onpagehide":
-                return "onPageHide";
-            case "onpageshow":
-                return "onPageShow";
-        }
-    }
-
-    toLiteralString(elem) {
-        const props = this.resolveProps(elem);
-        let string = this.resolveId(elem.getTagName().toLowerCase(), props);
-        string = this.resolveClass(string, props);
-        string = this.resolveAttrs(string, props);
-        return string;
-    }
-
-    /**
-     * Function by default resolves a given element and its' children and returns template representation of the element.
-     * @param {object} elem 
-     * @param {boolean} deep 
-     * @returns Template object representation of the Elem
-     */
-    static toTemplate(elem, deep) {
-        return RMEElemTemplater.getInstance().toTemplate(elem, deep);
-    }
-
-    /**
-     * Function resolves and returns properties of a given Elem object.
-     * @param {object} elem 
-     * @returns The properties object of the given Elem.
-     */
-    static getElementProps(elem) {
-        return RMEElemTemplater.getInstance().resolveProps(elem);
-    }
-
-    static toLiteralString(elem) {
-        return RMEElemTemplater.getInstance().toLiteralString(elem);
-    }
-
-    static getInstance() {
-        if(!this.instance)
-            this.instance = new RMEElemTemplater();
-        return this.instance;
-    }
-}
 
 
 let Elem = (function() {
@@ -2057,11 +1707,10 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         append(elem) {
-            if (!(elem instanceof Elem) && !Template.isTemplate(elem)) {
-                throw new Error(`Could not append element or template: ${elem}`);
+            if (Util.notEmpty(elem)) {
+                this.html.appendChild(Template.isTemplate(elem) ? Template.resolve(elem).dom() : elem.dom());
             }
             
-            this.html.appendChild(Template.isTemplate(elem) ? Template.resolve(elem).dom() : elem.dom());
             return this;
         }
 
@@ -3666,6 +3315,356 @@ let Elem = (function() {
 }());
 
 
+/**
+ * RMEElemTemplater class is able to create a Template out of an Elem object.
+ */
+class RMEElemTemplater {
+    constructor() {
+        this.instance;
+        this.template = {};
+        this.deep = true;
+    }
+
+    toTemplate(elem, deep) {
+        if(!Util.isEmpty(deep))
+            this.deep = deep;
+        this.resolve(elem, this.template);
+        return this.template;
+    }
+
+    /**
+     * Function is called recursively and resolves an Elem object and its children in recursion
+     * @param {object} elem 
+     * @param {object} parent 
+     */
+    resolve(elem, parent) {
+        let resolved = this.resolveElem(elem, this.resolveProps(elem));
+        for(let p in parent) {
+            if(parent.hasOwnProperty(p)) {
+                if(Util.isArray(parent[p]._rme_type_))
+                    parent[p]._rme_type_.push(resolved);
+                else
+                    this.extendMap(parent[p], resolved);
+            }
+        }
+
+        let i = 0;
+        let children = Util.isArray(elem.getChildren()) ? elem.getChildren() : [elem.getChildren()];
+        if(children && this.deep) {
+            while(i < children.length) {
+                this.resolve(children[i], resolved);
+                i++;
+            }
+        }
+        this.template = resolved;
+    }
+
+    extendMap(map, next) {
+        for(let v in next) {
+            if(next.hasOwnProperty(v)) {
+                map[v] = next[v];
+            }
+        }
+    }
+
+    /**
+     * Function will attach given properties into a given Elem and returns the resolved Elem.
+     * @param {object} elem 
+     * @param {object} props 
+     * @returns The resolved elem with attached properties.
+     */
+    resolveElem(elem, props) {
+        let el = {};
+        let children = elem.getChildren();
+        if(Util.isArray(children) && children.length > 1) {
+            let elTag = elem.getTagName().toLowerCase();
+            let elName = this.resolveId(elTag, props);
+            elName = this.resolveClass(elName, props);
+            elName = this.resolveAttrs(elName, props);
+            el[elName] = {
+                _rme_type_: [],
+                _rme_props_: props
+            };
+        } else {
+            el[elem.getTagName().toLowerCase()] = props
+        }
+        return el;
+    }
+
+    /**
+     * Function will place an ID attribute into an element tag if the ID attribute is found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with the ID or without.
+     */
+    resolveId(tag, props) {
+        if(props.id)
+            return tag+"#"+props.id;
+        else
+            return tag;
+    }
+
+    /**
+     * Function will place a class attribute into an element tag if the class attribute is found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with the classes or without.
+     */
+    resolveClass(tag, props) {
+        if(props.class)
+            return tag+"."+props.class.replace(/ /g, ".");
+        else
+            return tag;
+    }
+
+    /**
+     * Function will resolve all other attributes and place them into an element tag if other attributes are found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with other attributes or without.
+     */
+    resolveAttrs(tag, props) {
+        let tagName = tag;
+        for (let p in props) {
+            if (props.hasOwnProperty(p) && p !== 'id' && p !== 'class' && p.indexOf('on') !== 0) {
+                tagName += `[${p}=${props[p]}]`
+            }
+        }
+        return tagName;
+    }
+
+    /**
+     * Resolves a given Elem object and returns its properties in an object.
+     * @param {object} elem 
+     * @returns The properties object of the given element.
+     */
+    resolveProps(elem) {
+        let props = {};
+        let attributes = elem.dom().attributes;
+        let a = 0;
+        if(attributes) {
+            while(a < attributes.length) {
+                props[this.resolveAttributeNames(attributes[a].name)] = attributes[a].value;
+                a++;
+            }
+        }
+
+        if(elem.dom().hasChildNodes() && elem.dom().childNodes[0].nodeType === 3) {
+            props["text"] = elem.getText();
+        }
+
+        for(let p in elem.dom()) {
+            if(p.indexOf("on") !== 0 || Util.isEmpty(elem.dom()[p]))
+                continue;
+            else
+                props[this.resolveListeners(p)] = elem.dom()[p];
+        }
+
+        return props;
+    }
+
+    /**
+     * Resolves a html data-* attributes by removing '-' and setting the next character to uppercase. 
+     * Resolves an aria* attirubtes by setting the next character to uppercase.
+     * If the attribute is not a data-* or an aria attribute then it is directly returned.
+     * @param {string} attrName 
+     * @returns Resolved attribute name.
+     */
+    resolveAttributeNames(attrName) {
+        if (attrName.indexOf('data') === 0 && attrName.length > 'data'.length) {
+            while(attrName.search('-') > -1) {
+                attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search('-') + 1).toUpperCase());
+            }
+            return attrName
+        } else if (attrName.indexOf('aria') === 0) {
+            return attrName.replace(attrName.charAt('aria'.length), attrName.charAt('aria'.length).toUpperCase());
+        } else {
+            return attrName;
+        }
+    }
+
+    resolveListeners(name) {
+        switch(name) {
+            case "onanimationstart":
+                return "onAnimationStart";
+            case "onanimationiteration":
+                return "onAnimationIteration";
+            case "onanimationend":
+                return "onAnimationEnd";
+            case "ontransitionend":
+                return "onTransitionEnd";
+            case "ondrag":
+                return "onDrag"
+            case "ondragend":
+                return "onDragEnd";
+            case "ondragenter":
+                return "onDragEnter";
+            case "ondragover":
+                return "onDragOver";
+            case "ondragstart":
+                return "onDragStart";
+            case "ondrop":
+                return "onDrop"; 
+            case "onclick":
+                return "onClick";
+            case "ondblclick":
+                return "onDoubleClick";
+            case "oncontextmenu":
+                return "onContextMenu";
+            case "onmousedown":
+                return "onMouseDown";
+            case "onmouseenter":
+                return "onMouseEnter";
+            case "onmouseleave":
+                return "onMouseLeave";
+            case "onmousemove":
+                return "onMouseMove";
+            case "onmouseover":
+                return "onMouseOver";
+            case "onmouseout":
+                return "onMouseOut";
+            case "onmouseup":
+                return "onMouseUp";
+            case "onwheel":
+                return "onWheel";
+            case "onscroll":
+                return "onScroll";
+            case "onresize":
+                return "onResize";
+            case "onerror":
+                return "onError";
+            case "onload":
+                return "onLoad";
+            case "onunload":
+                return "onUnload";
+            case "onbeforeunload":
+                return "onBeforeUnload";
+            case "onkeyup":
+                return "onKeyUp";
+            case "onkeydown":
+                return "onKeyDown";
+            case "onkeypress":
+                return "onKeyPress";
+            case "oninput":
+                return "onInput";
+            case "onchange":
+                return "onChange";
+            case "onsubmit":
+                return "onSubmit";
+            case "onselect":
+                return "onSelect";
+            case "onreset":
+                return "onReset"
+            case "onfocus":
+                return "onFocus";
+            case "onfocusin":
+                return "onFocusIn";
+            case "onfocusout":
+                return "onFocusOut";
+            case "onblur":
+                return "onBlur";
+            case "oncopy":
+                return "onCopy";
+            case "oncut":
+                return "onCut";
+            case "onpaste":
+                return "onPaste";
+            case "onabort":
+                return "onAbort";
+            case "onwaiting":
+                return "onWaiting";
+            case "onvolumechange":
+                return "onVolumeChange";
+            case "ontimeupdate":
+                return "onTimeUpdate";
+            case "onseeking":
+                return "onSeeking";
+            case "onseekend":
+                return "onSeekEnd";
+            case "onratechange":
+                return "onRateChange";
+            case "onprogress":
+                return "onProgress";
+            case "onloadmetadata":
+                return "onLoadMetadata";
+            case "onloadeddata":
+                return "onLoadedData";
+            case "onloadstart":
+                return "onLoadStart";
+            case "onplaying":
+                return "onPlaying";
+            case "onplay":
+                return "onPlay";
+            case "onpause":
+                return "onPause";
+            case "onended":
+                return "onEnded";
+            case "ondurationchange":
+                return "onDurationChange";
+            case "oncanplay":
+                return "onCanPlay";
+            case "oncanplaythrough":
+                return "onCanPlayThrough";
+            case "onstalled":
+                return "onStalled";
+            case "onsuspend":
+                return "onSuspend";
+            case "onpopstate":
+                return "onPopState";
+            case "onstorage":
+                return "onStorage";
+            case "onhashchange":
+                return "onHashChange";
+            case "onafterprint":
+                return "onAfterPrint";
+            case "onbeforeprint":
+                return "onBeforePrint";
+            case "onpagehide":
+                return "onPageHide";
+            case "onpageshow":
+                return "onPageShow";
+        }
+    }
+
+    toLiteralString(elem) {
+        const props = this.resolveProps(elem);
+        let string = this.resolveId(elem.getTagName().toLowerCase(), props);
+        string = this.resolveClass(string, props);
+        string = this.resolveAttrs(string, props);
+        return string;
+    }
+
+    /**
+     * Function by default resolves a given element and its' children and returns template representation of the element.
+     * @param {object} elem 
+     * @param {boolean} deep 
+     * @returns Template object representation of the Elem
+     */
+    static toTemplate(elem, deep) {
+        return RMEElemTemplater.getInstance().toTemplate(elem, deep);
+    }
+
+    /**
+     * Function resolves and returns properties of a given Elem object.
+     * @param {object} elem 
+     * @returns The properties object of the given Elem.
+     */
+    static getElementProps(elem) {
+        return RMEElemTemplater.getInstance().resolveProps(elem);
+    }
+
+    static toLiteralString(elem) {
+        return RMEElemTemplater.getInstance().toLiteralString(elem);
+    }
+
+    static getInstance() {
+        if(!this.instance)
+            this.instance = new RMEElemTemplater();
+        return this.instance;
+    }
+}
+
+
 
 const EventPipe = (function() {
 
@@ -4267,6 +4266,7 @@ Key.COMMA = ",";
 Key.DOT = ".";
 
 
+
 let Messages = (function() {
     /**
      * Messages class handles internationalization. The class offers public methods that enable easy 
@@ -4511,189 +4511,6 @@ let Messages = (function() {
         setApp: Messages.setApp
     };
 }());
-
-
-
-/**
- * The configure function will configure given Components. Advantage of this function is that the Compoments can be given in 
- * any order and they will be recognized automatically.
- * 
- * Example use case would be to invoke configure(App.get(), Router, Messages);
- * 
- * This function can be conbined with a createApp('#app', AppComponent) function as follows:
- * configure(createApp('#app', AppComponent), Router, Messages); This is probably the shortest way to 
- * create the RME application.
- * @param {*} params comma separated list of components
- */
-const configure = (function() {
-
-    return (...params) => {
-        let config = {};
-        params.forEach(param => {
-            if (param.routes) {
-                config = {
-                    ...config,
-                    router: param
-                }
-            } else if (param.load) {
-                config = {
-                    ...config,
-                    messages: param
-                }
-            } else if (param.name) {
-                config = {
-                    ...config,
-                    app: param
-                }
-            } 
-        });
-
-        if (Util.notEmpty(config.router))
-            config.router.setApp(config.app);
-
-        if (Util.notEmpty(config.messages))
-            config.messages.setApp(config.app);
-
-        if (Util.notEmpty(config.app))
-            config.app.setRouter(config.router);
-    }
-
-})();
-
-
-/**
- * Adds a script file on runtime into the head of the current html document where the method is called on.
- * Source is required options can be omitted.
- * @param {String} source URL or file name. *Requied
- * @param {object} options Optional settings object.
- * 
- * Option settings:
- * -------
- *  @param {String} id 
- *  @param {String} type 
- *  @param {String} text Content of the script element if any.
- *  @param {boolean} defer If true script is executed when page has finished parsing.
- *  @param {*} crossOrigin 
- *  @param {String} charset 
- *  @param {boolean} async If true script is executed asynchronously when available.
- */
-const script = (function() {
-
-    const addScript = (elem) => {
-        const scripts = Tree.getHead().getByTag('script');
-        if (scripts.length > 0) {
-            const lastScript = scripts[scripts.length -1];
-            lastScript.after(elem);
-        } else {
-            Tree.getHead().append(elem);
-        }
-    }
-
-    return (source, options) => {
-        if (Util.notEmpty(source)) {
-            addScript(Template.resolve({
-                script: {
-                    src: source,
-                    ...options
-                }
-            }));
-        }
-    }
-})();
-
-
-/**
- * The function adds a callback function into the callback queue. The queue is invoked in the
- * function definition order. The queue will be run when the DOM tree is ready and
- * then the it is cleared.
- */
-const ready = (function() {
-
-    const callbacks = [];
-
-    document.addEventListener("readystatechange", () => {
-        if(document.readyState === "complete") {
-            callbacks.forEach(callback => callback());
-            callbacks.length = 0;
-        }
-    });
-
-    return (callback) => {
-        callbacks.push(callback);
-    }
-
-})();
-
-
-
-
-
-
-/**
- * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create
- * RESTfull webpages with ease and speed.
- * 
- * This library is free to use under the MIT License.
- */
-const RME = (function() {
-
-    class RMEStorage {
-        constructor() {
-            this.rmeState = {};
-        }
-
-        setRmeStateProp(key, value) {
-            this.rmeState[key] = value;
-        }
-
-        getRmeStateProp(key) {
-            return this.rmeState[key];
-        }
-
-    }
-
-    const rmeStorage = new RMEStorage();
-
-    /**
-     * This function is not the recommended way to use components and is for legacy support
-     * and will be removed in later releases. The recommended way to use components is the 
-     * Component function.
-     * 
-     * The function creates or retrieves a component. 
-     * If the first parameter is a string the function will try to get the component from the 
-     * component storage. Otherwise the function will set the component in the component storage.
-     * @param {*} component function, object or string.
-     * @param {Object} props 
-     */
-    const component = (component, props) => {
-        if (component && (Util.isFunction(component) || Util.isObject(component)))
-            RMEComponentManager.addComponent(component, props);
-        else if (component && Util.isString(component))
-            return RMEComponentManager.getComponent(component, props);
-    }
-
-    /**
-     * Saves data to or get data from the RME instance storage.
-     * If key and value parameters are not empty then this method will try to save the give value by the given key
-     * into to the RME instance storage.
-     * If key is not empty and value is empty then this method will try to get data from the RME instance storage
-     * by the given key.
-     * @param {String} key 
-     * @param {Object} value 
-     */
-    const storage = (key, value) => {
-        if (Util.notEmpty(key) && Util.notEmpty(value))
-            rmeStorage.setRmeStateProp(key, value);
-        else if (Util.notEmpty(key) && Util.isEmpty(value))
-            return rmeStorage.getRmeStateProp(key);
-    }
-
-    return {
-        component,
-        storage,
-    }
-}());
-
 
 
 
@@ -5155,6 +4972,188 @@ let Router = (function() {
     }
 }());
 
+
+/**
+ * The configure function will configure given Components. Advantage of this function is that the Compoments can be given in 
+ * any order and they will be recognized automatically.
+ * 
+ * Example use case would be to invoke configure(App.get(), Router, Messages);
+ * 
+ * This function can be conbined with a createApp('#app', AppComponent) function as follows:
+ * configure(createApp('#app', AppComponent), Router, Messages); This is probably the shortest way to 
+ * create the RME application.
+ * @param {*} params comma separated list of components
+ */
+const configure = (function() {
+
+    return (...params) => {
+        let config = {};
+        params.forEach(param => {
+            if (param.routes) {
+                config = {
+                    ...config,
+                    router: param
+                }
+            } else if (param.load) {
+                config = {
+                    ...config,
+                    messages: param
+                }
+            } else if (param.name) {
+                config = {
+                    ...config,
+                    app: param
+                }
+            } 
+        });
+
+        if (Util.notEmpty(config.router))
+            config.router.setApp(config.app);
+
+        if (Util.notEmpty(config.messages))
+            config.messages.setApp(config.app);
+
+        if (Util.notEmpty(config.app))
+            config.app.setRouter(config.router);
+    }
+
+})();
+
+
+/**
+ * Adds a script file on runtime into the head of the current html document where the method is called on.
+ * Source is required options can be omitted.
+ * @param {String} source URL or file name. *Requied
+ * @param {object} options Optional settings object.
+ * 
+ * Option settings:
+ * -------
+ *  @param {String} id 
+ *  @param {String} type 
+ *  @param {String} text Content of the script element if any.
+ *  @param {boolean} defer If true script is executed when page has finished parsing.
+ *  @param {*} crossOrigin 
+ *  @param {String} charset 
+ *  @param {boolean} async If true script is executed asynchronously when available.
+ */
+const script = (function() {
+
+    const addScript = (elem) => {
+        const scripts = Tree.getHead().getByTag('script');
+        if (scripts.length > 0) {
+            const lastScript = scripts[scripts.length -1];
+            lastScript.after(elem);
+        } else {
+            Tree.getHead().append(elem);
+        }
+    }
+
+    return (source, options) => {
+        if (Util.notEmpty(source)) {
+            addScript(Template.resolve({
+                script: {
+                    src: source,
+                    ...options
+                }
+            }));
+        }
+    }
+})();
+
+
+/**
+ * The function adds a callback function into the callback queue. The queue is invoked in the
+ * function definition order. The queue will be run when the DOM tree is ready and
+ * then the it is cleared.
+ */
+const ready = (function() {
+
+    const callbacks = [];
+
+    document.addEventListener("readystatechange", () => {
+        if(document.readyState === "complete") {
+            callbacks.forEach(callback => callback());
+            callbacks.length = 0;
+        }
+    });
+
+    return (callback) => {
+        callbacks.push(callback);
+    }
+
+})();
+
+
+
+
+
+
+/**
+ * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create
+ * RESTfull webpages with ease and speed.
+ * 
+ * This library is free to use under the MIT License.
+ */
+const RME = (function() {
+
+    class RMEStorage {
+        constructor() {
+            this.rmeState = {};
+        }
+
+        setRmeStateProp(key, value) {
+            this.rmeState[key] = value;
+        }
+
+        getRmeStateProp(key) {
+            return this.rmeState[key];
+        }
+
+    }
+
+    const rmeStorage = new RMEStorage();
+
+    /**
+     * This function is not the recommended way to use components and is for legacy support
+     * and will be removed in later releases. The recommended way to use components is the 
+     * Component function.
+     * 
+     * The function creates or retrieves a component. 
+     * If the first parameter is a string the function will try to get the component from the 
+     * component storage. Otherwise the function will set the component in the component storage.
+     * @param {*} component function, object or string.
+     * @param {Object} props 
+     */
+    const component = (component, props) => {
+        if (component && (Util.isFunction(component) || Util.isObject(component)))
+            RMEComponentManager.addComponent(component, props);
+        else if (component && Util.isString(component))
+            return RMEComponentManager.getComponent(component, props);
+    }
+
+    /**
+     * Saves data to or get data from the RME instance storage.
+     * If key and value parameters are not empty then this method will try to save the give value by the given key
+     * into to the RME instance storage.
+     * If key is not empty and value is empty then this method will try to get data from the RME instance storage
+     * by the given key.
+     * @param {String} key 
+     * @param {Object} value 
+     */
+    const storage = (key, value) => {
+        if (Util.notEmpty(key) && Util.notEmpty(value))
+            rmeStorage.setRmeStateProp(key, value);
+        else if (Util.notEmpty(key) && Util.isEmpty(value))
+            return rmeStorage.getRmeStateProp(key);
+    }
+
+    return {
+        component,
+        storage,
+    }
+}());
+
+
 /**
  * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
  */
@@ -5186,6 +5185,41 @@ class Session {
      */
     static clear() {
         sessionStorage.clear();
+    }
+}
+
+
+/**
+ * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
+ */
+class Storage {
+    /**
+     * Save data into the local storage. 
+     * @param {string} key
+     * @param {*} value
+     */
+    static set(key, value) {
+        localStorage.setItem(key, value);
+    }
+    /**
+     * Get the saved data from the local storage.
+     * @param {string} key
+     */
+    static get(key) {
+        return localStorage.getItem(key);
+    }
+    /**
+     * Remove data from the local storage.
+     * @param {string} key
+     */
+    static remove(key) {
+        localStorage.removeItem(key);
+    }
+    /**
+     * Clears the local storage.
+     */
+    static clear() {
+        localStorage.clear();
     }
 }
 
@@ -5249,39 +5283,176 @@ const RMETemplateFragmentHelper = (function() {
 
 
 /**
- * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
+ * General Utility methods.
  */
-class Storage {
+class Util {
     /**
-     * Save data into the local storage. 
-     * @param {string} key
+     * Checks is a given value empty.
      * @param {*} value
+     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
      */
-    static set(key, value) {
-        localStorage.setItem(key, value);
+    static isEmpty(value) {
+        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
     }
+
     /**
-     * Get the saved data from the local storage.
-     * @param {string} key
+     * Checks is the given value not empty. This function is a negation to the Util.isEmpty function.
+     * @param {*} value 
+     * @returns True if the value is not empty otherwise false.
      */
-    static get(key) {
-        return localStorage.getItem(key);
+    static notEmpty(value) {
+        return !Util.isEmpty(value)
     }
+
     /**
-     * Remove data from the local storage.
-     * @param {string} key
+     * Get the type of the given value.
+     * @param {*} value
+     * @returns The type of the given value.
      */
-    static remove(key) {
-        localStorage.removeItem(key);
+    static getType(value) {
+        return typeof value;
     }
+
     /**
-     * Clears the local storage.
+     * Checks is a given value is a given type.
+     * @param {*} value
+     * @param {string} type
+     * @returns True if the given value is the given type otherwise false.
      */
-    static clear() {
-        localStorage.clear();
+    static isType(value, type) {
+        return (Util.getType(value) === type);
+    }
+
+    /**
+     * Checks is a given parameter a function.
+     * @param {*} func 
+     * @returns True if the given parameter is fuction otherwise false.
+     */
+    static isFunction(func) {
+        return Util.isType(func, "function");
+    }
+
+    /**
+     * Checks is a given parameter a boolean.
+     * @param {*} boolean
+     * @returns True if the given parameter is boolean otherwise false.
+     */
+    static isBoolean(boolean) {
+        return Util.isType(boolean, "boolean");
+    }
+
+    /**
+     * Checks is a given parameter a string.
+     * @param {*} string
+     * @returns True if the given parameter is string otherwise false.
+     */
+    static isString(string) {
+        return Util.isType(string, "string");
+    }
+
+    /**
+     * Checks is a given parameter a number.
+     * @param {*} number
+     * @returns True if the given parameter is number otherwise false.
+     */
+    static isNumber(number) {
+        return Util.isType(number, "number");
+    }
+
+    /**
+     * Checks is a given parameter a symbol.
+     * @param {*} symbol
+     * @returns True if the given parameter is symbol otherwise false.
+     */
+    static isSymbol(symbol) {
+        return Util.isType(symbol, "symbol");
+    }
+
+    /**
+     * Checks is a given parameter a object.
+     * @param {*} object
+     * @returns True if the given parameter is object otherwise false.
+     */
+    static isObject(object) {
+        return Util.isType(object, "object");
+    }
+
+    /**
+     * Checks is a given parameter an array.
+     * @param {*} array
+     * @returns True if the given parameter is array otherwise false.
+     */
+    static isArray(array) {
+        return Array.isArray(array);
+    }
+
+    /**
+     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The timeout object.
+     */
+    static setTimeout(callback, milliseconds, ...params) {
+        if(!Util.isFunction(callback)) {
+            throw "callback not fuction";
+        }
+        return window.setTimeout(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes a timeout that was created by setTimeout method.
+     * @param {object} timeoutObject
+     */
+    static clearTimeout(timeoutObject) {
+        window.clearTimeout(timeoutObject);
+    }
+
+    /**
+     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The interval object.
+     */
+    static setInterval(callback, milliseconds, ...params) {
+        if(!Util.isFunction(callback)) {
+            throw "callback not fuction";
+        }
+        return window.setInterval(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes an interval that was created by setInterval method.
+     */
+    static clearInterval(intervalObject) {
+        window.clearInterval(intervalObject);
+    }
+
+    /**
+     * Encodes a string to Base64.
+     * @param {string} string
+     * @returns The base64 encoded string.
+     */
+    static encodeBase64String(string) {
+        if(!Util.isString(string)) {
+            throw "the given parameter is not a string: " +string;
+        }
+        return window.btoa(string);
+    }
+
+    /**
+     * Decodes a base 64 encoded string.
+     * @param {string} string
+     * @returns The base64 decoded string.
+     */
+    static decodeBase64String(string) {
+        if(!Util.isString(string)) {
+            throw "the given parameter is not a string: " +string;
+        }
+        return window.atob(string);
     }
 }
-
 
 
 let Template = (function() {
@@ -6017,6 +6188,7 @@ let Template = (function() {
 }());
 
 
+
 /**
  * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
  * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
@@ -6189,179 +6361,6 @@ class Tree {
      */
     static getForms() {
         return Elem.wrapElems(document.forms);
-    }
-}
-
-
-/**
- * General Utility methods.
- */
-class Util {
-    /**
-     * Checks is a given value empty.
-     * @param {*} value
-     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
-     */
-    static isEmpty(value) {
-        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
-    }
-
-    /**
-     * Checks is the given value not empty. This function is a negation to the Util.isEmpty function.
-     * @param {*} value 
-     * @returns True if the value is not empty otherwise false.
-     */
-    static notEmpty(value) {
-        return !Util.isEmpty(value)
-    }
-
-    /**
-     * Get the type of the given value.
-     * @param {*} value
-     * @returns The type of the given value.
-     */
-    static getType(value) {
-        return typeof value;
-    }
-
-    /**
-     * Checks is a given value is a given type.
-     * @param {*} value
-     * @param {string} type
-     * @returns True if the given value is the given type otherwise false.
-     */
-    static isType(value, type) {
-        return (Util.getType(value) === type);
-    }
-
-    /**
-     * Checks is a given parameter a function.
-     * @param {*} func 
-     * @returns True if the given parameter is fuction otherwise false.
-     */
-    static isFunction(func) {
-        return Util.isType(func, "function");
-    }
-
-    /**
-     * Checks is a given parameter a boolean.
-     * @param {*} boolean
-     * @returns True if the given parameter is boolean otherwise false.
-     */
-    static isBoolean(boolean) {
-        return Util.isType(boolean, "boolean");
-    }
-
-    /**
-     * Checks is a given parameter a string.
-     * @param {*} string
-     * @returns True if the given parameter is string otherwise false.
-     */
-    static isString(string) {
-        return Util.isType(string, "string");
-    }
-
-    /**
-     * Checks is a given parameter a number.
-     * @param {*} number
-     * @returns True if the given parameter is number otherwise false.
-     */
-    static isNumber(number) {
-        return Util.isType(number, "number");
-    }
-
-    /**
-     * Checks is a given parameter a symbol.
-     * @param {*} symbol
-     * @returns True if the given parameter is symbol otherwise false.
-     */
-    static isSymbol(symbol) {
-        return Util.isType(symbol, "symbol");
-    }
-
-    /**
-     * Checks is a given parameter a object.
-     * @param {*} object
-     * @returns True if the given parameter is object otherwise false.
-     */
-    static isObject(object) {
-        return Util.isType(object, "object");
-    }
-
-    /**
-     * Checks is a given parameter an array.
-     * @param {*} array
-     * @returns True if the given parameter is array otherwise false.
-     */
-    static isArray(array) {
-        return Array.isArray(array);
-    }
-
-    /**
-     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The timeout object.
-     */
-    static setTimeout(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setTimeout(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes a timeout that was created by setTimeout method.
-     * @param {object} timeoutObject
-     */
-    static clearTimeout(timeoutObject) {
-        window.clearTimeout(timeoutObject);
-    }
-
-    /**
-     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The interval object.
-     */
-    static setInterval(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setInterval(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes an interval that was created by setInterval method.
-     */
-    static clearInterval(intervalObject) {
-        window.clearInterval(intervalObject);
-    }
-
-    /**
-     * Encodes a string to Base64.
-     * @param {string} string
-     * @returns The base64 encoded string.
-     */
-    static encodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.btoa(string);
-    }
-
-    /**
-     * Decodes a base 64 encoded string.
-     * @param {string} string
-     * @returns The base64 decoded string.
-     */
-    static decodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.atob(string);
     }
 }
 
