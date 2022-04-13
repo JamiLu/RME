@@ -291,22 +291,22 @@ var App = function () {
           this.refreshQueue = Util.setTimeout(function () {
             var freshStage = Template.isTemplate(_this2.rawStage) ? Template.resolve(_this2.rawStage) : _this2.rawStage.duplicate();
 
-            if (!Util.isEmpty(_this2.router)) {
+            if (Util.notEmpty(_this2.router)) {
               var state = _this2.router.getCurrentState();
 
-              if (!Util.isEmpty(state.current)) {
+              if (Util.notEmpty(state.current)) {
                 var selector = state.root;
                 var element = state.current;
 
-                if (Template.isFragment(element)) {
+                if (RMETemplateFragmentHelper.isFragment(element)) {
                   var fragment = {};
-                  fragment[state.rootElem.toLiteralString()] = _objectSpread({}, element.fragment);
+                  fragment[state.rootElem.toLiteralString()] = _objectSpread({}, RMETemplateFragmentHelper.resolveFragmentValue(element, fragment));
                   freshStage.getFirst(selector).replace(Template.resolve(fragment));
                 } else {
                   freshStage.getFirst(selector).append(element);
                 }
 
-                if (!Util.isEmpty(state.onAfter)) _this2.afterRefreshCallQueue.push(state.onAfter);
+                if (Util.notEmpty(state.onAfter)) _this2.afterRefreshCallQueue.push(state.onAfter);
               }
             }
 
@@ -1815,6 +1815,449 @@ var CSS = function () {
     }
   };
 }();
+/**
+ * RMEElemTemplater class is able to create a Template out of an Elem object.
+ */
+
+
+var RMEElemTemplater = /*#__PURE__*/function () {
+  function RMEElemTemplater() {
+    _classCallCheck(this, RMEElemTemplater);
+
+    this.instance;
+    this.template = {};
+    this.deep = true;
+  }
+
+  _createClass(RMEElemTemplater, [{
+    key: "toTemplate",
+    value: function toTemplate(elem, deep) {
+      if (!Util.isEmpty(deep)) this.deep = deep;
+      this.resolve(elem, this.template);
+      return this.template;
+    }
+    /**
+     * Function is called recursively and resolves an Elem object and its children in recursion
+     * @param {object} elem 
+     * @param {object} parent 
+     */
+
+  }, {
+    key: "resolve",
+    value: function resolve(elem, parent) {
+      var resolved = this.resolveElem(elem, this.resolveProps(elem));
+
+      for (var p in parent) {
+        if (parent.hasOwnProperty(p)) {
+          if (Util.isArray(parent[p]._rme_type_)) parent[p]._rme_type_.push(resolved);else this.extendMap(parent[p], resolved);
+        }
+      }
+
+      var i = 0;
+      var children = Util.isArray(elem.getChildren()) ? elem.getChildren() : [elem.getChildren()];
+
+      if (children && this.deep) {
+        while (i < children.length) {
+          this.resolve(children[i], resolved);
+          i++;
+        }
+      }
+
+      this.template = resolved;
+    }
+  }, {
+    key: "extendMap",
+    value: function extendMap(map, next) {
+      for (var v in next) {
+        if (next.hasOwnProperty(v)) {
+          map[v] = next[v];
+        }
+      }
+    }
+    /**
+     * Function will attach given properties into a given Elem and returns the resolved Elem.
+     * @param {object} elem 
+     * @param {object} props 
+     * @returns The resolved elem with attached properties.
+     */
+
+  }, {
+    key: "resolveElem",
+    value: function resolveElem(elem, props) {
+      var el = {};
+      var children = elem.getChildren();
+
+      if (Util.isArray(children) && children.length > 1) {
+        var elTag = elem.getTagName().toLowerCase();
+        var elName = this.resolveId(elTag, props);
+        elName = this.resolveClass(elName, props);
+        elName = this.resolveAttrs(elName, props);
+        el[elName] = {
+          _rme_type_: [],
+          _rme_props_: props
+        };
+      } else {
+        el[elem.getTagName().toLowerCase()] = props;
+      }
+
+      return el;
+    }
+    /**
+     * Function will place an ID attribute into an element tag if the ID attribute is found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with the ID or without.
+     */
+
+  }, {
+    key: "resolveId",
+    value: function resolveId(tag, props) {
+      if (props.id) return tag + "#" + props.id;else return tag;
+    }
+    /**
+     * Function will place a class attribute into an element tag if the class attribute is found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with the classes or without.
+     */
+
+  }, {
+    key: "resolveClass",
+    value: function resolveClass(tag, props) {
+      if (props["class"]) return tag + "." + props["class"].replace(/ /g, ".");else return tag;
+    }
+    /**
+     * Function will resolve all other attributes and place them into an element tag if other attributes are found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with other attributes or without.
+     */
+
+  }, {
+    key: "resolveAttrs",
+    value: function resolveAttrs(tag, props) {
+      var tagName = tag;
+
+      for (var p in props) {
+        if (props.hasOwnProperty(p) && p !== 'id' && p !== 'class' && p.indexOf('on') !== 0) {
+          tagName += "[".concat(p, "=").concat(props[p], "]");
+        }
+      }
+
+      return tagName;
+    }
+    /**
+     * Resolves a given Elem object and returns its properties in an object.
+     * @param {object} elem 
+     * @returns The properties object of the given element.
+     */
+
+  }, {
+    key: "resolveProps",
+    value: function resolveProps(elem) {
+      var props = {};
+      var attributes = elem.dom().attributes;
+      var a = 0;
+
+      if (attributes) {
+        while (a < attributes.length) {
+          props[this.resolveAttributeNames(attributes[a].name)] = attributes[a].value;
+          a++;
+        }
+      }
+
+      if (elem.dom().hasChildNodes() && elem.dom().childNodes[0].nodeType === 3) {
+        props["text"] = elem.getText();
+      }
+
+      for (var p in elem.dom()) {
+        if (p.indexOf("on") !== 0 || Util.isEmpty(elem.dom()[p])) continue;else props[this.resolveListeners(p)] = elem.dom()[p];
+      }
+
+      return props;
+    }
+    /**
+     * Resolves a html data-* attributes by removing '-' and setting the next character to uppercase. 
+     * Resolves an aria* attirubtes by setting the next character to uppercase.
+     * If the attribute is not a data-* or an aria attribute then it is directly returned.
+     * @param {string} attrName 
+     * @returns Resolved attribute name.
+     */
+
+  }, {
+    key: "resolveAttributeNames",
+    value: function resolveAttributeNames(attrName) {
+      if (attrName.indexOf('data') === 0 && attrName.length > 'data'.length) {
+        while (attrName.search('-') > -1) {
+          attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search('-') + 1).toUpperCase());
+        }
+
+        return attrName;
+      } else if (attrName.indexOf('aria') === 0) {
+        return attrName.replace(attrName.charAt('aria'.length), attrName.charAt('aria'.length).toUpperCase());
+      } else {
+        return attrName;
+      }
+    }
+  }, {
+    key: "resolveListeners",
+    value: function resolveListeners(name) {
+      switch (name) {
+        case "onanimationstart":
+          return "onAnimationStart";
+
+        case "onanimationiteration":
+          return "onAnimationIteration";
+
+        case "onanimationend":
+          return "onAnimationEnd";
+
+        case "ontransitionend":
+          return "onTransitionEnd";
+
+        case "ondrag":
+          return "onDrag";
+
+        case "ondragend":
+          return "onDragEnd";
+
+        case "ondragenter":
+          return "onDragEnter";
+
+        case "ondragover":
+          return "onDragOver";
+
+        case "ondragstart":
+          return "onDragStart";
+
+        case "ondrop":
+          return "onDrop";
+
+        case "onclick":
+          return "onClick";
+
+        case "ondblclick":
+          return "onDoubleClick";
+
+        case "oncontextmenu":
+          return "onContextMenu";
+
+        case "onmousedown":
+          return "onMouseDown";
+
+        case "onmouseenter":
+          return "onMouseEnter";
+
+        case "onmouseleave":
+          return "onMouseLeave";
+
+        case "onmousemove":
+          return "onMouseMove";
+
+        case "onmouseover":
+          return "onMouseOver";
+
+        case "onmouseout":
+          return "onMouseOut";
+
+        case "onmouseup":
+          return "onMouseUp";
+
+        case "onwheel":
+          return "onWheel";
+
+        case "onscroll":
+          return "onScroll";
+
+        case "onresize":
+          return "onResize";
+
+        case "onerror":
+          return "onError";
+
+        case "onload":
+          return "onLoad";
+
+        case "onunload":
+          return "onUnload";
+
+        case "onbeforeunload":
+          return "onBeforeUnload";
+
+        case "onkeyup":
+          return "onKeyUp";
+
+        case "onkeydown":
+          return "onKeyDown";
+
+        case "onkeypress":
+          return "onKeyPress";
+
+        case "oninput":
+          return "onInput";
+
+        case "onchange":
+          return "onChange";
+
+        case "onsubmit":
+          return "onSubmit";
+
+        case "onselect":
+          return "onSelect";
+
+        case "onreset":
+          return "onReset";
+
+        case "onfocus":
+          return "onFocus";
+
+        case "onfocusin":
+          return "onFocusIn";
+
+        case "onfocusout":
+          return "onFocusOut";
+
+        case "onblur":
+          return "onBlur";
+
+        case "oncopy":
+          return "onCopy";
+
+        case "oncut":
+          return "onCut";
+
+        case "onpaste":
+          return "onPaste";
+
+        case "onabort":
+          return "onAbort";
+
+        case "onwaiting":
+          return "onWaiting";
+
+        case "onvolumechange":
+          return "onVolumeChange";
+
+        case "ontimeupdate":
+          return "onTimeUpdate";
+
+        case "onseeking":
+          return "onSeeking";
+
+        case "onseekend":
+          return "onSeekEnd";
+
+        case "onratechange":
+          return "onRateChange";
+
+        case "onprogress":
+          return "onProgress";
+
+        case "onloadmetadata":
+          return "onLoadMetadata";
+
+        case "onloadeddata":
+          return "onLoadedData";
+
+        case "onloadstart":
+          return "onLoadStart";
+
+        case "onplaying":
+          return "onPlaying";
+
+        case "onplay":
+          return "onPlay";
+
+        case "onpause":
+          return "onPause";
+
+        case "onended":
+          return "onEnded";
+
+        case "ondurationchange":
+          return "onDurationChange";
+
+        case "oncanplay":
+          return "onCanPlay";
+
+        case "oncanplaythrough":
+          return "onCanPlayThrough";
+
+        case "onstalled":
+          return "onStalled";
+
+        case "onsuspend":
+          return "onSuspend";
+
+        case "onpopstate":
+          return "onPopState";
+
+        case "onstorage":
+          return "onStorage";
+
+        case "onhashchange":
+          return "onHashChange";
+
+        case "onafterprint":
+          return "onAfterPrint";
+
+        case "onbeforeprint":
+          return "onBeforePrint";
+
+        case "onpagehide":
+          return "onPageHide";
+
+        case "onpageshow":
+          return "onPageShow";
+      }
+    }
+  }, {
+    key: "toLiteralString",
+    value: function toLiteralString(elem) {
+      var props = this.resolveProps(elem);
+      var string = this.resolveId(elem.getTagName().toLowerCase(), props);
+      string = this.resolveClass(string, props);
+      string = this.resolveAttrs(string, props);
+      return string;
+    }
+    /**
+     * Function by default resolves a given element and its' children and returns template representation of the element.
+     * @param {object} elem 
+     * @param {boolean} deep 
+     * @returns Template object representation of the Elem
+     */
+
+  }], [{
+    key: "toTemplate",
+    value: function toTemplate(elem, deep) {
+      return RMEElemTemplater.getInstance().toTemplate(elem, deep);
+    }
+    /**
+     * Function resolves and returns properties of a given Elem object.
+     * @param {object} elem 
+     * @returns The properties object of the given Elem.
+     */
+
+  }, {
+    key: "getElementProps",
+    value: function getElementProps(elem) {
+      return RMEElemTemplater.getInstance().resolveProps(elem);
+    }
+  }, {
+    key: "toLiteralString",
+    value: function toLiteralString(elem) {
+      return RMEElemTemplater.getInstance().toLiteralString(elem);
+    }
+  }, {
+    key: "getInstance",
+    value: function getInstance() {
+      if (!this.instance) this.instance = new RMEElemTemplater();
+      return this.instance;
+    }
+  }]);
+
+  return RMEElemTemplater;
+}();
 
 var Elem = function () {
   /**
@@ -1957,7 +2400,11 @@ var Elem = function () {
     }, {
       key: "append",
       value: function append(elem) {
-        if (!Util.isEmpty(elem)) this.html.appendChild(Template.isTemplate(elem) ? Template.resolve(elem).dom() : elem.dom());
+        if (!(elem instanceof Elem) && !Template.isTemplate(elem)) {
+          throw new Error("Could not append element or template: ".concat(elem));
+        }
+
+        this.html.appendChild(Template.isTemplate(elem) ? Template.resolve(elem).dom() : elem.dom());
         return this;
       }
       /**
@@ -3875,446 +4322,6 @@ var Elem = function () {
 
   return Elem;
 }();
-/**
- * RMEElemTemplater class is able to create a Template out of an Elem object.
- */
-
-
-var RMEElemTemplater = /*#__PURE__*/function () {
-  function RMEElemTemplater() {
-    _classCallCheck(this, RMEElemTemplater);
-
-    this.instance;
-    this.template = {};
-    this.deep = true;
-  }
-
-  _createClass(RMEElemTemplater, [{
-    key: "toTemplate",
-    value: function toTemplate(elem, deep) {
-      if (!Util.isEmpty(deep)) this.deep = deep;
-      this.resolve(elem, this.template);
-      return this.template;
-    }
-    /**
-     * Function is called recursively and resolves an Elem object and its children in recursion
-     * @param {object} elem 
-     * @param {object} parent 
-     */
-
-  }, {
-    key: "resolve",
-    value: function resolve(elem, parent) {
-      var resolved = this.resolveElem(elem, this.resolveProps(elem));
-
-      for (var p in parent) {
-        if (parent.hasOwnProperty(p)) {
-          if (Util.isArray(parent[p]._rme_type_)) parent[p]._rme_type_.push(resolved);else this.extendMap(parent[p], resolved);
-        }
-      }
-
-      var i = 0;
-      var children = Util.isArray(elem.getChildren()) ? elem.getChildren() : [elem.getChildren()];
-
-      if (children && this.deep) {
-        while (i < children.length) {
-          this.resolve(children[i], resolved);
-          i++;
-        }
-      }
-
-      this.template = resolved;
-    }
-  }, {
-    key: "extendMap",
-    value: function extendMap(map, next) {
-      for (var v in next) {
-        if (next.hasOwnProperty(v)) {
-          map[v] = next[v];
-        }
-      }
-    }
-    /**
-     * Function will attach given properties into a given Elem and returns the resolved Elem.
-     * @param {object} elem 
-     * @param {object} props 
-     * @returns The resolved elem with attached properties.
-     */
-
-  }, {
-    key: "resolveElem",
-    value: function resolveElem(elem, props) {
-      var el = {};
-      var children = elem.getChildren();
-
-      if (Util.isArray(children) && children.length > 1) {
-        var elTag = elem.getTagName().toLowerCase();
-        var elName = this.resolveId(elTag, props);
-        elName = this.resolveClass(elName, props);
-        elName = this.resolveAttrs(elName, props);
-        el[elName] = {
-          _rme_type_: [],
-          _rme_props_: props
-        };
-      } else {
-        el[elem.getTagName().toLowerCase()] = props;
-      }
-
-      return el;
-    }
-    /**
-     * Function will place an ID attribute into an element tag if the ID attribute is found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with the ID or without.
-     */
-
-  }, {
-    key: "resolveId",
-    value: function resolveId(tag, props) {
-      if (props.id) return tag + "#" + props.id;else return tag;
-    }
-    /**
-     * Function will place a class attribute into an element tag if the class attribute is found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with the classes or without.
-     */
-
-  }, {
-    key: "resolveClass",
-    value: function resolveClass(tag, props) {
-      if (props["class"]) return tag + "." + props["class"].replace(/ /g, ".");else return tag;
-    }
-    /**
-     * Function will resolve all other attributes and place them into an element tag if other attributes are found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with other attributes or without.
-     */
-
-  }, {
-    key: "resolveAttrs",
-    value: function resolveAttrs(tag, props) {
-      var tagName = tag;
-
-      for (var p in props) {
-        if (props.hasOwnProperty(p) && p !== 'id' && p !== 'class' && p.indexOf('on') !== 0) {
-          tagName += "[".concat(p, "=").concat(props[p], "]");
-        }
-      }
-
-      return tagName;
-    }
-    /**
-     * Resolves a given Elem object and returns its properties in an object.
-     * @param {object} elem 
-     * @returns The properties object of the given element.
-     */
-
-  }, {
-    key: "resolveProps",
-    value: function resolveProps(elem) {
-      var props = {};
-      var attributes = elem.dom().attributes;
-      var a = 0;
-
-      if (attributes) {
-        while (a < attributes.length) {
-          props[this.resolveAttributeNames(attributes[a].name)] = attributes[a].value;
-          a++;
-        }
-      }
-
-      if (elem.dom().hasChildNodes() && elem.dom().childNodes[0].nodeType === 3) {
-        props["text"] = elem.getText();
-      }
-
-      for (var p in elem.dom()) {
-        if (p.indexOf("on") !== 0 || Util.isEmpty(elem.dom()[p])) continue;else props[this.resolveListeners(p)] = elem.dom()[p];
-      }
-
-      return props;
-    }
-    /**
-     * Resolves html data-* attributes by removing '-' and setting the next character to uppercase. If the attribute is not 
-     * data-* attribute then it is directly returned.
-     * @param {string} attrName 
-     * @returns Resolved attribute name.
-     */
-
-  }, {
-    key: "resolveAttributeNames",
-    value: function resolveAttributeNames(attrName) {
-      if (attrName.indexOf("data" === 0 && attrName.length > "data".length)) {
-        while (attrName.search("-") > -1) {
-          attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search("-") + 1).toUpperCase());
-        }
-
-        return attrName;
-      } else {
-        return attrName;
-      }
-    }
-  }, {
-    key: "resolveListeners",
-    value: function resolveListeners(name) {
-      switch (name) {
-        case "onanimationstart":
-          return "onAnimationStart";
-
-        case "onanimationiteration":
-          return "onAnimationIteration";
-
-        case "onanimationend":
-          return "onAnimationEnd";
-
-        case "ontransitionend":
-          return "onTransitionEnd";
-
-        case "ondrag":
-          return "onDrag";
-
-        case "ondragend":
-          return "onDragEnd";
-
-        case "ondragenter":
-          return "onDragEnter";
-
-        case "ondragover":
-          return "onDragOver";
-
-        case "ondragstart":
-          return "onDragStart";
-
-        case "ondrop":
-          return "onDrop";
-
-        case "onclick":
-          return "onClick";
-
-        case "ondblclick":
-          return "onDoubleClick";
-
-        case "oncontextmenu":
-          return "onContextMenu";
-
-        case "onmousedown":
-          return "onMouseDown";
-
-        case "onmouseenter":
-          return "onMouseEnter";
-
-        case "onmouseleave":
-          return "onMouseLeave";
-
-        case "onmousemove":
-          return "onMouseMove";
-
-        case "onmouseover":
-          return "onMouseOver";
-
-        case "onmouseout":
-          return "onMouseOut";
-
-        case "onmouseup":
-          return "onMouseUp";
-
-        case "onwheel":
-          return "onWheel";
-
-        case "onscroll":
-          return "onScroll";
-
-        case "onresize":
-          return "onResize";
-
-        case "onerror":
-          return "onError";
-
-        case "onload":
-          return "onLoad";
-
-        case "onunload":
-          return "onUnload";
-
-        case "onbeforeunload":
-          return "onBeforeUnload";
-
-        case "onkeyup":
-          return "onKeyUp";
-
-        case "onkeydown":
-          return "onKeyDown";
-
-        case "onkeypress":
-          return "onKeyPress";
-
-        case "oninput":
-          return "onInput";
-
-        case "onchange":
-          return "onChange";
-
-        case "onsubmit":
-          return "onSubmit";
-
-        case "onselect":
-          return "onSelect";
-
-        case "onreset":
-          return "onReset";
-
-        case "onfocus":
-          return "onFocus";
-
-        case "onfocusin":
-          return "onFocusIn";
-
-        case "onfocusout":
-          return "onFocusOut";
-
-        case "onblur":
-          return "onBlur";
-
-        case "oncopy":
-          return "onCopy";
-
-        case "oncut":
-          return "onCut";
-
-        case "onpaste":
-          return "onPaste";
-
-        case "onabort":
-          return "onAbort";
-
-        case "onwaiting":
-          return "onWaiting";
-
-        case "onvolumechange":
-          return "onVolumeChange";
-
-        case "ontimeupdate":
-          return "onTimeUpdate";
-
-        case "onseeking":
-          return "onSeeking";
-
-        case "onseekend":
-          return "onSeekEnd";
-
-        case "onratechange":
-          return "onRateChange";
-
-        case "onprogress":
-          return "onProgress";
-
-        case "onloadmetadata":
-          return "onLoadMetadata";
-
-        case "onloadeddata":
-          return "onLoadedData";
-
-        case "onloadstart":
-          return "onLoadStart";
-
-        case "onplaying":
-          return "onPlaying";
-
-        case "onplay":
-          return "onPlay";
-
-        case "onpause":
-          return "onPause";
-
-        case "onended":
-          return "onEnded";
-
-        case "ondurationchange":
-          return "onDurationChange";
-
-        case "oncanplay":
-          return "onCanPlay";
-
-        case "oncanplaythrough":
-          return "onCanPlayThrough";
-
-        case "onstalled":
-          return "onStalled";
-
-        case "onsuspend":
-          return "onSuspend";
-
-        case "onpopstate":
-          return "onPopState";
-
-        case "onstorage":
-          return "onStorage";
-
-        case "onhashchange":
-          return "onHashChange";
-
-        case "onafterprint":
-          return "onAfterPrint";
-
-        case "onbeforeprint":
-          return "onBeforePrint";
-
-        case "onpagehide":
-          return "onPageHide";
-
-        case "onpageshow":
-          return "onPageShow";
-      }
-    }
-  }, {
-    key: "toLiteralString",
-    value: function toLiteralString(elem) {
-      var props = this.resolveProps(elem);
-      var string = this.resolveId(elem.getTagName().toLowerCase(), props);
-      string = this.resolveClass(string, props);
-      string = this.resolveAttrs(string, props);
-      return string;
-    }
-    /**
-     * Function by default resolves a given element and its' children and returns template representation of the element.
-     * @param {object} elem 
-     * @param {boolean} deep 
-     * @returns Template object representation of the Elem
-     */
-
-  }], [{
-    key: "toTemplate",
-    value: function toTemplate(elem, deep) {
-      return RMEElemTemplater.getInstance().toTemplate(elem, deep);
-    }
-    /**
-     * Function resolves and returns properties of a given Elem object.
-     * @param {object} elem 
-     * @returns The properties object of the given Elem.
-     */
-
-  }, {
-    key: "getElementProps",
-    value: function getElementProps(elem) {
-      return RMEElemTemplater.getInstance().resolveProps(elem);
-    }
-  }, {
-    key: "toLiteralString",
-    value: function toLiteralString(elem) {
-      return RMEElemTemplater.getInstance().toLiteralString(elem);
-    }
-  }, {
-    key: "getInstance",
-    value: function getInstance() {
-      if (!this.instance) this.instance = new RMEElemTemplater();
-      return this.instance;
-    }
-  }]);
-
-  return RMEElemTemplater;
-}();
 
 var EventPipe = function () {
   /**
@@ -5669,7 +5676,12 @@ var Router = function () {
     }, {
       key: "onPopState",
       value: function onPopState() {
-        if (this.useHistory) this.renderRoute(location.pathname);else this.renderRoute(location.hash);
+        if (this.useHistory) {
+          this.renderRoute(location.pathname);
+          Browser.scrollTo(0, 0);
+        } else {
+          this.renderRoute(location.hash);
+        }
       }
       /**
        * Set the router to use a history implementation or an anchor hash implementation.
@@ -5765,24 +5777,6 @@ var Router = function () {
         this.origRoot = route.elem;
       }
       /**
-       * @deprecated
-       * Resolve route elements.
-       * @param {array} routes 
-       */
-
-    }, {
-      key: "resolveRouteElems",
-      value: function resolveRouteElems(routes) {
-        var i = 0;
-
-        while (i < routes.length) {
-          routes[i].elem = this.resolveElem(routes[i].elem);
-          i++;
-        }
-
-        return routes;
-      }
-      /**
        * Method resolves element. If elem is string gets a component of the name if exist otherwise creates a new elemen of the name.
        * If both does not apply then method assumes the elem to be an element and returns it.
        * @param {*} elem 
@@ -5827,25 +5821,26 @@ var Router = function () {
       value: function navigateUrl(url) {
         var route = this.findRoute(url);
 
-        if (!Util.isEmpty(route) && this.useHistory && !route.hide) {
+        if (Util.notEmpty(route) && this.useHistory && !route.hide) {
           history.pushState(null, null, url);
-        } else if (!Util.isEmpty(route) && !route.hide) {
+        } else if (Util.notEmpty(route) && !route.hide) {
           location.href = url;
         }
 
-        if (!Util.isEmpty(this.root) && !Util.isEmpty(route)) {
-          if (route.scrolltop === true || route.scrolltop === undefined && this.scrolltop) Util.setTimeout(function () {
-            return Browser.scrollTo(0, 0);
-          });
+        if (Util.notEmpty(this.root) && Util.notEmpty(route)) {
+          if (route.scrolltop === true || route.scrolltop === undefined && this.scrolltop) {
+            Browser.scrollTo(0, 0);
+          }
+
           this.prevUrl = this.getUrlPath(url);
           this.currentRoute = route;
 
           if (Util.isEmpty(this.app)) {
-            if (!Util.isEmpty(route.onBefore)) route.onBefore();
+            if (Util.notEmpty(route.onBefore)) route.onBefore();
             this.root.elem.render(this.resolveElem(route.elem, route.compProps));
-            if (!Util.isEmpty(route.onAfter)) route.onAfter();
+            if (Util.notEmpty(route.onAfter)) route.onAfter();
           } else {
-            if (!Util.isEmpty(route.onBefore)) route.onBefore();
+            if (Util.notEmpty(route.onBefore)) route.onBefore();
             this.app.refresh();
           }
         }
@@ -5853,7 +5848,7 @@ var Router = function () {
       /**
        * Method looks for a route by the url. If the router is found then it will be returned otherwise returns null
        * @param {string} url
-       * @param {boolean} force
+       * @param {boolean} force match route even though the previous url and the current url are the same
        * @returns The found router or null if not found.
        */
 
@@ -6049,6 +6044,7 @@ var Router = function () {
       key: "manual",
       value: function manual() {
         if (Router.getInstance().useHistory) {
+          history.scrollRestoration = 'manual';
           Router.getInstance().clearListeners();
           Router.getInstance().setAutoListen(false);
           Router.getInstance().registerListeners();
@@ -6186,6 +6182,74 @@ var Session = /*#__PURE__*/function () {
 
   return Session;
 }();
+
+var RMETemplateFragmentHelper = function () {
+  // Fragment key can be any number of underscores (_).
+  var FRAGMENT_REGEXP = /^_+$/g;
+
+  var RMETemplateFragmentHelper = /*#__PURE__*/function () {
+    function RMETemplateFragmentHelper() {
+      _classCallCheck(this, RMETemplateFragmentHelper);
+    }
+
+    _createClass(RMETemplateFragmentHelper, [{
+      key: "getFragmentKey",
+      value:
+      /**
+       * Function takes the RME template as a parameter and tries to resolve a
+       * fragment key from the given template.
+       * @param {*} template 
+       * @returns The fragment key if found otherwise undefined is returned.
+       */
+      function getFragmentKey(template) {
+        return Object.keys(template).find(this.isFragmentKey);
+      }
+      /**
+       * Function takes the RME template as a parameter and tries to resolve the 
+       * fragment value from the given template.
+       * @param {*} template 
+       * @param {*} templateValue 
+       * @returns The fragment template value if found otherwise undefined is returned.
+       */
+
+    }, {
+      key: "resolveFragmentValue",
+      value: function resolveFragmentValue(template, templateValue) {
+        var fragmentKey = this.getFragmentKey(template);
+        return template[fragmentKey] || template.fragment || templateValue;
+      }
+      /**
+       * Function takes the RME template as a parameter and checks if the parameter is type fragment. 
+       * If the parameter is a fragment type the function will return true
+       * otherwise false is returned.
+       * @param {*} template 
+       * @returns True if the parameter is type fragment otherwise false is returned.
+       */
+
+    }, {
+      key: "isFragment",
+      value: function isFragment(template) {
+        return Util.notEmpty(template) && (template === 'fragment' || Boolean(this.getFragmentKey(template)));
+      }
+      /**
+       * Function will check if the given key is a fragment key. The function will
+       * return true if the key is a fragment key otherwise false is returned.
+       * @param {string} key 
+       * @returns True if the key is a fragment key otherwise false is returned.
+       */
+
+    }, {
+      key: "isFragmentKey",
+      value: function isFragmentKey(key) {
+        return key.match(FRAGMENT_REGEXP) || key.indexOf('fragment') === 0;
+      }
+    }]);
+
+    return RMETemplateFragmentHelper;
+  }();
+
+  return new RMETemplateFragmentHelper();
+}();
 /**
  * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
  */
@@ -6295,7 +6359,7 @@ var Template = function () {
               if (this.isArray(template[obj])) {
                 ++round;
                 this.resolveArray(template[obj], this.root, round);
-              } else if (!this.isComponent(obj) && Util.isObject(template[obj])) {
+              } else if (!Template.isComponent(obj) && Util.isObject(template[obj])) {
                 ++round;
                 this.resolve(template[obj], this.root, round);
               } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
@@ -6318,14 +6382,14 @@ var Template = function () {
                 ++round;
                 var child = this.resolveElement(obj, template[obj]);
 
-                if (Template.isFragment(child)) {
-                  this.resolveFragment(child.fragment || template[obj], parent, round);
+                if (RMETemplateFragmentHelper.isFragment(child)) {
+                  this.resolveFragment(RMETemplateFragmentHelper.resolveFragmentValue(child, template[obj]), parent, round);
                 } else {
                   parent.append(child);
 
                   if (this.isArray(template[obj])) {
                     this.resolveArray(template[obj], child, round);
-                  } else if (!this.isComponent(obj) && Util.isObject(template[obj])) {
+                  } else if (!Template.isComponent(obj) && Util.isObject(template[obj])) {
                     this.resolve(template[obj], child, round);
                   } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
                     this.resolveStringNumber(child, template[obj]);
@@ -6489,7 +6553,7 @@ var Template = function () {
       value: function resolveElement(tag, obj) {
         var resolved = null;
         var match = [];
-        var el = this.getElementName(tag);
+        var el = Template.getElementName(tag);
 
         if (RMEComponentManager.hasComponent(el)) {
           el = el.replace(/component:/, "");
@@ -6497,8 +6561,8 @@ var Template = function () {
           if (Util.isEmpty(resolved)) return resolved;
         } else if (Util.isEmpty(el)) {
           throw "Template resolver could not find element: ".concat(el, " from the given tag: ").concat(tag);
-        } else if (el.indexOf('fragment') === 0) {
-          return el.match(/fragment/).join();
+        } else if (RMETemplateFragmentHelper.isFragmentKey(el)) {
+          return 'fragment';
         } else {
           resolved = new Elem(el);
         }
@@ -6525,18 +6589,6 @@ var Template = function () {
       value: function cutAttributesIfFound(tag) {
         var idx = tag.indexOf('[');
         return tag.substring(0, idx > 0 ? idx : tag.length);
-      }
-      /**
-       * Function will try to parse an element name from the given string. If the given string
-       * is no empty a matched string is returned. If the given string is empty nothing is returned
-       * @param {string} str 
-       * @returns The matched string.
-       */
-
-    }, {
-      key: "getElementName",
-      value: function getElementName(str) {
-        if (!Util.isEmpty(str)) return str.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join();
       }
       /**
        * Adds resolved attributes to an element.
@@ -6755,6 +6807,18 @@ var Template = function () {
         return key.indexOf("on") === 0 && Util.isFunction(val);
       }
       /**
+       * Function will try to parse an element name from the given string. If the given string
+       * is no empty a matched string is returned. If the given string is empty nothing is returned
+       * @param {string} str 
+       * @returns The matched string.
+       */
+
+    }], [{
+      key: "getElementName",
+      value: function getElementName(str) {
+        if (Util.notEmpty(str)) return str.match(/component:?[a-zA-Z0-9_]+|[a-zA-Z0-9_]+/).join();
+      }
+      /**
        * Checks that the given component exist with the given key or the key starts with component keyword and the component exist. 
        * @param {string} key
        * @returns True if the component exist or the key contains component keyword and exist, otherwise false.
@@ -6763,7 +6827,7 @@ var Template = function () {
     }, {
       key: "isComponent",
       value: function isComponent(key) {
-        return RMEComponentManager.hasComponent(this.getElementName(key));
+        return RMEComponentManager.hasComponent(Template.getElementName(key));
       }
       /**
        * Method takes a template as parameter, starts resolving it and 
@@ -6772,7 +6836,7 @@ var Template = function () {
        * @returns Elem instance element tree.
        */
 
-    }], [{
+    }, {
       key: "resolveTemplate",
       value: function resolveTemplate(template) {
         return Template.create().setTemplateAndResolve(template);
@@ -6791,6 +6855,9 @@ var Template = function () {
         return Template.create().setTemplateAndResolve(template, parent);
       }
       /**
+       * @deprecated
+       * Will be removed in next releases
+       * 
        * Method takes a parameter and checks if the parameter is type fragment. 
        * If the parameter is type fragment the method will return true
        * otherwise false is returned.
@@ -6801,7 +6868,7 @@ var Template = function () {
     }, {
       key: "isFragment",
       value: function isFragment(child) {
-        return !Util.isEmpty(child) && (child === 'fragment' || !Util.isEmpty(child.fragment));
+        return RMETemplateFragmentHelper.isFragment(child);
       }
       /**
        * Method will apply the properties given to the element. Old properties are overridden.
@@ -6875,15 +6942,13 @@ var Template = function () {
       /**
        * Method takes a string and returns true if the given string is a html tag or a component, otherwise returns false.
        * @param {string} tag 
-       * @returns True if the given tag is a HTML tag otherwise false.
+       * @returns True if the given tag is a HTML tag or a RME component otherwise false.
        */
 
     }, {
       key: "isTagOrComponent",
       value: function isTagOrComponent(tag) {
-        tag = tag.match(/component:?[a-zA-Z0-9]+|[a-zA-Z0-9]+/).join().replace("component:", "");
-        if (RMEComponentManager.hasComponent(tag)) return true;
-        return Template.isTag(tag);
+        return Template.isComponent(tag) || Template.isTag(Template.getElementName(tag));
       }
       /**
        * Method takes a string and returns true if the given string is a html tag, otherwise returns false.
@@ -6976,7 +7041,37 @@ var Template = function () {
           }
         }
 
+        if (Template.isAriaKey(key)) {
+          return true;
+        }
+
         return false;
+      }
+      /**
+       * Function takes an attribute key as a parameter and checks if the key is an aria key.
+       * The function will return true if the key is an aria key otheriwise false is returned.
+       * @param {*} key 
+       * @returns True if the given key is an aria key otherwise false is returned.
+       */
+
+    }, {
+      key: "isAriaKey",
+      value: function isAriaKey(key) {
+        if (key.indexOf('aria') === 0) {
+          var ariaKeys = ['aria-activedescendant', 'aria-atomic', 'aria-autocomplete', 'aria-braillelabel', 'aria-brailleroledescription', 'aria-busy', 'aria-checked', 'aria-colcount', 'aria-colindex', 'aria-colindextext', 'aria-colspan', 'aria-controls', 'aria-current', 'aria-describedby', 'aria-description', 'aria-details', 'aria-disabled', 'aria-dropeffect', 'aria-errormessage', 'aria-expanded', 'aria-flowto', 'aria-grabbed', 'aria-haspopup', 'aria-hidden', 'aria-invalid', 'aria-keyshortcuts', 'aria-label', 'aria-labelledby', 'aria-level', 'aria-live', 'aria-multiline', 'aria-multiselectable', 'aria-orientation', 'aria-owns', 'aria-placeholder', 'aria-posinset', 'aria-pressed', 'aria-readonly', 'aria-relevant', 'aria-required', 'aria-roledescription', 'aria-rowcount', 'aria-rowindex', 'aria-rowindextext', 'aria-rowspan', 'aria-selected', 'aria-setsize', 'aria-sort', 'aria-valuemax', 'aria-valuemin', 'aria-valuenow', 'aria-valuetext'];
+          var normalizedKey = Template.normalizeKey(key);
+          return Boolean(ariaKeys.find(function (ariaKey) {
+            return ariaKey === normalizedKey;
+          }));
+        }
+
+        return false;
+      }
+    }, {
+      key: "normalizeKey",
+      value: function normalizeKey(key) {
+        var capital = key.search(/[A-Z]/);
+        return capital > -1 ? "".concat(key.substring(0, capital), "-").concat(key.substr(capital).toLowerCase()) : key;
       }
       /**
        * Internal use.
