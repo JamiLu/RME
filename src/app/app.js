@@ -3,7 +3,6 @@ import RMEElemRenderer from './renderer';
 import Template from '../template';
 import Tree from '../tree';
 import AppManager from './manager';
-import RMEComponentManager from '../component/manager';
 import RMETemplateFragmentHelper from '../template/fragment';
 
 let App = (function() {
@@ -171,18 +170,6 @@ let App = (function() {
             const app = AppManager.get(App.init().name);
             App.reset();
             return app;
-        }
-
-        /**
-         * Function creates a statefull component. The state of the component is stored in an application that this component is bound to.
-         * @param {object} component 
-         */
-        static component(component) {
-            const bindState = (appName) => {
-                let updater = Util.isEmpty(appName) ? () => (state) => App.getState(state) : () => (state) => App.get(appName).getState(state);
-                RMEComponentManager.addComponent(component, updater);
-            }
-            return bindState;
         }
 
         static init() {
