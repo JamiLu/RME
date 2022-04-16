@@ -73,15 +73,20 @@ const Component = (function() {
         }
     }
 
+    const bindGetState = (component, appName) => {
+        const stateGetter = Util.isEmpty(appName) ? () => (state) => App.getState(state) : (state) => App.get(appName).getState(state);
+        RMEComponentManager.addComponent(component, stateGetter);
+    }
+
     const resolveComponent = component => {
         if (Util.isObject(component)) {
-            App.component({[component.name]: component.comp})(component.appName);
+            bindGetState({[component.name]: component.comp}, component.appName);
             resolveInitialState(component.initialState, component.name+component.stateRef, component.appName);
         } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
             RMEComponentManager.addComponent({[component.valueOf().name]: component});
         } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
             const comp = new component();
-            App.component({[component.valueOf().name]: comp.render})(comp.appName);
+            bindGetState({[component.valueOf().name]: comp.render}, comp.appName);
             let state = {};
             if (!Util.isEmpty(comp.onBeforeCreate))
                 state.onBeforeCreate = comp.onBeforeCreate;
