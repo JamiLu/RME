@@ -8,7 +8,7 @@ import Template from './template';
 import Messages from './messages';
 import Router from './router';
 import EventPipe from './eventpipe';
-import Http from './http';
+import Http, { Fetch } from './http';
 import Cookie from './cookie';
 import Session from './session';
 import Storage from './storage';
@@ -35,6 +35,7 @@ export {
     Router,
     EventPipe,
     Http,
+    Fetch,
     Cookie,
     Session,
     Storage,
