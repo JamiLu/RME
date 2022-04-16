@@ -1,4 +1,4 @@
-import RME, { Component, bindState, useState, CSS } from '../../src/index';
+import { Component, bindState, useState, CSS, useValue } from '../../src/index';
 
 CSS(`
 table td {
@@ -7,11 +7,12 @@ table td {
 }
 `);
 
-RME.storage('countryList', [
+const [getCountryList] = useValue([
     {country: 'Finland', capital: 'Helsinki'}, {country: 'Sweden', capital: 'Stockholm'}, {country: 'Norway', capital: 'Oslo'},
     {country: 'Iceland', capital: 'Reykjavik'}, {country: 'England', capital: 'London'}, {country: 'America', capital: 'Washington'}, 
-    {country: 'Mexico', capital: 'Mexico City'}, {country: 'Peru', capital: 'Lima'}, {country: 'Egypt', capital: 'Kairo'}, {country: 'China', capital: 'Beijing'},
-    {country: 'Japan', capital: 'Tokyo'}, {country: 'South Korea', capital: 'Seoul'}, {country: 'Malaysia', capital: 'Kuala Lumpur'}, {country: 'Namibia', capital: 'Windhoek'}, {country: 'South Africa', capital: 'Cape Town'}]);
+    {country: 'Mexico', capital: 'Mexico City'}, {country: 'Peru', capital: 'Lima'}, {country: 'Egypt', capital: 'Kairo'}, 
+    {country: 'China', capital: 'Beijing'}, {country: 'Japan', capital: 'Tokyo'}, {country: 'South Korea', capital: 'Seoul'}, 
+    {country: 'Malaysia', capital: 'Kuala Lumpur'}, {country: 'Namibia', capital: 'Windhoek'}, {country: 'South Africa', capital: 'Cape Town'}]);
 
 const FilterExample = props => ({
     fragment: {
@@ -19,7 +20,7 @@ const FilterExample = props => ({
         'input[type=text][placeholder=Type to Filter Country]': {
             onInput: event => 
                 useState(props, {
-                    rows: RME.storage('countryList')
+                    rows: getCountryList()
                         .filter(row => `${row.country}${row.capital}`.toLowerCase().search(event.target.value) > -1)
                 })
         },
@@ -36,4 +37,4 @@ const MyTable = props => ({
     }))
 });
 
-Component(bindState(FilterExample, { rows: RME.storage('countryList') }), MyTable);
+Component(bindState(FilterExample, { rows: getCountryList() }), MyTable);
