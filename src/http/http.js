@@ -102,18 +102,19 @@ const Http = (function() {
             return new Http(config).instance();
         }
     }
+
     /**
      * Content-Type application/json
      */
-    Http.JSON = 'application/json';
+    Http.JSON = "application/json";
     /**
      * Content-Type multipart/form-data
      */
-    Http.FORM_DATA = 'multipart/form-data';
+    Http.FORM_DATA = "multipart/form-data";
     /**
      * Content-Type text/plain
      */
-    Http.TEXT_PLAIN = 'text/plain';
+    Http.TEXT_PLAIN = "text/plain";
 
     /**
      * The XMLHttpRequest made into the Promise pattern.
@@ -200,6 +201,7 @@ const Http = (function() {
     }
 
     return Http;
+
 }());
 
 export default Http;
