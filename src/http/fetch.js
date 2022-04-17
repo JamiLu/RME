@@ -30,55 +30,50 @@ const Fetch = (function() {
 
         /**
          * Does Fetch GET request. Content-Type JSON is used by default.
-         * @param {stirng} url *Required
-         * @param {*} config 
+         * @param {string} url *Required
+         * @param {string} contentType
          */
-        get(url, config = {}) {
-            config.method = 'GET';
-            return this.do({url: url, init: config, contentType: config.contentType || Http.JSON});
+        get(url, contentType) {
+            return this.do({url: url, init: { method: 'GET' }, contentType: contentType || Http.JSON});
         }
 
         /**
          * Does Fetch POST request. Content-Type JSON is used by default.
          * @param {string} url *Required
          * @param {*} body 
-         * @param {*} config 
+         * @param {string} contentType 
          */
-        post(url, body, config = {}) {
-            config.method = 'POST';
-            return this.do({url: url, body: body, init: config, contentType: config.contentType || Http.JSON});
+        post(url, body, contentType) {
+            return this.do({url: url, body: body, init: { method: 'POST' }, contentType: contentType || Http.JSON});
         }
 
         /**
          * Does Fetch PUT request. Content-Type JSON is used by default.
          * @param {string} url *Required
          * @param {*} body 
-         * @param {*} config 
+         * @param {string} contentType 
          */
-        put(url, body, config = {}) {
-            config.method = 'PUT';
-            return this.do({url: url, body: body, init: config, contentType: config.contentType || Http.JSON});
+        put(url, body, contentType) {
+            return this.do({url: url, body: body, init: { method: 'PUT' }, contentType: contentType || Http.JSON});
         }
 
         /**
          * Does Fetch DELETE request. Content-Type JSON is used by default.
          * @param {string} url 
-         * @param {*} config 
+         * @param {string} contentType 
          */
-        delete(url, config = {}) {
-            config.method = 'DELETE';
-            return this.do({url: url, init: config, contentType: config.contentType || Http.JSON});
+        delete(url, contentType) {
+            return this.do({url: url, init: { method: 'DELETE' }, contentType: contentType || Http.JSON});
         }
 
         /**
          * Does Fetch PATCH request. Content-Type JSON is used by default.
          * @param {string} url 
          * @param {*} body
-         * @param {*} config 
+         * @param {string} contentType
          */
-        patch(url, body, config = {}) {
-            config.method = 'PATCH';
-            return this.do({url, url, body: body, init: config, contentType: config.contentType || Http.JSON});
+        patch(url, body, contentType) {
+            return this.do({url, url, body: body, init: { method: 'PATCH' }, contentType: contentType || Http.JSON});
         }
 
         /**
@@ -115,13 +110,13 @@ const Fetch = (function() {
                 config.init.method = config.method;
             }
             return fetch(config.url, config.init)
-                .then((response) => {
+                .then(async (response) => {
                     if (!response.ok) {
                         throw Error(`Error in requesting url: ${config.url}, method: ${config.init.method}`);
                     }
                     if (isContentType(config.contentType, Http.JSON)) {
-                        const res = response.text();
-                        return res.length > 0 ? JSON.parse(res) : res; // Avoid null body failure
+                        const res = await response.text();
+                        return res.length > 0 ? JSON.parse(res) : res; // Avoid response.json() null body failure
                     }
                     if (isContentType(config.contentType, Http.TEXT_PLAIN)) {
                         return response.text();
