@@ -293,14 +293,14 @@ Classes & Functions
   - put(url, data, contentType) **Put request, defaults to JSON**
   - patch(url, data, contentType) **Patch request, defaults to JSON**
   - delete(url, contentType) **Delete request, defaults to JSON**
-  - do(config) **Config object: {method: method, url: url, data: data, contentType: contentType, onProgress: function(event), onTimeout: function(event), headers: headersObject{"header": "value"} }**
+  - do(config) **Config object: {method: method, url: url, data: data, contentType: contentType, onProgress: function(event), onTimeout: function(event), headers: {"header": "value"} }**
 * Fetch **Uses the Fetch API of the browser**
   - get(url, contentType) **Get request, defaults to JSON**
   - post(url, body, contentType) **Post request, defaults to JSON**
   - put(url, body, contentType) **Put request, defaults to JSON**
   - patch(url, body, contentType) **Patch request, defaults to JSON**
   - delete(url, contentType) **Delete request, defaults to JSON**
-  - do(config) **Config object: {url: url, method: method, body: body, contentType: contentType, init: init}**
+  - do(config) **Config object: {url: url, method: method, body: body, contentType: contentType, init: initObject}**
 * Elem
   - constructor(type|html) **If type is string creates a new JavaScript element of that type _OR_ If type is JavaScript html object then only wraps that object inside of this Elem object**
   - render(elem, elem, elem|arrayOfElems|arrayOfElems, arrayOfElems, elem) **Renders the Elem instance objects that contain html data to insert into the HTML document tree. Can render multiple elements.**
