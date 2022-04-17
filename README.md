@@ -10,9 +10,9 @@ Links
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v1.6.2/rme.js](https://github.com/JamiLu/RME/releases/download/v1.6.2/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.6.2/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.6.2/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v1.6.2/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.6.2/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.7.0/rme.js](https://github.com/JamiLu/RME/releases/download/v1.7.0/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.7.0/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v1.7.0/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v1.7.0/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v1.7.0/rme.es5.min.js)
 
 NPM
 ---
@@ -42,6 +42,7 @@ import RME, {
     Router,
     EventPipe,
     Http,
+    Fetch,
     Cookie,
     Session,
     Storage,
@@ -64,13 +65,13 @@ Basics
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v1.6.2/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v1.7.0/rme.es5.min.js"></script>`
 
 __Or use NPM__
 
 `npm i rme.js`
 
-`import RME, { App, createApp, Component, bindState, useState, useValue, bindGetters, Key } from 'rme.js'`
+`import { App, createApp, Component, bindState, useState, useValue, bindGetters, Key } from 'rme.js'`
 
 Then simply copy paste code clips below to your js file and voilà. 
 
@@ -216,11 +217,12 @@ Component(bindState(FormExample), TitleHeader, Form);
 
 Now we can save some dummy data into the RME instance storage for a next component.
 ```javascript
-RME.storage('countryList', [
+const [getCountryList] = useValue([
     {country: 'Finland', capital: 'Helsinki'}, {country: 'Sweden', capital: 'Stockholm'}, {country: 'Norway', capital: 'Oslo'},
     {country: 'Iceland', capital: 'Reykjavik'}, {country: 'England', capital: 'London'}, {country: 'America', capital: 'Washington'}, 
-    {country: 'Mexico', capital: 'Mexico City'}, {country: 'Peru', capital: 'Lima'}, {country: 'Egypt', capital: 'Kairo'}, {country: 'China', capital: 'Beijing'},
-    {country: 'Japan', capital: 'Tokyo'}, {country: 'South Korea', capital: 'Seoul'}, {country: 'Malaysia', capital: 'Kuala Lumpur'}, {country: 'Namibia', capital: 'Windhoek'}, {country: 'South Africa', capital: 'Cape Town'}]);
+    {country: 'Mexico', capital: 'Mexico City'}, {country: 'Peru', capital: 'Lima'}, {country: 'Egypt', capital: 'Kairo'}, 
+    {country: 'China', capital: 'Beijing'},{country: 'Japan', capital: 'Tokyo'}, {country: 'South Korea', capital: 'Seoul'}, 
+    {country: 'Malaysia', capital: 'Kuala Lumpur'}, {country: 'Namibia', capital: 'Windhoek'}, {country: 'South Africa', capital: 'Cape Town'}]);
 ```
 
 The FilterExample component has an input field that is used to filter the data. The filtered data is then set into the state of the component. The `stateRef` is reference to the state of the stateful component. Default values are populated from the state of component. The default state is set using the `bindState` function with the initial state object as a second attribute.
@@ -231,7 +233,7 @@ const FilterExample = props => ({
         'input[type=text][placeholder=Type to Filter Country]': {
             onInput: event => 
                 useState(props, {
-                    rows: RME.storage('countryList')
+                    rows: getCountryList()
                         .filter(row => `${row.country}${row.capital}`.toLowerCase().search(event.target.value) > -1)
                 })
         },
@@ -251,7 +253,7 @@ const MyTable = props => ({
     }))
 });
 
-Component(bindState(FilterExample, { rows: RME.storage('countryList') }), MyTable);
+Component(bindState(FilterExample, { rows: getCountryList() }), MyTable);
 ```
 
 Classes & Functions
@@ -269,37 +271,36 @@ Classes & Functions
   - CSS(content, properties) **Creates a dynamic style component with content and optional properties if given.**
   - script(src, options) **Attach a script file to the dom header**
   - ready(callback) **Add a callback function to be run when the DOM tree is ready. Calling the ready twice will create two callback functions.**
-* RME
-  - component(object|function(){}) **Create and return created component on the callback**
-  - component("componentName", {param: 1, param: 2}) **Get and invoke the component**
-  - storage(key, val) **Store data in RME instance**
-  - storage(key) **Read data from RME instance storage**
 * App **_Handles default application_**
   - root(selector) **Selects a root element for an application to work in**
   - name(appName) **Gives an applicatian a name**
   - create({template}|Elem) **Creates and instantiates a specified application**
   - get(appName) **Returns a specified application instance if empty a default application will be returned.**
-  - component({ compName: props => {..}})(appName) **Create a statefull application component, _appName_ parameter is optional if not given the component is created for a default application**
   - setState(refName, () => {state}|{state}, update) **Set state according to application reference name, _FOR default app_**
   - getState(refName) **Get state according to application reference name, _FOR default app_**
   - mergeState(refName, () => {state}|{state}, update) **Merges state according to application reference name, _FOR default app_**
-  - clearState(refName, update) **Clear state according to application reference name, update is boolean if true application is re-rendered, _FOR default app_**
+  - clearState(props | refName, update) **Clear state according to application reference name, update is boolean if true application is re-rendered, _FOR default app_**
+  - isStateEmpty(props | stateRef) **Checks if the state is empty and returns true if it is**
 * AppInstance **_Handles appropriate application instance received from App.get(appName)_**
   - setState(refName, () => {state}|{state}, update) **Set state according to application reference name**
   - getState(refName) **Get state according to application reference name**
   - mergeState(refName, () => {state}|{state}, update) **Merges state according to application reference name**
-  - clearState(refName, update) **Clear state according to application reference name, update is boolean if true application is re-rendered**
-* Http
-  - get(url).then(success).catch(error)
-  - post()...
-  - put()...
-  - delete()...
-  - do(customObject).then(success).catch(error)
-  - fetch().get(url).then(success).then(response).catch(error)
-  - fetch().post().....
-  - fetch().put()...
-  - fetch().delete()....
-  - fetch().do(custom).then(success).then(response).catch(error)
+  - clearState(props | refName, update) **Clear state according to application reference name, update is boolean if true application is re-rendered**
+  - isStateEmpty(props | stateRef) **Checks if the state is empty and returns true if it is**
+* Http **Uses XMLHttpRequest object wrapped in the Promise if the browser supports it**
+  - get(url, contentType) **Get request, defaults to JSON**
+  - post(url, data, contentType) **Post request, defaults to JSON**
+  - put(url, data, contentType) **Put request, defaults to JSON**
+  - patch(url, data, contentType) **Patch request, defaults to JSON**
+  - delete(url, contentType) **Delete request, defaults to JSON**
+  - do(config) **Config object: {method: method, url: url, data: data, contentType: contentType, onProgress: function(event), onTimeout: function(event), headers: headersObject{"header": "value"} }**
+* Fetch **Uses the Fetch API of the browser**
+  - get(url, contentType) **Get request, defaults to JSON**
+  - post(url, body, contentType) **Post request, defaults to JSON**
+  - put(url, body, contentType) **Put request, defaults to JSON**
+  - patch(url, body, contentType) **Patch request, defaults to JSON**
+  - delete(url, contentType) **Delete request, defaults to JSON**
+  - do(config) **Config object: {url: url, method: method, body: body, contentType: contentType, init: init}**
 * Elem
   - constructor(type|html) **If type is string creates a new JavaScript element of that type _OR_ If type is JavaScript html object then only wraps that object inside of this Elem object**
   - render(elem, elem, elem|arrayOfElems|arrayOfElems, arrayOfElems, elem) **Renders the Elem instance objects that contain html data to insert into the HTML document tree. Can render multiple elements.**
@@ -318,7 +319,6 @@ Classes & Functions
   - isTemplate(object) **Method checks if the given object is an unresolved JSON template and returns true if it is an unresolved JSON template, otherwise false.**
   - isTag(tag) **Function checks if the given tag is the HTML5 tag and returns true if is otherwise false is returned.**
   - updateElemProps(elem, props) **Method will apply the properties given to the element. Old properties are overridden.**
-  - isFragment(child) **Method takes a parameter and checks if the parameter is type fragment. If the parameter is type fragment the method will return true otherwise false is returned.**
   - resolveToParent(template, parent) **Method takes a template and a parent element as parameter and it resolves the given template into the given parent.**
 * Tree
   - get(cssSelector) **Returns an Array of Elem objects or one Elem object**
@@ -366,7 +366,7 @@ Classes & Functions
   - clear()
 * Util
   - many utility methods that this Framework also uses such as.
-  - isEmpty(value) **Returns true if null | undefined | ""**
+  - isEmpty(value) **Returns true if null | undefined | "" | array.length === 0**
   - notEmpty(value) **Returns true if the value is not empty !Util.isEmpty**
   - getType(value) **Returns the type of the given value**
   - isType(value, type) **Checks if value is a given type and returns true false accordigly**

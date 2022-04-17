@@ -1,7 +1,6 @@
 /** RME BUILD FILE **/
 
 
-
 let App = (function() {
 
     class App {
@@ -167,18 +166,6 @@ let App = (function() {
             const app = AppManager.get(App.init().name);
             App.reset();
             return app;
-        }
-
-        /**
-         * Function creates a statefull component. The state of the component is stored in an application that this component is bound to.
-         * @param {object} component 
-         */
-        static component(component) {
-            const bindState = (appName) => {
-                let updater = Util.isEmpty(appName) ? () => (state) => App.getState(state) : () => (state) => App.get(appName).getState(state);
-                RMEComponentManager.addComponent(component, updater);
-            }
-            return bindState;
         }
 
         static init() {
@@ -1132,119 +1119,6 @@ class Browser {
 
 
 
-
-
-
-/**
- * Manages RME components
- */
-const RMEComponentManager = (function() {
-
-    class RMEComponentManager {
-        constructor() {
-            this.components = {};
-            this.componentGetters = {};
-        }
-
-        addComponent(component, props) {
-            if (Util.isFunction(component)) {
-                component = component.call();
-            }
-
-            Object.keys(component).forEach((p) => {
-                this.components[p] = {
-                    component: component[p], 
-                    update: Util.isFunction(props) ? props : undefined
-                };
-            });
-        }
-
-        getComponent(name, props) {
-            let comp = this.components[name];
-            if (!comp) {
-                throw new Error(`Cannot find a component: "${name}"`);
-            }
-            if (Util.notEmpty(props) && Util.isFunction(comp.update)) {
-                let stateRef = props.stateRef;
-                if (Util.isEmpty(props.stateRef))
-                    stateRef = name;
-                else if (props.stateRef.search(name) === -1)
-                    stateRef = `${name}${props.stateRef}`;
-
-                props["stateRef"] = stateRef;
-                const newProps = comp.update.call()(stateRef);
-                const nextProps = {...props, ...newProps}; // nextProps is created for the sake of shouldComponentUpdate
-                if (!nextProps.shouldComponentUpdate || nextProps.shouldComponentUpdate(nextProps) !== false) {
-                    props = this.extendProps(props, newProps);
-                }
-            }
-            if (Util.isEmpty(props))
-                props = {};
-
-            this.inflateGetterValues(name, props);
-
-            if (Util.notEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate))
-                props.onBeforeCreate.call(props, props);
-            
-            let ret = comp.component.call(props, props);
-            
-            if (Template.isTemplate(ret))
-                ret = Template.resolve(ret);
-            
-            if (Util.notEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate))
-                props.onAfterCreate.call(props, ret, props);
-            
-            if (Util.notEmpty(this.defaultApp) && Util.notEmpty(props.onAfterRender) && Util.isFunction(props.onAfterRender))
-                this.defaultApp.addAfterRefreshCallback(props.onAfterRender.bind(ret, ret, props));
-
-            return ret;
-        }
-
-        inflateGetterValues(component, props) {
-            const mapper = this.getGetters(component);
-            if (Util.notEmpty(mapper)) {
-                const p = Object.keys(mapper)
-                .reduce((prev, curr) => {
-                    prev[curr] = Util.isFunction(mapper[curr]) ? mapper[curr]() : mapper[curr];
-                    return prev;
-                }, {});
-
-                this.extendProps(props, p);
-            }
-        }
-
-        extendProps(props, newProps) {
-            if (Util.notEmpty(newProps)) {
-                Object.keys(newProps).forEach(key => props[key] = newProps[key]);
-            }
-            return props;
-        }
-
-        /**
-         * Function checks if the given components exists or not
-         * @param {string} name 
-         * @returns True if the component exists.
-         */
-        hasComponent(name) {
-            return Util.notEmpty(this.components[name.replace('component:', '')]);
-        }
-
-        bindGetters(component, getters) {
-            this.componentGetters[component] = getters;
-        }
-
-        getGetters(component) {
-            return this.componentGetters[component];
-        }
-    }
-
-    const manager = new RMEComponentManager();
-
-    return manager;
-
-})();
-
-
 let Cookie = (function() {
     /**
      * Cookie interface offers an easy way to get, set or remove cookies in application logic.
@@ -1358,6 +1232,7 @@ let Cookie = (function() {
 
 
 
+
 /**
  * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
  * instance might have not been created at the time when components are created so the queue will wait 
@@ -1428,15 +1303,20 @@ const Component = (function() {
         }
     }
 
+    const bindGetState = (component, appName) => {
+        const stateGetter = Util.isEmpty(appName) ? () => (state) => App.getState(state) : (state) => App.get(appName).getState(state);
+        RMEComponentManager.addComponent(component, stateGetter);
+    }
+
     const resolveComponent = component => {
         if (Util.isObject(component)) {
-            App.component({[component.name]: component.comp})(component.appName);
+            bindGetState({[component.name]: component.comp}, component.appName);
             resolveInitialState(component.initialState, component.name+component.stateRef, component.appName);
         } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
             RMEComponentManager.addComponent({[component.valueOf().name]: component});
         } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
             const comp = new component();
-            App.component({[component.valueOf().name]: comp.render})(comp.appName);
+            bindGetState({[component.valueOf().name]: comp.render}, comp.appName);
             let state = {};
             if (!Util.isEmpty(comp.onBeforeCreate))
                 state.onBeforeCreate = comp.onBeforeCreate;
@@ -1524,6 +1404,118 @@ const bindGetters = (function() {
 
 
 
+
+
+
+
+/**
+ * Manages RME components
+ */
+const RMEComponentManager = (function() {
+
+    class RMEComponentManager {
+        constructor() {
+            this.components = {};
+            this.componentGetters = {};
+        }
+
+        addComponent(component, props) {
+            if (Util.isFunction(component)) {
+                component = component.call();
+            }
+
+            Object.keys(component).forEach((p) => {
+                this.components[p] = {
+                    component: component[p], 
+                    update: Util.isFunction(props) ? props : undefined
+                };
+            });
+        }
+
+        getComponent(name, props) {
+            let comp = this.components[name];
+            if (!comp) {
+                throw new Error(`Cannot find a component: "${name}"`);
+            }
+            if (Util.notEmpty(props) && Util.isFunction(comp.update)) {
+                let stateRef = props.stateRef;
+                if (Util.isEmpty(props.stateRef))
+                    stateRef = name;
+                else if (props.stateRef.search(name) === -1)
+                    stateRef = `${name}${props.stateRef}`;
+
+                props["stateRef"] = stateRef;
+                const newProps = comp.update.call()(stateRef);
+                const nextProps = {...props, ...newProps}; // nextProps is created for the sake of shouldComponentUpdate
+                if (!nextProps.shouldComponentUpdate || nextProps.shouldComponentUpdate(nextProps) !== false) {
+                    props = this.extendProps(props, newProps);
+                }
+            }
+            if (Util.isEmpty(props))
+                props = {};
+
+            this.inflateGetterValues(name, props);
+
+            if (Util.notEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate))
+                props.onBeforeCreate.call(props, props);
+            
+            let ret = comp.component.call(props, props);
+            
+            if (Template.isTemplate(ret))
+                ret = Template.resolve(ret);
+            
+            if (Util.notEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate))
+                props.onAfterCreate.call(props, ret, props);
+            
+            if (Util.notEmpty(this.defaultApp) && Util.notEmpty(props.onAfterRender) && Util.isFunction(props.onAfterRender))
+                this.defaultApp.addAfterRefreshCallback(props.onAfterRender.bind(ret, ret, props));
+
+            return ret;
+        }
+
+        inflateGetterValues(component, props) {
+            const mapper = this.getGetters(component);
+            if (Util.notEmpty(mapper)) {
+                const p = Object.keys(mapper)
+                .reduce((prev, curr) => {
+                    prev[curr] = Util.isFunction(mapper[curr]) ? mapper[curr]() : mapper[curr];
+                    return prev;
+                }, {});
+
+                this.extendProps(props, p);
+            }
+        }
+
+        extendProps(props, newProps) {
+            if (Util.notEmpty(newProps)) {
+                Object.keys(newProps).forEach(key => props[key] = newProps[key]);
+            }
+            return props;
+        }
+
+        /**
+         * Function checks if the given components exists or not
+         * @param {string} name 
+         * @returns True if the component exists.
+         */
+        hasComponent(name) {
+            return Util.notEmpty(this.components[name.replace('component:', '')]);
+        }
+
+        bindGetters(component, getters) {
+            this.componentGetters[component] = getters;
+        }
+
+        getGetters(component) {
+            return this.componentGetters[component];
+        }
+    }
+
+    const manager = new RMEComponentManager();
+
+    return manager;
+
+})();
 
 
 
@@ -3740,104 +3732,144 @@ const EventPipe = (function() {
 
 
 
-/**
- * Before using this class you should also be familiar on how to use fetch since usage of this class
- * will be quite similar to fetch except predefined candy that is added on a class.
- *
- * The class is added some predefined candy over the JavaScript Fetch interface.
- * get|post|put|delete methods will automatically use JSON as a Content-Type
- * and request methods will be predefined also.
- *
- * FOR Fetch
- * A Config object supports following:
- *  {
- *      url: url,
- *      method: method,
- *      contentType: contentType,
- *      init: init
- *  }
- *
- *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
- *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
- *
- *  If a total custom request is desired you should use a method do({}) e.g.
- *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
- */
-class HttpFetchRequest {
-    constructor() {}
+const Fetch = (function() {
     /**
-     * Does Fetch GET request. Content-Type JSON is used by default.
-     * @param {stirng} url *Required
-     * @param {*} init 
-     */
-    get(url, init) {
-        if(!init) init = {};
-        init.method = "GET";
-        return this.do({url: url, init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does Fetch POST request. Content-Type JSON is used by default.
-     * @param {string} url *Required
-     * @param {*} body 
-     * @param {*} init 
-     */
-    post(url, body, init) {
-        if(!init) init = {};
-        init.method = "POST";
-        init.body = body;
-        return this.do({url: url, init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does Fetch PUT request. Content-Type JSON is used by default.
-     * @param {string} url *Required
-     * @param {*} body 
-     * @param {*} init 
-     */
-    put(url, body, init) {
-        if(!init) init = {};
-        init.method = "PUT";
-        init.body = body;
-        return this.do({url: url, init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does Fetch DELETE request. Content-Type JSON is used by default.
-     * @param {string} url 
-     * @param {*} init 
-     */
-    delete(url, init) {
-        if(!init) init = {};
-        init.method = "DELETE";
-        return this.do({url: url,  init: init, contentType: Http.JSON});
-    }
-    /**
-     * Does any Fetch request a given config object defines.
-     * 
-     * Config object can contain parameters:
-     * {
+     * Before using this class you should also be familiar on how to use fetch since usage of this class
+     * will be quite similar to fetch except predefined candy that is added on a class.
+     *
+     * The class is added some predefined candy over the JavaScript Fetch interface.
+     * get|post|put|delete methods will automatically use JSON as a Content-Type
+     * and request methods will be predefined also.
+     *
+     * FOR Fetch
+     * A Config object supports following:
+     *  {
      *      url: url,
      *      method: method,
      *      contentType: contentType,
      *      init: init
      *  }
-     * @param {object} config 
+     *
+     *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
+     *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+     *
+     *  If a total custom request is desired you should use a method do({}) e.g.
+     *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
      */
-    do(config) {
-        if(!config.init) config.init = {};
-        if(config.contentType) {
-            if(!config.init.headers)
-                config.init.headers = new Headers({});
-            if(!config.init.headers.has("Content-Type"))
-                config.init.headers.set("Content-Type", config.contentType);
+    class Fetch {
+        constructor() {}
+
+        /**
+         * Does Fetch GET request. Content-Type JSON is used by default.
+         * @param {string} url *Required
+         * @param {string} contentType
+         */
+        get(url, contentType) {
+            return this.do({url: url, init: { method: 'GET' }, contentType: contentType || Http.JSON});
         }
-        if(config.method) {
-            config.init.method = config.method;
+
+        /**
+         * Does Fetch POST request. Content-Type JSON is used by default.
+         * @param {string} url *Required
+         * @param {*} body 
+         * @param {string} contentType 
+         */
+        post(url, body, contentType) {
+            return this.do({url: url, body: body, init: { method: 'POST' }, contentType: contentType || Http.JSON});
         }
-        return fetch(config.url, config.init);
+
+        /**
+         * Does Fetch PUT request. Content-Type JSON is used by default.
+         * @param {string} url *Required
+         * @param {*} body 
+         * @param {string} contentType 
+         */
+        put(url, body, contentType) {
+            return this.do({url: url, body: body, init: { method: 'PUT' }, contentType: contentType || Http.JSON});
+        }
+
+        /**
+         * Does Fetch DELETE request. Content-Type JSON is used by default.
+         * @param {string} url 
+         * @param {string} contentType 
+         */
+        delete(url, contentType) {
+            return this.do({url: url, init: { method: 'DELETE' }, contentType: contentType || Http.JSON});
+        }
+
+        /**
+         * Does Fetch PATCH request. Content-Type JSON is used by default.
+         * @param {string} url 
+         * @param {*} body
+         * @param {string} contentType
+         */
+        patch(url, body, contentType) {
+            return this.do({url, url, body: body, init: { method: 'PATCH' }, contentType: contentType || Http.JSON});
+        }
+
+        /**
+         * Does any Fetch request a given config object defines.
+         * 
+         * Config object can contain parameters:
+         * {
+         *      url: url,
+         *      method: method,
+         *      body: body,
+         *      contentType: contentType,
+         *      init: init
+         *  }
+         * @param {object} config 
+         */
+        do(config) {
+            if (Util.isEmpty(config) || !Util.isObject(config) || Util.isEmpty(config.url)) {
+                throw new Error(`Error in fetch config object ${JSON.stringify(config)}, url must be set`);
+            }
+            if (!config.init) config.init = {};
+            if (config.contentType) {
+                if (!config.init.headers)
+                    config.init.headers = new Headers({});
+                if (!config.init.headers.has('Content-Type'))
+                    config.init.headers.set('Content-Type', config.contentType);
+                
+            }
+            if ((config.body || config.init.body) && isContentType(config.contentType, Http.JSON)) {
+                config.init.body = JSON.stringify(config.body || config.init.body);
+            } else if (config.body) {
+                config.init.body = config.body;
+            }
+            if (config.method) {
+                config.init.method = config.method;
+            }
+            return fetch(config.url, config.init)
+                .then(async (response) => {
+                    if (!response.ok) {
+                        throw Error(`Error in requesting url: ${config.url}, method: ${config.init.method}`);
+                    }
+                    if (isContentType(config.contentType, Http.JSON)) {
+                        const res = await response.text();
+                        return res.length > 0 ? JSON.parse(res) : res; // Avoid response.json() null body failure
+                    }
+                    if (isContentType(config.contentType, Http.TEXT_PLAIN)) {
+                        return response.text();
+                    }
+                    if (isContentType(config.contentType, Http.FORM_DATA)) {
+                        return response.formData();
+                    }
+                    return response;
+                });
+        }
     }
-}
+
+    const isContentType = (contentTypeA, contentTypeB) => {
+        return Util.notEmpty(contentTypeA) && contentTypeA.search(contentTypeB) > -1;
+    }
+
+    return new Fetch();
+
+})();
 
 
-let Http = (function() {
+const Http = (function() {
     /**
      * FOR XmlHttpRequest
      * A config object supports following. More features could be added.
@@ -3849,7 +3881,6 @@ let Http = (function() {
      *    onProgress: function(event),
      *    onTimeout: function(event),
      *    headers: headersObject{"header": "value"},
-     *    useFetch: true|false **determines that is fetch used or not.
      *  }
      * 
      * If contentType is not defined, application/json is used, if set to null, default is used, otherwise used defined is used.
@@ -3861,9 +3892,7 @@ let Http = (function() {
     class Http {
         constructor(config) {
             config.contentType = config.contentType === undefined ? Http.JSON : config.contentType;
-            if(config.useFetch) {
-                this.self = new HttpFetchRequest();
-            } else if(window.Promise) {
+            if (window.Promise) {
                 this.self = new HttpPromiseAjax(config).instance();
             } else {
                 this.self = new HttpAjax(config);
@@ -3880,7 +3909,7 @@ let Http = (function() {
          * @param {string} requestContentType 
          */
         static get(url, requestContentType) {
-            return new Http({method: "GET", url: url, data: undefined, contentType: requestContentType}).instance();
+            return new Http({method: 'GET', url: url, data: undefined, contentType: requestContentType}).instance();
         }
 
         /**
@@ -3890,7 +3919,7 @@ let Http = (function() {
          * @param {string} requestContentType 
          */
         static post(url, data, requestContentType) {
-            return new Http({method: "POST", url: url, data: data, contentType: requestContentType}).instance();
+            return new Http({method: 'POST', url: url, data: data, contentType: requestContentType}).instance();
         }
 
         /**
@@ -3900,7 +3929,7 @@ let Http = (function() {
          * @param {string} requestContentType 
          */
         static put(url, data, requestContentType) {
-            return new Http({method: "PUT", url: url, data: data, contentType: requestContentType}).instance();
+            return new Http({method: 'PUT', url: url, data: data, contentType: requestContentType}).instance();
         }
 
         /**
@@ -3909,7 +3938,17 @@ let Http = (function() {
          * @param {*} requestContentType 
          */
         static delete(url, requestContentType) {
-            return new Http({method: "DELETE", url: url, data: undefined, contentType: requestContentType}).instance();
+            return new Http({method: 'DELETE', url: url, data: undefined, contentType: requestContentType}).instance();
+        }
+
+        /**
+         * Do PATH XMLHttpRequest. If a content type is not specified JSON will be default. Promise will be used if available.
+         * @param {string} url *Required
+         * @param {*} data
+         * @param {*} requestContentType 
+         */
+        static patch(url, data, requestContentType) {
+            return new Http({method: "PATCH", url: url, data: data, contentType: requestContentType}).instance();
         }
 
         /**
@@ -3931,40 +3970,12 @@ let Http = (function() {
         static do(config) {
             return new Http(config).instance();
         }
-
-        /**
-         * Uses Fetch interface to make a request to server.
-         * 
-         * Before using fetch you should also be familiar on how to use fetch since usage of this function
-         * will be quite similar to fetch except predefined candy that is added.
-         *
-         * The fetch interface adds some predefined candy over the JavaScript Fetch interface.
-         * get|post|put|delete methods will automatically use JSON as a Content-Type
-         * and request methods will be predefined also.
-         *
-         * FOR Fetch
-         * A Config object supports following:
-         *  {
-         *      url: url,
-         *      method: method,
-         *      contentType: contentType,
-         *      init: init
-         *  }
-         *
-         *  All methods also take init object as an alternative parameter. Init object is the same object that fetch uses.
-         *  For more information about init Google JavaScript Fetch or go to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-         *
-         *  If a total custom request is desired you should use a method do({}) e.g.
-         *  do({url: url, init: init}).then((resp) => resp.json()).then((resp) => console.log(resp)).catch((error) => console.log(error));
-         */
-        static fetch() {
-            return new Http({useFetch: true}).instance();
-        }
     }
+
     /**
-     * Content-Type application/json;charset=UTF-8
+     * Content-Type application/json
      */
-    Http.JSON = "application/json;charset=UTF-8";
+    Http.JSON = "application/json";
     /**
      * Content-Type multipart/form-data
      */
@@ -3975,17 +3986,18 @@ let Http = (function() {
     Http.TEXT_PLAIN = "text/plain";
 
     /**
-     * Old Fashion XMLHttpRequest made into the Promise pattern.
+     * The XMLHttpRequest made into the Promise pattern.
      */
     class HttpAjax {
         constructor(config) {
-            this.progressHandler = config.onProgress ? config.onProgress : function(event) {};
+            this.config = config;
             this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
             this.xhr = new XMLHttpRequest();
             this.xhr.open(config.method, config.url);
-            if(config.contentType)
-                this.xhr.setRequestHeader("Content-Type", config.contentType);
-            if(config.headers)
+
+            if (config.contentType)
+                this.xhr.setRequestHeader('Content-Type', config.contentType);
+            if (config.headers)
                 setXhrHeaders(this.xhr, config.headers);
         }
         then(successHandler, errorHandler) {
@@ -3993,18 +4005,19 @@ let Http = (function() {
                 this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
                 isResponseOK(this.xhr.status) ? successHandler(resolveResponse(this.xhr.response), this.xhr) : errorHandler(this.xhr)
             };
-            this.xhr.onprogress = (event) => {
-                if(this.progressHandler)
-                    this.progressHandler(event);
-            };
-            if(this.xhr.ontimeout && config.onTimeout) {
+            if (this.config.onProgress) {
+                this.xhr.onprogress = (event) => {
+                    this.config.onProgress(event);
+                };
+            }
+            if (this.config.onTimeout) {
                 this.xhr.ontimeout = (event) => {
-                    config.onTimeout(event);
+                    this.config.onTimeout(event);
                 }
             }
             this.xhr.onerror = () => {
                 this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
-                if(errorHandler)
+                if (errorHandler)
                     errorHandler(this.xhr);
             };
             this.data ? this.xhr.send(this.data) : this.xhr.send();
@@ -4012,8 +4025,8 @@ let Http = (function() {
         }
         catch(errorHandler) {
             this.xhr.onerror = () => {
-                this.xhr.responseJSON = tryParseJSON(this.xhr.responrenderseText);
-                if(errorHandler)
+                this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
+                if (errorHandler)
                     errorHandler(this.xhr);
             }
         }
@@ -4024,32 +4037,8 @@ let Http = (function() {
      */
     class HttpPromiseAjax {
         constructor(config) {
-            this.data = isContentTypeJson(config.contentType) ? JSON.stringify(config.data) : config.data;
             this.promise = new Promise((resolve, reject) => {
-                var request = new XMLHttpRequest();
-                request.open(config.method, config.url);
-                if(config.contentType)
-                    request.setRequestHeader("Content-Type", config.contentType);
-                if(config.headers)
-                    setXhrHeaders(request, config.headers);
-                request.onload = () => {
-                    request.responseJSON = tryParseJSON(request.responseText);
-                    isResponseOK(request.status) ? resolve(resolveResponse(request.response)) : reject(request);
-                };
-                if(request.ontimeout && config.onTimeout) {
-                    request.ontimeout = (event) => {
-                        config.onTimeout(event);
-                    }
-                }
-                request.onprogress = (event) => {
-                    if(config.onProgress)
-                        config.onProgress(event);
-                }
-                request.onerror = () => {
-                    request.responseJSON = tryParseJSON(request.responseText);
-                    reject(request)
-                };
-                this.data ? request.send(this.data) : request.send();
+                new HttpAjax(config).then((response) => resolve(response), (error) => reject(error));
             });
         }
         instance() {
@@ -4058,32 +4047,20 @@ let Http = (function() {
     }
 
     const resolveResponse = (response) => {
-        let resp = tryParseJSON(response);
-        if(Util.isEmpty(resp))
-            resp = response;
-        return resp;
+        const resp = tryParseJSON(response);
+        return Util.notEmpty(resp) ? resp : response;
     }
     
     const setXhrHeaders = (xhr, headers) => {
-        for(let header in headers) {
-            if(headers.hasOwnProperty(header))
-                xhr.setRequestHeader(header, headers[header]);
-        }
+        Object.keys(headers).forEach(header => xhr.setRequestHeader(header, headers[header]));
     }
     
     const isResponseOK = (status) => {
-        let okResponses = [200, 201, 202, 203, 204, 205, 206, 207, 208, 226];
-        let i = 0;
-        while(i < okResponses.length) {
-            if(okResponses[i] === status)
-                return true;
-            i++;
-        }
-        return false;
+        return Boolean([200, 201, 202, 203, 204, 205, 206, 207, 208, 226].find(num => num === status));
     }
     
     const isContentTypeJson = (contentType) => {
-        return contentType === Http.JSON;
+        return Http.JSON.search(contentType.toLowerCase()) > -1 || contentType.toLowerCase().search(Http.JSON) > -1;
     }
     
     const tryParseJSON = (text) => {
@@ -4093,7 +4070,10 @@ let Http = (function() {
     }
 
     return Http;
+
 }());
+
+
 
 
 
@@ -4511,6 +4491,120 @@ let Messages = (function() {
         setApp: Messages.setApp
     };
 }());
+
+
+/**
+ * The configure function will configure given Components. Advantage of this function is that the Compoments can be given in 
+ * any order and they will be recognized automatically.
+ * 
+ * Example use case would be to invoke configure(App.get(), Router, Messages);
+ * 
+ * This function can be conbined with a createApp('#app', AppComponent) function as follows:
+ * configure(createApp('#app', AppComponent), Router, Messages); This is probably the shortest way to 
+ * create the RME application.
+ * @param {*} params comma separated list of components
+ */
+const configure = (function() {
+
+    return (...params) => {
+        let config = {};
+        params.forEach(param => {
+            if (param.routes) {
+                config = {
+                    ...config,
+                    router: param
+                }
+            } else if (param.load) {
+                config = {
+                    ...config,
+                    messages: param
+                }
+            } else if (param.name) {
+                config = {
+                    ...config,
+                    app: param
+                }
+            } 
+        });
+
+        if (Util.notEmpty(config.router))
+            config.router.setApp(config.app);
+
+        if (Util.notEmpty(config.messages))
+            config.messages.setApp(config.app);
+
+        if (Util.notEmpty(config.app))
+            config.app.setRouter(config.router);
+    }
+
+})();
+
+
+/**
+ * Adds a script file on runtime into the head of the current html document where the method is called on.
+ * Source is required options can be omitted.
+ * @param {String} source URL or file name. *Requied
+ * @param {object} options Optional settings object.
+ * 
+ * Option settings:
+ * -------
+ *  @param {String} id 
+ *  @param {String} type 
+ *  @param {String} text Content of the script element if any.
+ *  @param {boolean} defer If true script is executed when page has finished parsing.
+ *  @param {*} crossOrigin 
+ *  @param {String} charset 
+ *  @param {boolean} async If true script is executed asynchronously when available.
+ */
+const script = (function() {
+
+    const addScript = (elem) => {
+        const scripts = Tree.getHead().getByTag('script');
+        if (scripts.length > 0) {
+            const lastScript = scripts[scripts.length -1];
+            lastScript.after(elem);
+        } else {
+            Tree.getHead().append(elem);
+        }
+    }
+
+    return (source, options) => {
+        if (Util.notEmpty(source)) {
+            addScript(Template.resolve({
+                script: {
+                    src: source,
+                    ...options
+                }
+            }));
+        }
+    }
+})();
+
+
+/**
+ * The function adds a callback function into the callback queue. The queue is invoked in the
+ * function definition order. The queue will be run when the DOM tree is ready and
+ * then the it is cleared.
+ */
+const ready = (function() {
+
+    const callbacks = [];
+
+    document.addEventListener("readystatechange", () => {
+        if(document.readyState === "complete") {
+            callbacks.forEach(callback => callback());
+            callbacks.length = 0;
+        }
+    });
+
+    return (callback) => {
+        callbacks.push(callback);
+    }
+
+})();
+
+
+
 
 
 
@@ -4974,185 +5068,38 @@ let Router = (function() {
 
 
 /**
- * The configure function will configure given Components. Advantage of this function is that the Compoments can be given in 
- * any order and they will be recognized automatically.
- * 
- * Example use case would be to invoke configure(App.get(), Router, Messages);
- * 
- * This function can be conbined with a createApp('#app', AppComponent) function as follows:
- * configure(createApp('#app', AppComponent), Router, Messages); This is probably the shortest way to 
- * create the RME application.
- * @param {*} params comma separated list of components
+ * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
  */
-const configure = (function() {
-
-    return (...params) => {
-        let config = {};
-        params.forEach(param => {
-            if (param.routes) {
-                config = {
-                    ...config,
-                    router: param
-                }
-            } else if (param.load) {
-                config = {
-                    ...config,
-                    messages: param
-                }
-            } else if (param.name) {
-                config = {
-                    ...config,
-                    app: param
-                }
-            } 
-        });
-
-        if (Util.notEmpty(config.router))
-            config.router.setApp(config.app);
-
-        if (Util.notEmpty(config.messages))
-            config.messages.setApp(config.app);
-
-        if (Util.notEmpty(config.app))
-            config.app.setRouter(config.router);
-    }
-
-})();
-
-
-/**
- * Adds a script file on runtime into the head of the current html document where the method is called on.
- * Source is required options can be omitted.
- * @param {String} source URL or file name. *Requied
- * @param {object} options Optional settings object.
- * 
- * Option settings:
- * -------
- *  @param {String} id 
- *  @param {String} type 
- *  @param {String} text Content of the script element if any.
- *  @param {boolean} defer If true script is executed when page has finished parsing.
- *  @param {*} crossOrigin 
- *  @param {String} charset 
- *  @param {boolean} async If true script is executed asynchronously when available.
- */
-const script = (function() {
-
-    const addScript = (elem) => {
-        const scripts = Tree.getHead().getByTag('script');
-        if (scripts.length > 0) {
-            const lastScript = scripts[scripts.length -1];
-            lastScript.after(elem);
-        } else {
-            Tree.getHead().append(elem);
-        }
-    }
-
-    return (source, options) => {
-        if (Util.notEmpty(source)) {
-            addScript(Template.resolve({
-                script: {
-                    src: source,
-                    ...options
-                }
-            }));
-        }
-    }
-})();
-
-
-/**
- * The function adds a callback function into the callback queue. The queue is invoked in the
- * function definition order. The queue will be run when the DOM tree is ready and
- * then the it is cleared.
- */
-const ready = (function() {
-
-    const callbacks = [];
-
-    document.addEventListener("readystatechange", () => {
-        if(document.readyState === "complete") {
-            callbacks.forEach(callback => callback());
-            callbacks.length = 0;
-        }
-    });
-
-    return (callback) => {
-        callbacks.push(callback);
-    }
-
-})();
-
-
-
-
-
-
-/**
- * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create
- * RESTfull webpages with ease and speed.
- * 
- * This library is free to use under the MIT License.
- */
-const RME = (function() {
-
-    class RMEStorage {
-        constructor() {
-            this.rmeState = {};
-        }
-
-        setRmeStateProp(key, value) {
-            this.rmeState[key] = value;
-        }
-
-        getRmeStateProp(key) {
-            return this.rmeState[key];
-        }
-
-    }
-
-    const rmeStorage = new RMEStorage();
-
+class Storage {
     /**
-     * This function is not the recommended way to use components and is for legacy support
-     * and will be removed in later releases. The recommended way to use components is the 
-     * Component function.
-     * 
-     * The function creates or retrieves a component. 
-     * If the first parameter is a string the function will try to get the component from the 
-     * component storage. Otherwise the function will set the component in the component storage.
-     * @param {*} component function, object or string.
-     * @param {Object} props 
+     * Save data into the local storage. 
+     * @param {string} key
+     * @param {*} value
      */
-    const component = (component, props) => {
-        if (component && (Util.isFunction(component) || Util.isObject(component)))
-            RMEComponentManager.addComponent(component, props);
-        else if (component && Util.isString(component))
-            return RMEComponentManager.getComponent(component, props);
+    static set(key, value) {
+        localStorage.setItem(key, value);
     }
-
     /**
-     * Saves data to or get data from the RME instance storage.
-     * If key and value parameters are not empty then this method will try to save the give value by the given key
-     * into to the RME instance storage.
-     * If key is not empty and value is empty then this method will try to get data from the RME instance storage
-     * by the given key.
-     * @param {String} key 
-     * @param {Object} value 
+     * Get the saved data from the local storage.
+     * @param {string} key
      */
-    const storage = (key, value) => {
-        if (Util.notEmpty(key) && Util.notEmpty(value))
-            rmeStorage.setRmeStateProp(key, value);
-        else if (Util.notEmpty(key) && Util.isEmpty(value))
-            return rmeStorage.getRmeStateProp(key);
+    static get(key) {
+        return localStorage.getItem(key);
     }
-
-    return {
-        component,
-        storage,
+    /**
+     * Remove data from the local storage.
+     * @param {string} key
+     */
+    static remove(key) {
+        localStorage.removeItem(key);
     }
-}());
-
+    /**
+     * Clears the local storage.
+     */
+    static clear() {
+        localStorage.clear();
+    }
+}
 
 /**
  * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
@@ -5188,40 +5135,6 @@ class Session {
     }
 }
 
-
-/**
- * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
- */
-class Storage {
-    /**
-     * Save data into the local storage. 
-     * @param {string} key
-     * @param {*} value
-     */
-    static set(key, value) {
-        localStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the local storage.
-     * @param {string} key
-     */
-    static get(key) {
-        return localStorage.getItem(key);
-    }
-    /**
-     * Remove data from the local storage.
-     * @param {string} key
-     */
-    static remove(key) {
-        localStorage.removeItem(key);
-    }
-    /**
-     * Clears the local storage.
-     */
-    static clear() {
-        localStorage.clear();
-    }
-}
 
 
 const RMETemplateFragmentHelper = (function() {
@@ -5281,178 +5194,6 @@ const RMETemplateFragmentHelper = (function() {
 }());
 
 
-
-/**
- * General Utility methods.
- */
-class Util {
-    /**
-     * Checks is a given value empty.
-     * @param {*} value
-     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
-     */
-    static isEmpty(value) {
-        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
-    }
-
-    /**
-     * Checks is the given value not empty. This function is a negation to the Util.isEmpty function.
-     * @param {*} value 
-     * @returns True if the value is not empty otherwise false.
-     */
-    static notEmpty(value) {
-        return !Util.isEmpty(value)
-    }
-
-    /**
-     * Get the type of the given value.
-     * @param {*} value
-     * @returns The type of the given value.
-     */
-    static getType(value) {
-        return typeof value;
-    }
-
-    /**
-     * Checks is a given value is a given type.
-     * @param {*} value
-     * @param {string} type
-     * @returns True if the given value is the given type otherwise false.
-     */
-    static isType(value, type) {
-        return (Util.getType(value) === type);
-    }
-
-    /**
-     * Checks is a given parameter a function.
-     * @param {*} func 
-     * @returns True if the given parameter is fuction otherwise false.
-     */
-    static isFunction(func) {
-        return Util.isType(func, "function");
-    }
-
-    /**
-     * Checks is a given parameter a boolean.
-     * @param {*} boolean
-     * @returns True if the given parameter is boolean otherwise false.
-     */
-    static isBoolean(boolean) {
-        return Util.isType(boolean, "boolean");
-    }
-
-    /**
-     * Checks is a given parameter a string.
-     * @param {*} string
-     * @returns True if the given parameter is string otherwise false.
-     */
-    static isString(string) {
-        return Util.isType(string, "string");
-    }
-
-    /**
-     * Checks is a given parameter a number.
-     * @param {*} number
-     * @returns True if the given parameter is number otherwise false.
-     */
-    static isNumber(number) {
-        return Util.isType(number, "number");
-    }
-
-    /**
-     * Checks is a given parameter a symbol.
-     * @param {*} symbol
-     * @returns True if the given parameter is symbol otherwise false.
-     */
-    static isSymbol(symbol) {
-        return Util.isType(symbol, "symbol");
-    }
-
-    /**
-     * Checks is a given parameter a object.
-     * @param {*} object
-     * @returns True if the given parameter is object otherwise false.
-     */
-    static isObject(object) {
-        return Util.isType(object, "object");
-    }
-
-    /**
-     * Checks is a given parameter an array.
-     * @param {*} array
-     * @returns True if the given parameter is array otherwise false.
-     */
-    static isArray(array) {
-        return Array.isArray(array);
-    }
-
-    /**
-     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The timeout object.
-     */
-    static setTimeout(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setTimeout(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes a timeout that was created by setTimeout method.
-     * @param {object} timeoutObject
-     */
-    static clearTimeout(timeoutObject) {
-        window.clearTimeout(timeoutObject);
-    }
-
-    /**
-     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The interval object.
-     */
-    static setInterval(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setInterval(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes an interval that was created by setInterval method.
-     */
-    static clearInterval(intervalObject) {
-        window.clearInterval(intervalObject);
-    }
-
-    /**
-     * Encodes a string to Base64.
-     * @param {string} string
-     * @returns The base64 encoded string.
-     */
-    static encodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.btoa(string);
-    }
-
-    /**
-     * Decodes a base 64 encoded string.
-     * @param {string} string
-     * @returns The base64 decoded string.
-     */
-    static decodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.atob(string);
-    }
-}
 
 
 let Template = (function() {
@@ -5938,20 +5679,6 @@ let Template = (function() {
         }
 
         /**
-         * @deprecated
-         * Will be removed in next releases
-         * 
-         * Method takes a parameter and checks if the parameter is type fragment. 
-         * If the parameter is type fragment the method will return true
-         * otherwise false is returned.
-         * @param {*} child 
-         * @returns True if the parameter is type fragment otherwise false is returned.
-         */
-        static isFragment(child) {
-            return RMETemplateFragmentHelper.isFragment(child);
-        }
-
-        /**
          * Method will apply the properties given to the element. Old properties are overridden.
          * @param {object} elem 
          * @param {object} props 
@@ -6182,11 +5909,9 @@ let Template = (function() {
         isTemplate: Template.isTemplate,
         isTag: Template.isTag,
         updateElemProps: Template.updateElemProps,
-        isFragment: Template.isFragment,
         resolveToParent: Template.resolveToParent
     }
 }());
-
 
 
 /**
@@ -6361,6 +6086,179 @@ class Tree {
      */
     static getForms() {
         return Elem.wrapElems(document.forms);
+    }
+}
+
+
+/**
+ * General Utility methods.
+ */
+class Util {
+    /**
+     * Checks is a given value empty.
+     * @param {*} value
+     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
+     */
+    static isEmpty(value) {
+        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
+    }
+
+    /**
+     * Checks is the given value not empty. This function is a negation to the Util.isEmpty function.
+     * @param {*} value 
+     * @returns True if the value is not empty otherwise false.
+     */
+    static notEmpty(value) {
+        return !Util.isEmpty(value)
+    }
+
+    /**
+     * Get the type of the given value.
+     * @param {*} value
+     * @returns The type of the given value.
+     */
+    static getType(value) {
+        return typeof value;
+    }
+
+    /**
+     * Checks is a given value is a given type.
+     * @param {*} value
+     * @param {string} type
+     * @returns True if the given value is the given type otherwise false.
+     */
+    static isType(value, type) {
+        return (Util.getType(value) === type);
+    }
+
+    /**
+     * Checks is a given parameter a function.
+     * @param {*} func 
+     * @returns True if the given parameter is fuction otherwise false.
+     */
+    static isFunction(func) {
+        return Util.isType(func, "function");
+    }
+
+    /**
+     * Checks is a given parameter a boolean.
+     * @param {*} boolean
+     * @returns True if the given parameter is boolean otherwise false.
+     */
+    static isBoolean(boolean) {
+        return Util.isType(boolean, "boolean");
+    }
+
+    /**
+     * Checks is a given parameter a string.
+     * @param {*} string
+     * @returns True if the given parameter is string otherwise false.
+     */
+    static isString(string) {
+        return Util.isType(string, "string");
+    }
+
+    /**
+     * Checks is a given parameter a number.
+     * @param {*} number
+     * @returns True if the given parameter is number otherwise false.
+     */
+    static isNumber(number) {
+        return Util.isType(number, "number");
+    }
+
+    /**
+     * Checks is a given parameter a symbol.
+     * @param {*} symbol
+     * @returns True if the given parameter is symbol otherwise false.
+     */
+    static isSymbol(symbol) {
+        return Util.isType(symbol, "symbol");
+    }
+
+    /**
+     * Checks is a given parameter a object.
+     * @param {*} object
+     * @returns True if the given parameter is object otherwise false.
+     */
+    static isObject(object) {
+        return Util.isType(object, "object");
+    }
+
+    /**
+     * Checks is a given parameter an array.
+     * @param {*} array
+     * @returns True if the given parameter is array otherwise false.
+     */
+    static isArray(array) {
+        return Array.isArray(array);
+    }
+
+    /**
+     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The timeout object.
+     */
+    static setTimeout(callback, milliseconds, ...params) {
+        if(!Util.isFunction(callback)) {
+            throw "callback not fuction";
+        }
+        return window.setTimeout(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes a timeout that was created by setTimeout method.
+     * @param {object} timeoutObject
+     */
+    static clearTimeout(timeoutObject) {
+        window.clearTimeout(timeoutObject);
+    }
+
+    /**
+     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The interval object.
+     */
+    static setInterval(callback, milliseconds, ...params) {
+        if(!Util.isFunction(callback)) {
+            throw "callback not fuction";
+        }
+        return window.setInterval(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes an interval that was created by setInterval method.
+     */
+    static clearInterval(intervalObject) {
+        window.clearInterval(intervalObject);
+    }
+
+    /**
+     * Encodes a string to Base64.
+     * @param {string} string
+     * @returns The base64 encoded string.
+     */
+    static encodeBase64String(string) {
+        if(!Util.isString(string)) {
+            throw "the given parameter is not a string: " +string;
+        }
+        return window.btoa(string);
+    }
+
+    /**
+     * Decodes a base 64 encoded string.
+     * @param {string} string
+     * @returns The base64 decoded string.
+     */
+    static decodeBase64String(string) {
+        if(!Util.isString(string)) {
+            throw "the given parameter is not a string: " +string;
+        }
+        return window.atob(string);
     }
 }
 
