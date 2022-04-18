@@ -1323,6 +1323,178 @@ var Browser = /*#__PURE__*/function () {
   return Browser;
 }();
 /**
+ * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
+ * instance might have not been created at the time when components are created so the queue will wait 
+ * until the application instance is created and then sets the state for the components in the queue.
+ */
+
+
+var AppSetInitialStateJob = function () {
+  var InitStateJob = /*#__PURE__*/function () {
+    function InitStateJob() {
+      _classCallCheck(this, InitStateJob);
+
+      this.updateJob;
+      this.updateJobMap = {};
+      this.appNameList = [];
+    }
+
+    _createClass(InitStateJob, [{
+      key: "resolveUpdateJobs",
+      value: function resolveUpdateJobs() {
+        var _this5 = this;
+
+        if (!this.updateJob) this.updateJob = Util.setInterval(function () {
+          var appName = _this5.getAppNameIfPresent();
+
+          if (!Util.isEmpty(appName)) {
+            _this5.updateJobMap[appName].forEach(function (job) {
+              return job();
+            });
+
+            _this5.updateJobMap[appName] = [];
+            _this5.appNameList = _this5.appNameList.filter(function (app) {
+              return app !== appName;
+            });
+
+            if (_this5.appNameList.length === 0) {
+              Util.clearInterval(_this5.updateJob);
+              _this5.updateJob = undefined;
+            }
+          }
+        });
+      }
+    }, {
+      key: "getAppNameIfPresent",
+      value: function getAppNameIfPresent() {
+        return this.appNameList.find(function (appName) {
+          return App.get(appName === "undefined" ? undefined : appName);
+        });
+      }
+    }, {
+      key: "addToQueue",
+      value: function addToQueue(appName, job) {
+        var updateQueue = this.updateJobMap[appName] || [];
+        updateQueue.push(job);
+        this.updateJobMap[appName] = updateQueue;
+        this.appNameList = Object.keys(this.updateJobMap);
+        this.resolveUpdateJobs();
+      }
+    }]);
+
+    return InitStateJob;
+  }();
+
+  var initStateJob = new InitStateJob();
+  return {
+    addToQueue: initStateJob.addToQueue.bind(initStateJob),
+    resolveUpdateJobs: initStateJob.resolveUpdateJobs.bind(initStateJob)
+  };
+}();
+/**
+ * Component resolves comma separated list of components that may be function or class.
+ * Function component example: const Comp = props => ({h1: 'Hello'});
+ * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
+ * Resolve components Component(Comp, Comp2);
+ * @param {function} components commma separated list of components
+ */
+
+
+var Component = function () {
+  var resolveInitialState = function resolveInitialState(initialState, stateRef, appName) {
+    if (!Util.isEmpty(App.get(appName))) {
+      App.get(appName).setState(stateRef, initialState, false);
+    } else {
+      AppSetInitialStateJob.addToQueue(appName, function () {
+        return App.get(appName).setState(stateRef, initialState);
+      });
+    }
+  };
+
+  var resolveComponent = function resolveComponent(component) {
+    if (Util.isObject(component)) {
+      App.component(_defineProperty({}, component.name, component.comp))(component.appName);
+      resolveInitialState(component.initialState, component.name + component.stateRef, component.appName);
+    } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
+      RMEComponentManager.addComponent(_defineProperty({}, component.valueOf().name, component));
+    } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
+      var comp = new component();
+      App.component(_defineProperty({}, component.valueOf().name, comp.render))(comp.appName);
+      var state = {};
+      if (!Util.isEmpty(comp.onBeforeCreate)) state.onBeforeCreate = comp.onBeforeCreate;
+      if (!Util.isEmpty(comp.shouldComponentUpdate)) state.shouldComponentUpdate = comp.shouldComponentUpdate;
+      if (!Util.isEmpty(comp.onAfterCreate)) state.onAfterCreate = comp.onAfterCreate;
+      if (!Util.isEmpty(comp.onAfterRender)) state.onAfterRender = comp.onAfterRender;
+      state = _objectSpread(_objectSpread({}, state), comp.initialState);
+      var ref = comp.stateRef || state.stateRef || '';
+      resolveInitialState(state, component.name + ref, comp.appName);
+    }
+  };
+
+  return function () {
+    for (var _len = arguments.length, components = new Array(_len), _key = 0; _key < _len; _key++) {
+      components[_key] = arguments[_key];
+    }
+
+    components.forEach(function (component) {
+      return !Util.isEmpty(component.valueOf().name) && resolveComponent(component);
+    });
+  };
+}();
+/**
+ * A bindState function transfers a function component to a stateful component just like it was created 
+ * using class or App class itself. The function receives three parameters. The function component,
+ * an optional state object and an optinal appName.
+ * Invoking examples:
+ * Component(bindState(StatefulComponent));
+ * Component(bindState(OtherComponent, { initialValue: 'initialText' }));
+ * @param {function} component
+ * @param {object} state
+ * @param {string} appName
+ */
+
+
+var bindState = function () {
+  var getStateRef = function getStateRef(state) {
+    return state && state.stateRef ? state.stateRef : '';
+  };
+
+  var removeStateRef = function removeStateRef(state) {
+    var obj = _objectSpread({}, state);
+
+    delete obj.stateRef;
+    return obj;
+  };
+
+  return function (component, state, appName) {
+    return {
+      comp: component,
+      name: component.valueOf().name,
+      appName: appName,
+      stateRef: getStateRef(state),
+      initialState: _objectSpread({}, removeStateRef(state))
+    };
+  };
+}();
+/**
+ * The function will bind an array of getter functions for the component. The getters are invoked
+ * when the component is invoked. The values returend by the getters are set in the component properties.
+ * @param {*} component
+ * @param {Array} mapper Value mapper
+ */
+
+
+var bindGetters = function () {
+  return function (component, mapper) {
+    var name;
+    if (Util.isFunction(component)) name = component.valueOf().name;else if (Util.isObject(component)) {
+      name = component.name;
+    }
+    RMEComponentManager.bindGetters(name, mapper);
+    return component;
+  };
+}();
+/**
  * Manages RME components
  */
 
@@ -1339,14 +1511,14 @@ var RMEComponentManager = function () {
     _createClass(RMEComponentManager, [{
       key: "addComponent",
       value: function addComponent(component, props) {
-        var _this5 = this;
+        var _this6 = this;
 
         if (Util.isFunction(component)) {
           component = component.call();
         }
 
         Object.keys(component).forEach(function (p) {
-          _this5.components[p] = {
+          _this6.components[p] = {
             component: component[p],
             update: Util.isFunction(props) ? props : undefined
           };
@@ -1579,241 +1751,6 @@ var Cookie = function () {
   }();
 
   return Cookie;
-}();
-/**
- * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
- * instance might have not been created at the time when components are created so the queue will wait 
- * until the application instance is created and then sets the state for the components in the queue.
- */
-
-
-var AppSetInitialStateJob = function () {
-  var InitStateJob = /*#__PURE__*/function () {
-    function InitStateJob() {
-      _classCallCheck(this, InitStateJob);
-
-      this.updateJob;
-      this.updateJobMap = {};
-      this.appNameList = [];
-    }
-
-    _createClass(InitStateJob, [{
-      key: "resolveUpdateJobs",
-      value: function resolveUpdateJobs() {
-        var _this6 = this;
-
-        if (!this.updateJob) this.updateJob = Util.setInterval(function () {
-          var appName = _this6.getAppNameIfPresent();
-
-          if (!Util.isEmpty(appName)) {
-            _this6.updateJobMap[appName].forEach(function (job) {
-              return job();
-            });
-
-            _this6.updateJobMap[appName] = [];
-            _this6.appNameList = _this6.appNameList.filter(function (app) {
-              return app !== appName;
-            });
-
-            if (_this6.appNameList.length === 0) {
-              Util.clearInterval(_this6.updateJob);
-              _this6.updateJob = undefined;
-            }
-          }
-        });
-      }
-    }, {
-      key: "getAppNameIfPresent",
-      value: function getAppNameIfPresent() {
-        return this.appNameList.find(function (appName) {
-          return App.get(appName === "undefined" ? undefined : appName);
-        });
-      }
-    }, {
-      key: "addToQueue",
-      value: function addToQueue(appName, job) {
-        var updateQueue = this.updateJobMap[appName] || [];
-        updateQueue.push(job);
-        this.updateJobMap[appName] = updateQueue;
-        this.appNameList = Object.keys(this.updateJobMap);
-        this.resolveUpdateJobs();
-      }
-    }]);
-
-    return InitStateJob;
-  }();
-
-  var initStateJob = new InitStateJob();
-  return {
-    addToQueue: initStateJob.addToQueue.bind(initStateJob),
-    resolveUpdateJobs: initStateJob.resolveUpdateJobs.bind(initStateJob)
-  };
-}();
-/**
- * Component resolves comma separated list of components that may be function or class.
- * Function component example: const Comp = props => ({h1: 'Hello'});
- * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
- * Resolve components Component(Comp, Comp2);
- * @param {function} components commma separated list of components
- */
-
-
-var Component = function () {
-  var resolveInitialState = function resolveInitialState(initialState, stateRef, appName) {
-    if (!Util.isEmpty(App.get(appName))) {
-      App.get(appName).setState(stateRef, initialState, false);
-    } else {
-      AppSetInitialStateJob.addToQueue(appName, function () {
-        return App.get(appName).setState(stateRef, initialState);
-      });
-    }
-  };
-
-  var resolveComponent = function resolveComponent(component) {
-    if (Util.isObject(component)) {
-      App.component(_defineProperty({}, component.name, component.comp))(component.appName);
-      resolveInitialState(component.initialState, component.name + component.stateRef, component.appName);
-    } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
-      RMEComponentManager.addComponent(_defineProperty({}, component.valueOf().name, component));
-    } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
-      var comp = new component();
-      App.component(_defineProperty({}, component.valueOf().name, comp.render))(comp.appName);
-      var state = {};
-      if (!Util.isEmpty(comp.onBeforeCreate)) state.onBeforeCreate = comp.onBeforeCreate;
-      if (!Util.isEmpty(comp.shouldComponentUpdate)) state.shouldComponentUpdate = comp.shouldComponentUpdate;
-      if (!Util.isEmpty(comp.onAfterCreate)) state.onAfterCreate = comp.onAfterCreate;
-      if (!Util.isEmpty(comp.onAfterRender)) state.onAfterRender = comp.onAfterRender;
-      state = _objectSpread(_objectSpread({}, state), comp.initialState);
-      var ref = comp.stateRef || state.stateRef || '';
-      resolveInitialState(state, component.name + ref, comp.appName);
-    }
-  };
-
-  return function () {
-    for (var _len = arguments.length, components = new Array(_len), _key = 0; _key < _len; _key++) {
-      components[_key] = arguments[_key];
-    }
-
-    components.forEach(function (component) {
-      return !Util.isEmpty(component.valueOf().name) && resolveComponent(component);
-    });
-  };
-}();
-/**
- * A bindState function transfers a function component to a stateful component just like it was created 
- * using class or App class itself. The function receives three parameters. The function component,
- * an optional state object and an optinal appName.
- * Invoking examples:
- * Component(bindState(StatefulComponent));
- * Component(bindState(OtherComponent, { initialValue: 'initialText' }));
- * @param {function} component
- * @param {object} state
- * @param {string} appName
- */
-
-
-var bindState = function () {
-  var getStateRef = function getStateRef(state) {
-    return state && state.stateRef ? state.stateRef : '';
-  };
-
-  var removeStateRef = function removeStateRef(state) {
-    var obj = _objectSpread({}, state);
-
-    delete obj.stateRef;
-    return obj;
-  };
-
-  return function (component, state, appName) {
-    return {
-      comp: component,
-      name: component.valueOf().name,
-      appName: appName,
-      stateRef: getStateRef(state),
-      initialState: _objectSpread({}, removeStateRef(state))
-    };
-  };
-}();
-/**
- * The function will bind an array of getter functions for the component. The getters are invoked
- * when the component is invoked. The values returend by the getters are set in the component properties.
- * @param {*} component
- * @param {Array} mapper Value mapper
- */
-
-
-var bindGetters = function () {
-  return function (component, mapper) {
-    var name;
-    if (Util.isFunction(component)) name = component.valueOf().name;else if (Util.isObject(component)) {
-      name = component.name;
-    }
-    RMEComponentManager.bindGetters(name, mapper);
-    return component;
-  };
-}();
-/**
- * A CSS function will either create a new style element containing given css and other parameters 
- * or it will append to a existing style element if the element is found by given parameters.
- * @param {string} css string
- * @param {object} config properties object of the style element
- */
-
-
-var CSS = function () {
-  var getStyles = function getStyles(config) {
-    var styles = Tree.getHead().getByTag('style');
-
-    if (Util.isEmpty(config) && !Util.isArray(styles)) {
-      return styles;
-    } else if (Util.isArray(styles)) {
-      return styles.find(function (style) {
-        return arePropertiesSame(style.getProps(), config);
-      });
-    } else if (!Util.isEmpty(styles) && arePropertiesSame(styles.getProps(), config)) {
-      return styles;
-    }
-  };
-
-  var propsWithoutContent = function propsWithoutContent(props) {
-    var newProps = _objectSpread({}, props);
-
-    delete newProps.text;
-    return newProps;
-  };
-
-  var arePropertiesSame = function arePropertiesSame(oldProps, newProps) {
-    return JSON.stringify(propsWithoutContent(oldProps)) === JSON.stringify(newProps || {});
-  };
-
-  var hasStyles = function hasStyles(config) {
-    return !Util.isEmpty(getStyles(config));
-  };
-
-  var hasContent = function hasContent(content, config) {
-    var styles = getStyles(config);
-
-    if (!Util.isEmpty(styles)) {
-      return styles.getContent().match(content) !== null;
-    }
-  };
-
-  return function (content, config) {
-    if (!hasStyles(config)) {
-      Tree.getHead().append({
-        style: _objectSpread({
-          content: content
-        }, config)
-      });
-    } else if (!hasContent(content, config)) {
-      var style = getStyles(config);
-
-      if (!Util.isEmpty(style)) {
-        var prevContent = style.getContent();
-        style.setContent(prevContent + content);
-      }
-    }
-  };
 }();
 
 var Elem = function () {
@@ -4321,6 +4258,69 @@ var RMEElemTemplater = /*#__PURE__*/function () {
 
   return RMEElemTemplater;
 }();
+/**
+ * A CSS function will either create a new style element containing given css and other parameters 
+ * or it will append to a existing style element if the element is found by given parameters.
+ * @param {string} css string
+ * @param {object} config properties object of the style element
+ */
+
+
+var CSS = function () {
+  var getStyles = function getStyles(config) {
+    var styles = Tree.getHead().getByTag('style');
+
+    if (Util.isEmpty(config) && !Util.isArray(styles)) {
+      return styles;
+    } else if (Util.isArray(styles)) {
+      return styles.find(function (style) {
+        return arePropertiesSame(style.getProps(), config);
+      });
+    } else if (!Util.isEmpty(styles) && arePropertiesSame(styles.getProps(), config)) {
+      return styles;
+    }
+  };
+
+  var propsWithoutContent = function propsWithoutContent(props) {
+    var newProps = _objectSpread({}, props);
+
+    delete newProps.text;
+    return newProps;
+  };
+
+  var arePropertiesSame = function arePropertiesSame(oldProps, newProps) {
+    return JSON.stringify(propsWithoutContent(oldProps)) === JSON.stringify(newProps || {});
+  };
+
+  var hasStyles = function hasStyles(config) {
+    return !Util.isEmpty(getStyles(config));
+  };
+
+  var hasContent = function hasContent(content, config) {
+    var styles = getStyles(config);
+
+    if (!Util.isEmpty(styles)) {
+      return styles.getContent().match(content) !== null;
+    }
+  };
+
+  return function (content, config) {
+    if (!hasStyles(config)) {
+      Tree.getHead().append({
+        style: _objectSpread({
+          content: content
+        }, config)
+      });
+    } else if (!hasContent(content, config)) {
+      var style = getStyles(config);
+
+      if (!Util.isEmpty(style)) {
+        var prevContent = style.getContent();
+        style.setContent(prevContent + content);
+      }
+    }
+  };
+}();
 
 var EventPipe = function () {
   /**
@@ -5417,6 +5417,175 @@ var Messages = function () {
     setApp: Messages.setApp
   };
 }();
+/**
+ * The configure function will configure given Components. Advantage of this function is that the Compoments can be given in 
+ * any order and they will be recognized automatically.
+ * 
+ * Example use case would be to invoke configure(App.get(), Router, Messages);
+ * 
+ * This function can be conbined with a createApp('#app', AppComponent) function as follows:
+ * configure(createApp('#app', AppComponent), Router, Messages); This is probably the shortest way to 
+ * create the RME application.
+ * @param {*} params comma separated list of components
+ */
+
+
+var configure = function () {
+  return function () {
+    var config = {};
+
+    for (var _len6 = arguments.length, params = new Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
+      params[_key6] = arguments[_key6];
+    }
+
+    params.forEach(function (param) {
+      if (param.routes) {
+        config = _objectSpread(_objectSpread({}, config), {}, {
+          router: param
+        });
+      } else if (param.load) {
+        config = _objectSpread(_objectSpread({}, config), {}, {
+          messages: param
+        });
+      } else if (param.name) {
+        config = _objectSpread(_objectSpread({}, config), {}, {
+          app: param
+        });
+      }
+    });
+    if (Util.notEmpty(config.router)) config.router.setApp(config.app);
+    if (Util.notEmpty(config.messages)) config.messages.setApp(config.app);
+    if (Util.notEmpty(config.app)) config.app.setRouter(config.router);
+  };
+}();
+/**
+ * Adds a script file on runtime into the head of the current html document where the method is called on.
+ * Source is required options can be omitted.
+ * @param {String} source URL or file name. *Requied
+ * @param {object} options Optional settings object.
+ * 
+ * Option settings:
+ * -------
+ *  @param {String} id 
+ *  @param {String} type 
+ *  @param {String} text Content of the script element if any.
+ *  @param {boolean} defer If true script is executed when page has finished parsing.
+ *  @param {*} crossOrigin 
+ *  @param {String} charset 
+ *  @param {boolean} async If true script is executed asynchronously when available.
+ */
+
+
+var script = function () {
+  var addScript = function addScript(elem) {
+    var scripts = Tree.getHead().getByTag('script');
+
+    if (scripts.length > 0) {
+      var lastScript = scripts[scripts.length - 1];
+      lastScript.after(elem);
+    } else {
+      Tree.getHead().append(elem);
+    }
+  };
+
+  return function (source, options) {
+    if (Util.notEmpty(source)) {
+      addScript(Template.resolve({
+        script: _objectSpread({
+          src: source
+        }, options)
+      }));
+    }
+  };
+}();
+/**
+ * The function adds a callback function into the callback queue. The queue is invoked in the
+ * function definition order. The queue will be run when the DOM tree is ready and
+ * then the it is cleared.
+ */
+
+
+var ready = function () {
+  var callbacks = [];
+  document.addEventListener("readystatechange", function () {
+    if (document.readyState === "complete") {
+      callbacks.forEach(function (callback) {
+        return callback();
+      });
+      callbacks.length = 0;
+    }
+  });
+  return function (callback) {
+    callbacks.push(callback);
+  };
+}();
+/**
+ * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create
+ * RESTfull webpages with ease and speed.
+ * 
+ * This library is free to use under the MIT License.
+ */
+
+
+var RME = function () {
+  var RMEStorage = /*#__PURE__*/function () {
+    function RMEStorage() {
+      _classCallCheck(this, RMEStorage);
+
+      this.rmeState = {};
+    }
+
+    _createClass(RMEStorage, [{
+      key: "setRmeStateProp",
+      value: function setRmeStateProp(key, value) {
+        this.rmeState[key] = value;
+      }
+    }, {
+      key: "getRmeStateProp",
+      value: function getRmeStateProp(key) {
+        return this.rmeState[key];
+      }
+    }]);
+
+    return RMEStorage;
+  }();
+
+  var rmeStorage = new RMEStorage();
+  /**
+   * This function is not the recommended way to use components and is for legacy support
+   * and will be removed in later releases. The recommended way to use components is the 
+   * Component function.
+   * 
+   * The function creates or retrieves a component. 
+   * If the first parameter is a string the function will try to get the component from the 
+   * component storage. Otherwise the function will set the component in the component storage.
+   * @param {*} component function, object or string.
+   * @param {Object} props 
+   */
+
+  var component = function component(_component2, props) {
+    if (_component2 && (Util.isFunction(_component2) || Util.isObject(_component2))) RMEComponentManager.addComponent(_component2, props);else if (_component2 && Util.isString(_component2)) return RMEComponentManager.getComponent(_component2, props);
+  };
+  /**
+   * Saves data to or get data from the RME instance storage.
+   * If key and value parameters are not empty then this method will try to save the give value by the given key
+   * into to the RME instance storage.
+   * If key is not empty and value is empty then this method will try to get data from the RME instance storage
+   * by the given key.
+   * @param {String} key 
+   * @param {Object} value 
+   */
+
+
+  var storage = function storage(key, value) {
+    if (Util.notEmpty(key) && Util.notEmpty(value)) rmeStorage.setRmeStateProp(key, value);else if (Util.notEmpty(key) && Util.isEmpty(value)) return rmeStorage.getRmeStateProp(key);
+  };
+
+  return {
+    component: component,
+    storage: storage
+  };
+}();
 
 var Router = function () {
   /**
@@ -5659,7 +5828,7 @@ var Router = function () {
 
         if (Util.notEmpty(this.root) && Util.notEmpty(route)) {
           if (route.scrolltop === true || route.scrolltop === undefined && this.scrolltop) {
-            Browser.scrollTo(0, 0);
+            if (window.scrollY > 0) Browser.scrollTo(0, 0);
           }
 
           this.prevUrl = this.getUrlPath(url);
@@ -5959,175 +6128,6 @@ var Router = function () {
   };
 }();
 /**
- * The configure function will configure given Components. Advantage of this function is that the Compoments can be given in 
- * any order and they will be recognized automatically.
- * 
- * Example use case would be to invoke configure(App.get(), Router, Messages);
- * 
- * This function can be conbined with a createApp('#app', AppComponent) function as follows:
- * configure(createApp('#app', AppComponent), Router, Messages); This is probably the shortest way to 
- * create the RME application.
- * @param {*} params comma separated list of components
- */
-
-
-var configure = function () {
-  return function () {
-    var config = {};
-
-    for (var _len6 = arguments.length, params = new Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
-      params[_key6] = arguments[_key6];
-    }
-
-    params.forEach(function (param) {
-      if (param.routes) {
-        config = _objectSpread(_objectSpread({}, config), {}, {
-          router: param
-        });
-      } else if (param.load) {
-        config = _objectSpread(_objectSpread({}, config), {}, {
-          messages: param
-        });
-      } else if (param.name) {
-        config = _objectSpread(_objectSpread({}, config), {}, {
-          app: param
-        });
-      }
-    });
-    if (Util.notEmpty(config.router)) config.router.setApp(config.app);
-    if (Util.notEmpty(config.messages)) config.messages.setApp(config.app);
-    if (Util.notEmpty(config.app)) config.app.setRouter(config.router);
-  };
-}();
-/**
- * Adds a script file on runtime into the head of the current html document where the method is called on.
- * Source is required options can be omitted.
- * @param {String} source URL or file name. *Requied
- * @param {object} options Optional settings object.
- * 
- * Option settings:
- * -------
- *  @param {String} id 
- *  @param {String} type 
- *  @param {String} text Content of the script element if any.
- *  @param {boolean} defer If true script is executed when page has finished parsing.
- *  @param {*} crossOrigin 
- *  @param {String} charset 
- *  @param {boolean} async If true script is executed asynchronously when available.
- */
-
-
-var script = function () {
-  var addScript = function addScript(elem) {
-    var scripts = Tree.getHead().getByTag('script');
-
-    if (scripts.length > 0) {
-      var lastScript = scripts[scripts.length - 1];
-      lastScript.after(elem);
-    } else {
-      Tree.getHead().append(elem);
-    }
-  };
-
-  return function (source, options) {
-    if (Util.notEmpty(source)) {
-      addScript(Template.resolve({
-        script: _objectSpread({
-          src: source
-        }, options)
-      }));
-    }
-  };
-}();
-/**
- * The function adds a callback function into the callback queue. The queue is invoked in the
- * function definition order. The queue will be run when the DOM tree is ready and
- * then the it is cleared.
- */
-
-
-var ready = function () {
-  var callbacks = [];
-  document.addEventListener("readystatechange", function () {
-    if (document.readyState === "complete") {
-      callbacks.forEach(function (callback) {
-        return callback();
-      });
-      callbacks.length = 0;
-    }
-  });
-  return function (callback) {
-    callbacks.push(callback);
-  };
-}();
-/**
- * RME stands for Rest Made Easy. This is a small easy to use library that enables you to create
- * RESTfull webpages with ease and speed.
- * 
- * This library is free to use under the MIT License.
- */
-
-
-var RME = function () {
-  var RMEStorage = /*#__PURE__*/function () {
-    function RMEStorage() {
-      _classCallCheck(this, RMEStorage);
-
-      this.rmeState = {};
-    }
-
-    _createClass(RMEStorage, [{
-      key: "setRmeStateProp",
-      value: function setRmeStateProp(key, value) {
-        this.rmeState[key] = value;
-      }
-    }, {
-      key: "getRmeStateProp",
-      value: function getRmeStateProp(key) {
-        return this.rmeState[key];
-      }
-    }]);
-
-    return RMEStorage;
-  }();
-
-  var rmeStorage = new RMEStorage();
-  /**
-   * This function is not the recommended way to use components and is for legacy support
-   * and will be removed in later releases. The recommended way to use components is the 
-   * Component function.
-   * 
-   * The function creates or retrieves a component. 
-   * If the first parameter is a string the function will try to get the component from the 
-   * component storage. Otherwise the function will set the component in the component storage.
-   * @param {*} component function, object or string.
-   * @param {Object} props 
-   */
-
-  var component = function component(_component2, props) {
-    if (_component2 && (Util.isFunction(_component2) || Util.isObject(_component2))) RMEComponentManager.addComponent(_component2, props);else if (_component2 && Util.isString(_component2)) return RMEComponentManager.getComponent(_component2, props);
-  };
-  /**
-   * Saves data to or get data from the RME instance storage.
-   * If key and value parameters are not empty then this method will try to save the give value by the given key
-   * into to the RME instance storage.
-   * If key is not empty and value is empty then this method will try to get data from the RME instance storage
-   * by the given key.
-   * @param {String} key 
-   * @param {Object} value 
-   */
-
-
-  var storage = function storage(key, value) {
-    if (Util.notEmpty(key) && Util.notEmpty(value)) rmeStorage.setRmeStateProp(key, value);else if (Util.notEmpty(key) && Util.isEmpty(value)) return rmeStorage.getRmeStateProp(key);
-  };
-
-  return {
-    component: component,
-    storage: storage
-  };
-}();
-/**
  * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
  */
 
@@ -6302,233 +6302,6 @@ var RMETemplateFragmentHelper = function () {
   }();
 
   return new RMETemplateFragmentHelper();
-}();
-/**
- * General Utility methods.
- */
-
-
-var Util = /*#__PURE__*/function () {
-  function Util() {
-    _classCallCheck(this, Util);
-  }
-
-  _createClass(Util, null, [{
-    key: "isEmpty",
-    value:
-    /**
-     * Checks is a given value empty.
-     * @param {*} value
-     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
-     */
-    function isEmpty(value) {
-      return value === null || value === undefined || value === "" || Util.isArray(value) && value.length === 0;
-    }
-    /**
-     * Checks is the given value not empty. This function is a negation to the Util.isEmpty function.
-     * @param {*} value 
-     * @returns True if the value is not empty otherwise false.
-     */
-
-  }, {
-    key: "notEmpty",
-    value: function notEmpty(value) {
-      return !Util.isEmpty(value);
-    }
-    /**
-     * Get the type of the given value.
-     * @param {*} value
-     * @returns The type of the given value.
-     */
-
-  }, {
-    key: "getType",
-    value: function getType(value) {
-      return _typeof(value);
-    }
-    /**
-     * Checks is a given value is a given type.
-     * @param {*} value
-     * @param {string} type
-     * @returns True if the given value is the given type otherwise false.
-     */
-
-  }, {
-    key: "isType",
-    value: function isType(value, type) {
-      return Util.getType(value) === type;
-    }
-    /**
-     * Checks is a given parameter a function.
-     * @param {*} func 
-     * @returns True if the given parameter is fuction otherwise false.
-     */
-
-  }, {
-    key: "isFunction",
-    value: function isFunction(func) {
-      return Util.isType(func, "function");
-    }
-    /**
-     * Checks is a given parameter a boolean.
-     * @param {*} boolean
-     * @returns True if the given parameter is boolean otherwise false.
-     */
-
-  }, {
-    key: "isBoolean",
-    value: function isBoolean(_boolean8) {
-      return Util.isType(_boolean8, "boolean");
-    }
-    /**
-     * Checks is a given parameter a string.
-     * @param {*} string
-     * @returns True if the given parameter is string otherwise false.
-     */
-
-  }, {
-    key: "isString",
-    value: function isString(string) {
-      return Util.isType(string, "string");
-    }
-    /**
-     * Checks is a given parameter a number.
-     * @param {*} number
-     * @returns True if the given parameter is number otherwise false.
-     */
-
-  }, {
-    key: "isNumber",
-    value: function isNumber(number) {
-      return Util.isType(number, "number");
-    }
-    /**
-     * Checks is a given parameter a symbol.
-     * @param {*} symbol
-     * @returns True if the given parameter is symbol otherwise false.
-     */
-
-  }, {
-    key: "isSymbol",
-    value: function isSymbol(symbol) {
-      return Util.isType(symbol, "symbol");
-    }
-    /**
-     * Checks is a given parameter a object.
-     * @param {*} object
-     * @returns True if the given parameter is object otherwise false.
-     */
-
-  }, {
-    key: "isObject",
-    value: function isObject(object) {
-      return Util.isType(object, "object");
-    }
-    /**
-     * Checks is a given parameter an array.
-     * @param {*} array
-     * @returns True if the given parameter is array otherwise false.
-     */
-
-  }, {
-    key: "isArray",
-    value: function isArray(array) {
-      return Array.isArray(array);
-    }
-    /**
-     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The timeout object.
-     */
-
-  }, {
-    key: "setTimeout",
-    value: function setTimeout(callback, milliseconds) {
-      if (!Util.isFunction(callback)) {
-        throw "callback not fuction";
-      }
-
-      for (var _len7 = arguments.length, params = new Array(_len7 > 2 ? _len7 - 2 : 0), _key7 = 2; _key7 < _len7; _key7++) {
-        params[_key7 - 2] = arguments[_key7];
-      }
-
-      return window.setTimeout(callback, milliseconds, params);
-    }
-    /**
-     * Removes a timeout that was created by setTimeout method.
-     * @param {object} timeoutObject
-     */
-
-  }, {
-    key: "clearTimeout",
-    value: function clearTimeout(timeoutObject) {
-      window.clearTimeout(timeoutObject);
-    }
-    /**
-     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The interval object.
-     */
-
-  }, {
-    key: "setInterval",
-    value: function setInterval(callback, milliseconds) {
-      if (!Util.isFunction(callback)) {
-        throw "callback not fuction";
-      }
-
-      for (var _len8 = arguments.length, params = new Array(_len8 > 2 ? _len8 - 2 : 0), _key8 = 2; _key8 < _len8; _key8++) {
-        params[_key8 - 2] = arguments[_key8];
-      }
-
-      return window.setInterval(callback, milliseconds, params);
-    }
-    /**
-     * Removes an interval that was created by setInterval method.
-     */
-
-  }, {
-    key: "clearInterval",
-    value: function clearInterval(intervalObject) {
-      window.clearInterval(intervalObject);
-    }
-    /**
-     * Encodes a string to Base64.
-     * @param {string} string
-     * @returns The base64 encoded string.
-     */
-
-  }, {
-    key: "encodeBase64String",
-    value: function encodeBase64String(string) {
-      if (!Util.isString(string)) {
-        throw "the given parameter is not a string: " + string;
-      }
-
-      return window.btoa(string);
-    }
-    /**
-     * Decodes a base 64 encoded string.
-     * @param {string} string
-     * @returns The base64 decoded string.
-     */
-
-  }, {
-    key: "decodeBase64String",
-    value: function decodeBase64String(string) {
-      if (!Util.isString(string)) {
-        throw "the given parameter is not a string: " + string;
-      }
-
-      return window.atob(string);
-    }
-  }]);
-
-  return Util;
 }();
 
 var Template = function () {
@@ -7554,4 +7327,231 @@ var Tree = /*#__PURE__*/function () {
   }]);
 
   return Tree;
+}();
+/**
+ * General Utility methods.
+ */
+
+
+var Util = /*#__PURE__*/function () {
+  function Util() {
+    _classCallCheck(this, Util);
+  }
+
+  _createClass(Util, null, [{
+    key: "isEmpty",
+    value:
+    /**
+     * Checks is a given value empty.
+     * @param {*} value
+     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
+     */
+    function isEmpty(value) {
+      return value === null || value === undefined || value === "" || Util.isArray(value) && value.length === 0;
+    }
+    /**
+     * Checks is the given value not empty. This function is a negation to the Util.isEmpty function.
+     * @param {*} value 
+     * @returns True if the value is not empty otherwise false.
+     */
+
+  }, {
+    key: "notEmpty",
+    value: function notEmpty(value) {
+      return !Util.isEmpty(value);
+    }
+    /**
+     * Get the type of the given value.
+     * @param {*} value
+     * @returns The type of the given value.
+     */
+
+  }, {
+    key: "getType",
+    value: function getType(value) {
+      return _typeof(value);
+    }
+    /**
+     * Checks is a given value is a given type.
+     * @param {*} value
+     * @param {string} type
+     * @returns True if the given value is the given type otherwise false.
+     */
+
+  }, {
+    key: "isType",
+    value: function isType(value, type) {
+      return Util.getType(value) === type;
+    }
+    /**
+     * Checks is a given parameter a function.
+     * @param {*} func 
+     * @returns True if the given parameter is fuction otherwise false.
+     */
+
+  }, {
+    key: "isFunction",
+    value: function isFunction(func) {
+      return Util.isType(func, "function");
+    }
+    /**
+     * Checks is a given parameter a boolean.
+     * @param {*} boolean
+     * @returns True if the given parameter is boolean otherwise false.
+     */
+
+  }, {
+    key: "isBoolean",
+    value: function isBoolean(_boolean8) {
+      return Util.isType(_boolean8, "boolean");
+    }
+    /**
+     * Checks is a given parameter a string.
+     * @param {*} string
+     * @returns True if the given parameter is string otherwise false.
+     */
+
+  }, {
+    key: "isString",
+    value: function isString(string) {
+      return Util.isType(string, "string");
+    }
+    /**
+     * Checks is a given parameter a number.
+     * @param {*} number
+     * @returns True if the given parameter is number otherwise false.
+     */
+
+  }, {
+    key: "isNumber",
+    value: function isNumber(number) {
+      return Util.isType(number, "number");
+    }
+    /**
+     * Checks is a given parameter a symbol.
+     * @param {*} symbol
+     * @returns True if the given parameter is symbol otherwise false.
+     */
+
+  }, {
+    key: "isSymbol",
+    value: function isSymbol(symbol) {
+      return Util.isType(symbol, "symbol");
+    }
+    /**
+     * Checks is a given parameter a object.
+     * @param {*} object
+     * @returns True if the given parameter is object otherwise false.
+     */
+
+  }, {
+    key: "isObject",
+    value: function isObject(object) {
+      return Util.isType(object, "object");
+    }
+    /**
+     * Checks is a given parameter an array.
+     * @param {*} array
+     * @returns True if the given parameter is array otherwise false.
+     */
+
+  }, {
+    key: "isArray",
+    value: function isArray(array) {
+      return Array.isArray(array);
+    }
+    /**
+     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The timeout object.
+     */
+
+  }, {
+    key: "setTimeout",
+    value: function setTimeout(callback, milliseconds) {
+      if (!Util.isFunction(callback)) {
+        throw "callback not fuction";
+      }
+
+      for (var _len7 = arguments.length, params = new Array(_len7 > 2 ? _len7 - 2 : 0), _key7 = 2; _key7 < _len7; _key7++) {
+        params[_key7 - 2] = arguments[_key7];
+      }
+
+      return window.setTimeout(callback, milliseconds, params);
+    }
+    /**
+     * Removes a timeout that was created by setTimeout method.
+     * @param {object} timeoutObject
+     */
+
+  }, {
+    key: "clearTimeout",
+    value: function clearTimeout(timeoutObject) {
+      window.clearTimeout(timeoutObject);
+    }
+    /**
+     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The interval object.
+     */
+
+  }, {
+    key: "setInterval",
+    value: function setInterval(callback, milliseconds) {
+      if (!Util.isFunction(callback)) {
+        throw "callback not fuction";
+      }
+
+      for (var _len8 = arguments.length, params = new Array(_len8 > 2 ? _len8 - 2 : 0), _key8 = 2; _key8 < _len8; _key8++) {
+        params[_key8 - 2] = arguments[_key8];
+      }
+
+      return window.setInterval(callback, milliseconds, params);
+    }
+    /**
+     * Removes an interval that was created by setInterval method.
+     */
+
+  }, {
+    key: "clearInterval",
+    value: function clearInterval(intervalObject) {
+      window.clearInterval(intervalObject);
+    }
+    /**
+     * Encodes a string to Base64.
+     * @param {string} string
+     * @returns The base64 encoded string.
+     */
+
+  }, {
+    key: "encodeBase64String",
+    value: function encodeBase64String(string) {
+      if (!Util.isString(string)) {
+        throw "the given parameter is not a string: " + string;
+      }
+
+      return window.btoa(string);
+    }
+    /**
+     * Decodes a base 64 encoded string.
+     * @param {string} string
+     * @returns The base64 decoded string.
+     */
+
+  }, {
+    key: "decodeBase64String",
+    value: function decodeBase64String(string) {
+      if (!Util.isString(string)) {
+        throw "the given parameter is not a string: " + string;
+      }
+
+      return window.atob(string);
+    }
+  }]);
+
+  return Util;
 }();
