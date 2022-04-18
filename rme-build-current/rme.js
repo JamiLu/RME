@@ -496,31 +496,6 @@ const useValue = (function() {
 
 
 
-/**
- * Keeps app instances in memory
- */
-const AppManager = (function() {
-
-    class AppManager {
-        constructor() {
-            this.apps = {};
-        }
-
-        set(name, value) {
-            this.apps[name] = value;
-        }
-
-        get(name) {
-            return this.apps[name];
-        }
-    }
-
-    const manager = new AppManager();
-
-    return manager;
-
-})();
-
 
 class RMEElemRenderer {
     constructor(root) {
@@ -620,63 +595,28 @@ class RMEElemRenderer {
 
 }
 
-
 /**
- * Manages between component shareable values.
+ * Keeps app instances in memory
  */
-const ValueStore = (function() {
+const AppManager = (function() {
 
-    class ValueStore {
+    class AppManager {
         constructor() {
-            this.values = {};
-            this.valueRefGenerator = new RefGenerator('val');
+            this.apps = {};
         }
-    
-        /**
-         * The function will set the given value to the app instance and return a getter and a setter function
-         * for the given value. Values can be shared and used in between any component.
-         * @param {*} value 
-         * @returns An array containing the getter and the setter functions for the given value.
-         */
-        useValue(value, appName) {
-            if (Util.isFunction(value)) {
-                value = value(value);
-            }
-            const ref = this.valueRefGenerator.next();
-            this.values[ref] = value;
-    
-            const getter = () => this.values[ref];
-            const setter = (next, update) => {
-                if (Util.isFunction(next)) {
-                    next = next(getter());
-                }
-    
-                this.values[ref] = next;
-                
-                if (update !== false) {
-                    App.get(appName).refresh();
-                }
-            }
-            return [getter, setter];
-        }
-    }
-    
-    class RefGenerator {
-        constructor(feed) {
-            this.feed = feed || "";
-            this.seq = 0;
-        }
-    
-        next() {
-            const ref = this.feed+this.seq;
-            this.seq++
-            return ref;
-        }
-    }
-    
-    const valueStore = new ValueStore();
 
-    return valueStore;
+        set(name, value) {
+            this.apps[name] = value;
+        }
+
+        get(name) {
+            return this.apps[name];
+        }
+    }
+
+    const manager = new AppManager();
+
+    return manager;
 
 })();
 
@@ -1118,117 +1058,64 @@ class Browser {
 }
 
 
+/**
+ * Manages between component shareable values.
+ */
+const ValueStore = (function() {
 
-let Cookie = (function() {
-    /**
-     * Cookie interface offers an easy way to get, set or remove cookies in application logic.
-     * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
-     * 
-     * {
-     *    name: "name",
-     *    value: "value",
-     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-     *    cookiePath: "cookiePath absolute dir",
-     *    cookieDomain: "cookieDomain e.g example.com",
-     *    setSecureBoolean: true|false
-     * }
-     * 
-     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-     */
-    class Cookie {
+    class ValueStore {
+        constructor() {
+            this.values = {};
+            this.valueRefGenerator = new RefGenerator('val');
+        }
+    
         /**
-         * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
-         * 
-         * @param {String} name 
-         * @returns cookie object
+         * The function will set the given value to the app instance and return a getter and a setter function
+         * for the given value. Values can be shared and used in between any component.
+         * @param {*} value 
+         * @returns An array containing the getter and the setter functions for the given value.
          */
-        static get(name) {
-            if(navigator.cookieEnabled) {
-                var retCookie = null;
-                var cookies = document.cookie.split(";");
-                var i = 0;
-                while(i < cookies.length) {
-                    var cookie = cookies[i];
-                    var eq = cookie.search("=");
-                    var cn = cookie.substr(0, eq).trim();
-                    var cv = cookie.substr(eq + 1, cookie.length).trim();
-                    if(cn === name) {
-                        retCookie = new CookieInstance(cn, cv);
-                        break;
-                    }
-                    i++;
+        useValue(value, appName) {
+            if (Util.isFunction(value)) {
+                value = value(value);
+            }
+            const ref = this.valueRefGenerator.next();
+            this.values[ref] = value;
+    
+            const getter = () => this.values[ref];
+            const setter = (next, update) => {
+                if (Util.isFunction(next)) {
+                    next = next(getter());
                 }
-                return retCookie;
+    
+                this.values[ref] = next;
+                
+                if (update !== false) {
+                    App.get(appName).refresh();
+                }
             }
-        }
-        /**
-         * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
-         * 
-         * @param {string} name
-         * @param {string} value
-         * @param {string} expiresDate
-         * @param {string} cookiePath
-         * @param {string} cookieDomain
-         * @param {boolean} setSecureBoolean
-         */
-        static set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-            if(navigator.cookieEnabled) {
-                document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
-            }
-        }
-        /**
-         * Remove a cookie by name. Method will set the cookie expired and then remove it.
-         * @param {string} name
-         */
-        static remove(name) {
-            var co = Cookie.get(name);
-            if(!Util.isEmpty(co)) {
-                co.setExpired();
-                document.cookie = co.toString();
-            }
+            return [getter, setter];
         }
     }
-
-    /**
-     * Cookie object may hold following values:
-     *
-     * {
-     *    name: "name",
-     *    value: "value",
-     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-     *    cookiePath: "cookiePath absolute dir",
-     *    cookieDomain: "cookieDomain e.g example.com",
-     *    setSecureBoolean: true|false
-     * }
-     * 
-     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-     */
-    class CookieInstance {
-        constructor(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-            this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
-            this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
-            this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
-            this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
-            this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
-            this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
+    
+    class RefGenerator {
+        constructor(feed) {
+            this.feed = feed || "";
+            this.seq = 0;
         }
-
-        setExpired() {
-            this.cookieExpires = new Date(1970,0,1).toString();
-        }
-
-        toString() {
-            return this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity;
-        }
-        static create(name, value, expires, cpath, cdomain, setSecure) {
-                return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
+    
+        next() {
+            const ref = this.feed+this.seq;
+            this.seq++
+            return ref;
         }
     }
+    
+    const valueStore = new ValueStore();
 
-    return Cookie;
-}());
+    return valueStore;
+
+})();
 
 
 
@@ -1516,6 +1403,119 @@ const RMEComponentManager = (function() {
     return manager;
 
 })();
+
+
+let Cookie = (function() {
+    /**
+     * Cookie interface offers an easy way to get, set or remove cookies in application logic.
+     * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
+     * 
+     * {
+     *    name: "name",
+     *    value: "value",
+     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+     *    cookiePath: "cookiePath absolute dir",
+     *    cookieDomain: "cookieDomain e.g example.com",
+     *    setSecureBoolean: true|false
+     * }
+     * 
+     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+     */
+    class Cookie {
+        /**
+         * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
+         * 
+         * @param {String} name 
+         * @returns cookie object
+         */
+        static get(name) {
+            if(navigator.cookieEnabled) {
+                var retCookie = null;
+                var cookies = document.cookie.split(";");
+                var i = 0;
+                while(i < cookies.length) {
+                    var cookie = cookies[i];
+                    var eq = cookie.search("=");
+                    var cn = cookie.substr(0, eq).trim();
+                    var cv = cookie.substr(eq + 1, cookie.length).trim();
+                    if(cn === name) {
+                        retCookie = new CookieInstance(cn, cv);
+                        break;
+                    }
+                    i++;
+                }
+                return retCookie;
+            }
+        }
+        /**
+         * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
+         * 
+         * @param {string} name
+         * @param {string} value
+         * @param {string} expiresDate
+         * @param {string} cookiePath
+         * @param {string} cookieDomain
+         * @param {boolean} setSecureBoolean
+         */
+        static set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+            if(navigator.cookieEnabled) {
+                document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
+            }
+        }
+        /**
+         * Remove a cookie by name. Method will set the cookie expired and then remove it.
+         * @param {string} name
+         */
+        static remove(name) {
+            var co = Cookie.get(name);
+            if(!Util.isEmpty(co)) {
+                co.setExpired();
+                document.cookie = co.toString();
+            }
+        }
+    }
+
+    /**
+     * Cookie object may hold following values:
+     *
+     * {
+     *    name: "name",
+     *    value: "value",
+     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
+     *    cookiePath: "cookiePath absolute dir",
+     *    cookieDomain: "cookieDomain e.g example.com",
+     *    setSecureBoolean: true|false
+     * }
+     * 
+     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
+     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
+     */
+    class CookieInstance {
+        constructor(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
+            this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
+            this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
+            this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
+            this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
+            this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
+            this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
+        }
+
+        setExpired() {
+            this.cookieExpires = new Date(1970,0,1).toString();
+        }
+
+        toString() {
+            return this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity;
+        }
+        static create(name, value, expires, cpath, cdomain, setSecure) {
+                return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
+        }
+    }
+
+    return Cookie;
+}());
+
 
 
 
@@ -4608,6 +4608,7 @@ const ready = (function() {
 
 
 
+
 let Router = (function() {
     /**
      * Router class handles and renders route elements that are given by Router.routes() method.
@@ -4808,7 +4809,8 @@ let Router = (function() {
             }
             if (Util.notEmpty(this.root) && Util.notEmpty(route)) {
                 if ((route.scrolltop === true) || (route.scrolltop === undefined && this.scrolltop)) {
-                    Browser.scrollTo(0, 0);
+                    if (window.scrollY > 0)
+                        Browser.scrollTo(0, 0);
                 }
                 this.prevUrl = this.getUrlPath(url);
                 this.currentRoute = route;
@@ -5066,41 +5068,6 @@ let Router = (function() {
     }
 }());
 
-
-/**
- * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
- */
-class Storage {
-    /**
-     * Save data into the local storage. 
-     * @param {string} key
-     * @param {*} value
-     */
-    static set(key, value) {
-        localStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the local storage.
-     * @param {string} key
-     */
-    static get(key) {
-        return localStorage.getItem(key);
-    }
-    /**
-     * Remove data from the local storage.
-     * @param {string} key
-     */
-    static remove(key) {
-        localStorage.removeItem(key);
-    }
-    /**
-     * Clears the local storage.
-     */
-    static clear() {
-        localStorage.clear();
-    }
-}
-
 /**
  * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
  */
@@ -5135,6 +5102,40 @@ class Session {
     }
 }
 
+
+/**
+ * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
+ */
+class Storage {
+    /**
+     * Save data into the local storage. 
+     * @param {string} key
+     * @param {*} value
+     */
+    static set(key, value) {
+        localStorage.setItem(key, value);
+    }
+    /**
+     * Get the saved data from the local storage.
+     * @param {string} key
+     */
+    static get(key) {
+        return localStorage.getItem(key);
+    }
+    /**
+     * Remove data from the local storage.
+     * @param {string} key
+     */
+    static remove(key) {
+        localStorage.removeItem(key);
+    }
+    /**
+     * Clears the local storage.
+     */
+    static clear() {
+        localStorage.clear();
+    }
+}
 
 
 const RMETemplateFragmentHelper = (function() {
