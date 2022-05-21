@@ -496,105 +496,6 @@ const useValue = (function() {
 
 
 
-
-class RMEElemRenderer {
-    constructor(root) {
-        this.root = root;
-        this.mergedStage;
-        this.tobeRemoved = [];
-    }
-
-    /**
-     * Function merges a newStage to a oldStage. Merge rules are following.
-     * New stage has what old stage doesn't > add it.
-     * New stage has what old stage has > has it changed ? yes > change|update it : no > do nothing.
-     * New stage doesn't have what old stage has > remove it.
-     * @param {object} oldStage
-     * @param {object} newStage
-     * @returns The merged stage.
-     */
-    merge(oldStage, newStage) {
-        if (Util.isEmpty(this.root.getChildren())) {
-            this.root.append(newStage);
-            this.mergedStage = newStage;
-        } else {
-            this.render(this.root, oldStage, newStage, 0);
-            this.mergedStage = oldStage;
-            this.removeToBeRemoved();
-        }
-        return this.mergedStage;
-    }
-
-    /**
-     * Function is called recusively and goes through a oldStage and a newStage simultaneosly in recursion and comparing them and updating changed content.
-     * @param {object} parent 
-     * @param {object} oldNode 
-     * @param {object} newNode 
-     * @param {number} index 
-     */
-    render(parent, oldNode, newNode, index) {
-        if (!oldNode && newNode) {
-            parent.append(newNode.duplicate());
-        } else if (oldNode && !newNode) {
-            this.tobeRemoved.push({parent: parent, child: this.wrap(parent.dom().children[index])});
-        } else if (this.hasNodeChanged(oldNode, newNode)) {
-            if (oldNode.getTagName() !== newNode.getTagName() || (oldNode.dom().children.length > 0 || newNode.dom().children.length > 0)) {
-                this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
-            } else {
-                oldNode.setProps(newNode.getProps());
-            }
-        } else {
-            let i = 0;
-            let oldLength = oldNode ? oldNode.dom().children.length : 0;
-            let newLength = newNode ? newNode.dom().children.length : 0;
-            
-            while(i < newLength || i < oldLength) {
-                this.render(
-                    this.wrap(parent.dom().children[index]),
-                    oldNode ? this.wrap(oldNode.dom().children[i]) : null,
-                    newNode ? this.wrap(newNode.dom().children[i]) : null,
-                    i);
-                i++;
-            }
-        }
-    }
-
-    /**
-     * Function removes all the marked as to be removed elements which did not come in the new stage by starting from the last to the first.
-     */
-    removeToBeRemoved() {
-        if(this.tobeRemoved.length > 0) {
-            let lastIdx = this.tobeRemoved.length - 1;
-            while (lastIdx >= 0) {
-                this.tobeRemoved[lastIdx].parent.remove(this.tobeRemoved[lastIdx].child);
-                lastIdx--;
-            }
-            this.tobeRemoved = [];
-        }
-    }
-
-    /**
-     * Function takes two Elem objects as parameter and compares them if they are equal or have some properties changed.
-     * @param {object} oldNode 
-     * @param {object} newNode 
-     * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
-     */
-    hasNodeChanged(oldNode, newNode) {
-        return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && oldNode.getProps(true) !== newNode.getProps(true);
-    }
-
-    /**
-     * Function takes DOM node as a parameter and wraps it to Elem object.
-     * @param {object} node 
-     * @returns the Wrapped Elem object.
-     */
-    wrap(node) {
-        if (!Util.isEmpty(node))
-            return Elem.wrap(node);
-    }
-
-}
-
 /**
  * Keeps app instances in memory
  */
@@ -619,6 +520,67 @@ const AppManager = (function() {
     return manager;
 
 })();
+
+
+/**
+ * Manages between component shareable values.
+ */
+const ValueStore = (function() {
+
+    class ValueStore {
+        constructor() {
+            this.values = {};
+            this.valueRefGenerator = new RefGenerator('val');
+        }
+    
+        /**
+         * The function will set the given value to the app instance and return a getter and a setter function
+         * for the given value. Values can be shared and used in between any component.
+         * @param {*} value 
+         * @returns An array containing the getter and the setter functions for the given value.
+         */
+        useValue(value, appName) {
+            if (Util.isFunction(value)) {
+                value = value(value);
+            }
+            const ref = this.valueRefGenerator.next();
+            this.values[ref] = value;
+    
+            const getter = () => this.values[ref];
+            const setter = (next, update) => {
+                if (Util.isFunction(next)) {
+                    next = next(getter());
+                }
+    
+                this.values[ref] = next;
+                
+                if (update !== false) {
+                    App.get(appName).refresh();
+                }
+            }
+            return [getter, setter];
+        }
+    }
+    
+    class RefGenerator {
+        constructor(feed) {
+            this.feed = feed || "";
+            this.seq = 0;
+        }
+    
+        next() {
+            const ref = this.feed+this.seq;
+            this.seq++
+            return ref;
+        }
+    }
+    
+    const valueStore = new ValueStore();
+
+    return valueStore;
+
+})();
+
 
 /**
  * Browser class contains all the rest utility functions which JavaScript has to offer from Window, Navigator, Screen, History, Location objects.
@@ -1058,65 +1020,159 @@ class Browser {
 }
 
 
-/**
- * Manages between component shareable values.
- */
-const ValueStore = (function() {
+class RMEElemRenderer {
+    constructor(root) {
+        this.root = root;
+        this.mergedStage;
+        this.tobeRemoved = [];
+    }
 
-    class ValueStore {
-        constructor() {
-            this.values = {};
-            this.valueRefGenerator = new RefGenerator('val');
+    /**
+     * Function merges a newStage to a oldStage. Merge rules are following.
+     * New stage has what old stage doesn't > add it.
+     * New stage has what old stage has > has it changed ? yes > change|update it : no > do nothing.
+     * New stage doesn't have what old stage has > remove it.
+     * @param {object} oldStage
+     * @param {object} newStage
+     * @returns The merged stage.
+     */
+    merge(oldStage, newStage) {
+        if (Util.isEmpty(this.root.getChildren())) {
+            this.root.append(newStage);
+            this.mergedStage = newStage;
+        } else {
+            this.render(this.root, oldStage, newStage, 0);
+            this.mergedStage = oldStage;
+            this.removeToBeRemoved();
         }
-    
-        /**
-         * The function will set the given value to the app instance and return a getter and a setter function
-         * for the given value. Values can be shared and used in between any component.
-         * @param {*} value 
-         * @returns An array containing the getter and the setter functions for the given value.
-         */
-        useValue(value, appName) {
-            if (Util.isFunction(value)) {
-                value = value(value);
+        return this.mergedStage;
+    }
+
+    /**
+     * Function is called recusively and goes through a oldStage and a newStage simultaneosly in recursion and comparing them and updating changed content.
+     * @param {object} parent 
+     * @param {object} oldNode 
+     * @param {object} newNode 
+     * @param {number} index 
+     */
+    render(parent, oldNode, newNode, index) {
+        if (!oldNode && newNode) {
+            parent.append(newNode.duplicate());
+        } else if (oldNode && !newNode) {
+            this.tobeRemoved.push({parent: parent, child: this.wrap(parent.dom().children[index])});
+        } else if (this.hasNodeChanged(oldNode, newNode)) {
+            if (oldNode.getTagName() !== newNode.getTagName() || (oldNode.dom().children.length > 0 || newNode.dom().children.length > 0)) {
+                this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
+            } else {
+                oldNode.setProps({
+                    ...this.excludeEventListeners(this.getBrowserSetProps(parent, index)), 
+                    ...newNode.getProps()
+                });
             }
-            const ref = this.valueRefGenerator.next();
-            this.values[ref] = value;
-    
-            const getter = () => this.values[ref];
-            const setter = (next, update) => {
-                if (Util.isFunction(next)) {
-                    next = next(getter());
-                }
-    
-                this.values[ref] = next;
-                
-                if (update !== false) {
-                    App.get(appName).refresh();
-                }
+        } else {
+            this.updateEventListeners(oldNode, newNode);
+            
+            let i = 0;
+            let oldLength = oldNode ? oldNode.dom().children.length : 0;
+            let newLength = newNode ? newNode.dom().children.length : 0;
+            
+            while(i < newLength || i < oldLength) {
+                this.render(
+                    this.wrap(parent.dom().children[index]),
+                    oldNode ? this.wrap(oldNode.dom().children[i]) : null,
+                    newNode ? this.wrap(newNode.dom().children[i]) : null,
+                    i);
+                i++;
             }
-            return [getter, setter];
         }
     }
-    
-    class RefGenerator {
-        constructor(feed) {
-            this.feed = feed || "";
-            this.seq = 0;
+
+    /**
+     * Excludes event listeners from the given props object.
+     * @param {object} props 
+     * @returns The properties object not containing event listeners
+     */
+    excludeEventListeners(props) {
+        for (let p in props) {
+            if (props.hasOwnProperty(p) && p.indexOf('on') === 0) {
+                delete props[p];
+            }
         }
-    
-        next() {
-            const ref = this.feed+this.seq;
-            this.seq++
-            return ref;
+        return props;
+    }
+
+    /**
+     * Get browser set properties object of the node from the parent in the specific index.
+     * @param {object} parent 
+     * @param {number} index 
+     * @returns Properties object of the node in the shadow three.
+     */
+    getBrowserSetProps(parent, index) {
+        return this.wrap(parent.dom().children[index]).getProps();
+    }
+
+    /**
+     * Update event listeners of the old node to event listeners of the new node.
+     * @param {object} oldNode 
+     * @param {object} newNode 
+     */
+    updateEventListeners(oldNode, newNode) {
+        const listeners = this.getEventListeners(newNode);
+        if (Object.keys(listeners).length > 0) {
+            oldNode.setProps({...oldNode.getProps(), ...listeners});
         }
     }
-    
-    const valueStore = new ValueStore();
 
-    return valueStore;
+    /**
+     * Get event listeners of the node
+     * @param {object} node 
+     * @returns An object containing defined event listeners
+     */
+    getEventListeners(node) {
+        const props = node.getProps();
+        for (let p in props) {
+            if (props.hasOwnProperty(p) && p.indexOf('on') !== 0) {
+                delete props[p]
+            }
+        }
+        return props;
+    }
 
-})();
+    /**
+     * Function removes all the marked as to be removed elements which did not come in the new stage by starting from the last to the first.
+     */
+    removeToBeRemoved() {
+        if(this.tobeRemoved.length > 0) {
+            let lastIdx = this.tobeRemoved.length - 1;
+            while (lastIdx >= 0) {
+                this.tobeRemoved[lastIdx].parent.remove(this.tobeRemoved[lastIdx].child);
+                lastIdx--;
+            }
+            this.tobeRemoved = [];
+        }
+    }
 
+    /**
+     * Function takes two Elem objects as parameter and compares them if they are equal or have some properties changed.
+     * @param {object} oldNode 
+     * @param {object} newNode 
+     * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
+     */
+    hasNodeChanged(oldNode, newNode) {
+        return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && oldNode.getProps(true) !== newNode.getProps(true);
+    }
+
+    /**
+     * Function takes DOM node as a parameter and wraps it to Elem object.
+     * @param {object} node 
+     * @returns the Wrapped Elem object.
+     */
+    wrap(node) {
+        if (!Util.isEmpty(node))
+            return Elem.wrap(node);
+    }
+
+}
 
 
 
@@ -3765,7 +3821,7 @@ const Fetch = (function() {
          * @param {string} contentType
          */
         get(url, contentType) {
-            return this.do({url: url, init: { method: 'GET' }, contentType: contentType || Http.JSON});
+            return this.do({url: url, init: { method: 'GET' }, contentType: getDefaultContentType(contentType)});
         }
 
         /**
@@ -3775,7 +3831,7 @@ const Fetch = (function() {
          * @param {string} contentType 
          */
         post(url, body, contentType) {
-            return this.do({url: url, body: body, init: { method: 'POST' }, contentType: contentType || Http.JSON});
+            return this.do({url: url, body: body, init: { method: 'POST' }, contentType: getDefaultContentType(contentType)});
         }
 
         /**
@@ -3785,7 +3841,7 @@ const Fetch = (function() {
          * @param {string} contentType 
          */
         put(url, body, contentType) {
-            return this.do({url: url, body: body, init: { method: 'PUT' }, contentType: contentType || Http.JSON});
+            return this.do({url: url, body: body, init: { method: 'PUT' }, contentType: getDefaultContentType(contentType)});
         }
 
         /**
@@ -3794,7 +3850,7 @@ const Fetch = (function() {
          * @param {string} contentType 
          */
         delete(url, contentType) {
-            return this.do({url: url, init: { method: 'DELETE' }, contentType: contentType || Http.JSON});
+            return this.do({url: url, init: { method: 'DELETE' }, contentType: getDefaultContentType(contentType)});
         }
 
         /**
@@ -3804,7 +3860,7 @@ const Fetch = (function() {
          * @param {string} contentType
          */
         patch(url, body, contentType) {
-            return this.do({url, url, body: body, init: { method: 'PATCH' }, contentType: contentType || Http.JSON});
+            return this.do({url, url, body: body, init: { method: 'PATCH' }, contentType: getDefaultContentType(contentType)});
         }
 
         /**
@@ -3825,7 +3881,7 @@ const Fetch = (function() {
                 throw new Error(`Error in fetch config object ${JSON.stringify(config)}, url must be set`);
             }
             if (!config.init) config.init = {};
-            if (config.contentType) {
+            if (config.contentType && config.contentType !== 'buffer') {
                 if (!config.init.headers)
                     config.init.headers = new Headers({});
                 if (!config.init.headers.has('Content-Type'))
@@ -3855,6 +3911,12 @@ const Fetch = (function() {
                     if (isContentType(config.contentType, Http.FORM_DATA)) {
                         return response.formData();
                     }
+                    if (isContentType(config.contentType, Http.OCTET_STREAM)) {
+                        return response.blob();
+                    }
+                    if (config.contentType === 'buffer') {
+                        return response.arrayBuffer();
+                    }
                     return response;
                 });
         }
@@ -3862,6 +3924,16 @@ const Fetch = (function() {
 
     const isContentType = (contentTypeA, contentTypeB) => {
         return Util.notEmpty(contentTypeA) && contentTypeA.search(contentTypeB) > -1;
+    }
+
+    const getDefaultContentType = (contentType) => {
+        if (contentType === undefined) {
+            return Http.JSON;
+        } else if (contentType === null) {
+            return null;
+        } else {
+            return contentType;
+        }
     }
 
     return new Fetch();
@@ -3986,6 +4058,11 @@ const Http = (function() {
     Http.TEXT_PLAIN = "text/plain";
 
     /**
+     * Content-Type application/octet-stream
+     */
+    Http.OCTET_STREAM = "application/octet-stream";
+
+    /**
      * The XMLHttpRequest made into the Promise pattern.
      */
     class HttpAjax {
@@ -4003,7 +4080,10 @@ const Http = (function() {
         then(successHandler, errorHandler) {
             this.xhr.onload = () => {
                 this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
-                isResponseOK(this.xhr.status) ? successHandler(resolveResponse(this.xhr.response), this.xhr) : errorHandler(this.xhr)
+                isResponseOK(this.xhr.status) 
+                    ? successHandler(isContentTypeJson(this.config.contentType) 
+                        ? resolveResponse(this.xhr.response) : this.xhr)
+                    : errorHandler(this.xhr)
             };
             if (this.config.onProgress) {
                 this.xhr.onprogress = (event) => {
@@ -4060,7 +4140,7 @@ const Http = (function() {
     }
     
     const isContentTypeJson = (contentType) => {
-        return Http.JSON.search(contentType.toLowerCase()) > -1 || contentType.toLowerCase().search(Http.JSON) > -1;
+        return contentType && (Http.JSON.search(contentType.toLowerCase()) > -1 || contentType.toLowerCase().search(Http.JSON) > -1);
     }
     
     const tryParseJSON = (text) => {
@@ -4608,7 +4688,6 @@ const ready = (function() {
 
 
 
-
 let Router = (function() {
     /**
      * Router class handles and renders route elements that are given by Router.routes() method.
@@ -5068,6 +5147,7 @@ let Router = (function() {
     }
 }());
 
+
 /**
  * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
  */
@@ -5102,7 +5182,6 @@ class Session {
     }
 }
 
-
 /**
  * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
  */
@@ -5136,6 +5215,7 @@ class Storage {
         localStorage.clear();
     }
 }
+
 
 
 const RMETemplateFragmentHelper = (function() {

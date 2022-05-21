@@ -539,120 +539,6 @@ var useValue = function () {
     return ValueStore.useValue(value, appName);
   };
 }();
-
-var RMEElemRenderer = /*#__PURE__*/function () {
-  function RMEElemRenderer(root) {
-    _classCallCheck(this, RMEElemRenderer);
-
-    this.root = root;
-    this.mergedStage;
-    this.tobeRemoved = [];
-  }
-  /**
-   * Function merges a newStage to a oldStage. Merge rules are following.
-   * New stage has what old stage doesn't > add it.
-   * New stage has what old stage has > has it changed ? yes > change|update it : no > do nothing.
-   * New stage doesn't have what old stage has > remove it.
-   * @param {object} oldStage
-   * @param {object} newStage
-   * @returns The merged stage.
-   */
-
-
-  _createClass(RMEElemRenderer, [{
-    key: "merge",
-    value: function merge(oldStage, newStage) {
-      if (Util.isEmpty(this.root.getChildren())) {
-        this.root.append(newStage);
-        this.mergedStage = newStage;
-      } else {
-        this.render(this.root, oldStage, newStage, 0);
-        this.mergedStage = oldStage;
-        this.removeToBeRemoved();
-      }
-
-      return this.mergedStage;
-    }
-    /**
-     * Function is called recusively and goes through a oldStage and a newStage simultaneosly in recursion and comparing them and updating changed content.
-     * @param {object} parent 
-     * @param {object} oldNode 
-     * @param {object} newNode 
-     * @param {number} index 
-     */
-
-  }, {
-    key: "render",
-    value: function render(parent, oldNode, newNode, index) {
-      if (!oldNode && newNode) {
-        parent.append(newNode.duplicate());
-      } else if (oldNode && !newNode) {
-        this.tobeRemoved.push({
-          parent: parent,
-          child: this.wrap(parent.dom().children[index])
-        });
-      } else if (this.hasNodeChanged(oldNode, newNode)) {
-        if (oldNode.getTagName() !== newNode.getTagName() || oldNode.dom().children.length > 0 || newNode.dom().children.length > 0) {
-          this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
-        } else {
-          oldNode.setProps(newNode.getProps());
-        }
-      } else {
-        var i = 0;
-        var oldLength = oldNode ? oldNode.dom().children.length : 0;
-        var newLength = newNode ? newNode.dom().children.length : 0;
-
-        while (i < newLength || i < oldLength) {
-          this.render(this.wrap(parent.dom().children[index]), oldNode ? this.wrap(oldNode.dom().children[i]) : null, newNode ? this.wrap(newNode.dom().children[i]) : null, i);
-          i++;
-        }
-      }
-    }
-    /**
-     * Function removes all the marked as to be removed elements which did not come in the new stage by starting from the last to the first.
-     */
-
-  }, {
-    key: "removeToBeRemoved",
-    value: function removeToBeRemoved() {
-      if (this.tobeRemoved.length > 0) {
-        var lastIdx = this.tobeRemoved.length - 1;
-
-        while (lastIdx >= 0) {
-          this.tobeRemoved[lastIdx].parent.remove(this.tobeRemoved[lastIdx].child);
-          lastIdx--;
-        }
-
-        this.tobeRemoved = [];
-      }
-    }
-    /**
-     * Function takes two Elem objects as parameter and compares them if they are equal or have some properties changed.
-     * @param {object} oldNode 
-     * @param {object} newNode 
-     * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
-     */
-
-  }, {
-    key: "hasNodeChanged",
-    value: function hasNodeChanged(oldNode, newNode) {
-      return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && oldNode.getProps(true) !== newNode.getProps(true);
-    }
-    /**
-     * Function takes DOM node as a parameter and wraps it to Elem object.
-     * @param {object} node 
-     * @returns the Wrapped Elem object.
-     */
-
-  }, {
-    key: "wrap",
-    value: function wrap(node) {
-      if (!Util.isEmpty(node)) return Elem.wrap(node);
-    }
-  }]);
-
-  return RMEElemRenderer;
-}();
 /**
  * Keeps app instances in memory
  */
@@ -683,6 +569,85 @@ var AppManager = function () {
 
   var manager = new AppManager();
   return manager;
+}();
+/**
+ * Manages between component shareable values.
+ */
+
+
+var ValueStore = function () {
+  var ValueStore = /*#__PURE__*/function () {
+    function ValueStore() {
+      _classCallCheck(this, ValueStore);
+
+      this.values = {};
+      this.valueRefGenerator = new RefGenerator('val');
+    }
+    /**
+     * The function will set the given value to the app instance and return a getter and a setter function
+     * for the given value. Values can be shared and used in between any component.
+     * @param {*} value 
+     * @returns An array containing the getter and the setter functions for the given value.
+     */
+
+
+    _createClass(ValueStore, [{
+      key: "useValue",
+      value: function useValue(value, appName) {
+        var _this4 = this;
+
+        if (Util.isFunction(value)) {
+          value = value(value);
+        }
+
+        var ref = this.valueRefGenerator.next();
+        this.values[ref] = value;
+
+        var getter = function getter() {
+          return _this4.values[ref];
+        };
+
+        var setter = function setter(next, update) {
+          if (Util.isFunction(next)) {
+            next = next(getter());
+          }
+
+          _this4.values[ref] = next;
+
+          if (update !== false) {
+            App.get(appName).refresh();
+          }
+        };
+
+        return [getter, setter];
+      }
+    }]);
+
+    return ValueStore;
+  }();
+
+  var RefGenerator = /*#__PURE__*/function () {
+    function RefGenerator(feed) {
+      _classCallCheck(this, RefGenerator);
+
+      this.feed = feed || "";
+      this.seq = 0;
+    }
+
+    _createClass(RefGenerator, [{
+      key: "next",
+      value: function next() {
+        var ref = this.feed + this.seq;
+        this.seq++;
+        return ref;
+      }
+    }]);
+
+    return RefGenerator;
+  }();
+
+  var valueStore = new ValueStore();
+  return valueStore;
 }();
 /**
  * Browser class contains all the rest utility functions which JavaScript has to offer from Window, Navigator, Screen, History, Location objects.
@@ -1224,84 +1189,183 @@ var Browser = /*#__PURE__*/function () {
 
   return Browser;
 }();
-/**
- * Manages between component shareable values.
- */
+
+var RMEElemRenderer = /*#__PURE__*/function () {
+  function RMEElemRenderer(root) {
+    _classCallCheck(this, RMEElemRenderer);
+
+    this.root = root;
+    this.mergedStage;
+    this.tobeRemoved = [];
+  }
+  /**
+   * Function merges a newStage to a oldStage. Merge rules are following.
+   * New stage has what old stage doesn't > add it.
+   * New stage has what old stage has > has it changed ? yes > change|update it : no > do nothing.
+   * New stage doesn't have what old stage has > remove it.
+   * @param {object} oldStage
+   * @param {object} newStage
+   * @returns The merged stage.
+   */
 
 
-var ValueStore = function () {
-  var ValueStore = /*#__PURE__*/function () {
-    function ValueStore() {
-      _classCallCheck(this, ValueStore);
+  _createClass(RMEElemRenderer, [{
+    key: "merge",
+    value: function merge(oldStage, newStage) {
+      if (Util.isEmpty(this.root.getChildren())) {
+        this.root.append(newStage);
+        this.mergedStage = newStage;
+      } else {
+        this.render(this.root, oldStage, newStage, 0);
+        this.mergedStage = oldStage;
+        this.removeToBeRemoved();
+      }
 
-      this.values = {};
-      this.valueRefGenerator = new RefGenerator('val');
+      return this.mergedStage;
     }
     /**
-     * The function will set the given value to the app instance and return a getter and a setter function
-     * for the given value. Values can be shared and used in between any component.
-     * @param {*} value 
-     * @returns An array containing the getter and the setter functions for the given value.
+     * Function is called recusively and goes through a oldStage and a newStage simultaneosly in recursion and comparing them and updating changed content.
+     * @param {object} parent 
+     * @param {object} oldNode 
+     * @param {object} newNode 
+     * @param {number} index 
      */
 
+  }, {
+    key: "render",
+    value: function render(parent, oldNode, newNode, index) {
+      if (!oldNode && newNode) {
+        parent.append(newNode.duplicate());
+      } else if (oldNode && !newNode) {
+        this.tobeRemoved.push({
+          parent: parent,
+          child: this.wrap(parent.dom().children[index])
+        });
+      } else if (this.hasNodeChanged(oldNode, newNode)) {
+        if (oldNode.getTagName() !== newNode.getTagName() || oldNode.dom().children.length > 0 || newNode.dom().children.length > 0) {
+          this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
+        } else {
+          oldNode.setProps(_objectSpread(_objectSpread({}, this.excludeEventListeners(this.getBrowserSetProps(parent, index))), newNode.getProps()));
+        }
+      } else {
+        this.updateEventListeners(oldNode, newNode);
+        var i = 0;
+        var oldLength = oldNode ? oldNode.dom().children.length : 0;
+        var newLength = newNode ? newNode.dom().children.length : 0;
 
-    _createClass(ValueStore, [{
-      key: "useValue",
-      value: function useValue(value, appName) {
-        var _this4 = this;
+        while (i < newLength || i < oldLength) {
+          this.render(this.wrap(parent.dom().children[index]), oldNode ? this.wrap(oldNode.dom().children[i]) : null, newNode ? this.wrap(newNode.dom().children[i]) : null, i);
+          i++;
+        }
+      }
+    }
+    /**
+     * Excludes event listeners from the given props object.
+     * @param {object} props 
+     * @returns The properties object not containing event listeners
+     */
 
-        if (Util.isFunction(value)) {
-          value = value(value);
+  }, {
+    key: "excludeEventListeners",
+    value: function excludeEventListeners(props) {
+      for (var p in props) {
+        if (props.hasOwnProperty(p) && p.indexOf('on') === 0) {
+          delete props[p];
+        }
+      }
+
+      return props;
+    }
+    /**
+     * Get browser set properties object of the node from the parent in the specific index.
+     * @param {object} parent 
+     * @param {number} index 
+     * @returns Properties object of the node in the shadow three.
+     */
+
+  }, {
+    key: "getBrowserSetProps",
+    value: function getBrowserSetProps(parent, index) {
+      return this.wrap(parent.dom().children[index]).getProps();
+    }
+    /**
+     * Update event listeners of the old node to event listeners of the new node.
+     * @param {object} oldNode 
+     * @param {object} newNode 
+     */
+
+  }, {
+    key: "updateEventListeners",
+    value: function updateEventListeners(oldNode, newNode) {
+      var listeners = this.getEventListeners(newNode);
+
+      if (Object.keys(listeners).length > 0) {
+        oldNode.setProps(_objectSpread(_objectSpread({}, oldNode.getProps()), listeners));
+      }
+    }
+    /**
+     * Get event listeners of the node
+     * @param {object} node 
+     * @returns An object containing defined event listeners
+     */
+
+  }, {
+    key: "getEventListeners",
+    value: function getEventListeners(node) {
+      var props = node.getProps();
+
+      for (var p in props) {
+        if (props.hasOwnProperty(p) && p.indexOf('on') !== 0) {
+          delete props[p];
+        }
+      }
+
+      return props;
+    }
+    /**
+     * Function removes all the marked as to be removed elements which did not come in the new stage by starting from the last to the first.
+     */
+
+  }, {
+    key: "removeToBeRemoved",
+    value: function removeToBeRemoved() {
+      if (this.tobeRemoved.length > 0) {
+        var lastIdx = this.tobeRemoved.length - 1;
+
+        while (lastIdx >= 0) {
+          this.tobeRemoved[lastIdx].parent.remove(this.tobeRemoved[lastIdx].child);
+          lastIdx--;
         }
 
-        var ref = this.valueRefGenerator.next();
-        this.values[ref] = value;
-
-        var getter = function getter() {
-          return _this4.values[ref];
-        };
-
-        var setter = function setter(next, update) {
-          if (Util.isFunction(next)) {
-            next = next(getter());
-          }
-
-          _this4.values[ref] = next;
-
-          if (update !== false) {
-            App.get(appName).refresh();
-          }
-        };
-
-        return [getter, setter];
+        this.tobeRemoved = [];
       }
-    }]);
-
-    return ValueStore;
-  }();
-
-  var RefGenerator = /*#__PURE__*/function () {
-    function RefGenerator(feed) {
-      _classCallCheck(this, RefGenerator);
-
-      this.feed = feed || "";
-      this.seq = 0;
     }
+    /**
+     * Function takes two Elem objects as parameter and compares them if they are equal or have some properties changed.
+     * @param {object} oldNode 
+     * @param {object} newNode 
+     * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
+     */
 
-    _createClass(RefGenerator, [{
-      key: "next",
-      value: function next() {
-        var ref = this.feed + this.seq;
-        this.seq++;
-        return ref;
-      }
-    }]);
+  }, {
+    key: "hasNodeChanged",
+    value: function hasNodeChanged(oldNode, newNode) {
+      return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && oldNode.getProps(true) !== newNode.getProps(true);
+    }
+    /**
+     * Function takes DOM node as a parameter and wraps it to Elem object.
+     * @param {object} node 
+     * @returns the Wrapped Elem object.
+     */
 
-    return RefGenerator;
-  }();
+  }, {
+    key: "wrap",
+    value: function wrap(node) {
+      if (!Util.isEmpty(node)) return Elem.wrap(node);
+    }
+  }]);
 
-  var valueStore = new ValueStore();
-  return valueStore;
+  return RMEElemRenderer;
 }();
 /**
  * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
@@ -4438,7 +4502,7 @@ var Fetch = function () {
           init: {
             method: 'GET'
           },
-          contentType: contentType || Http.JSON
+          contentType: getDefaultContentType(contentType)
         });
       }
       /**
@@ -4457,7 +4521,7 @@ var Fetch = function () {
           init: {
             method: 'POST'
           },
-          contentType: contentType || Http.JSON
+          contentType: getDefaultContentType(contentType)
         });
       }
       /**
@@ -4476,7 +4540,7 @@ var Fetch = function () {
           init: {
             method: 'PUT'
           },
-          contentType: contentType || Http.JSON
+          contentType: getDefaultContentType(contentType)
         });
       }
       /**
@@ -4493,7 +4557,7 @@ var Fetch = function () {
           init: {
             method: 'DELETE'
           },
-          contentType: contentType || Http.JSON
+          contentType: getDefaultContentType(contentType)
         });
       }
       /**
@@ -4512,7 +4576,7 @@ var Fetch = function () {
           url: url
         }, _defineProperty(_this$do, "url", url), _defineProperty(_this$do, "body", body), _defineProperty(_this$do, "init", {
           method: 'PATCH'
-        }), _defineProperty(_this$do, "contentType", contentType || Http.JSON), _this$do));
+        }), _defineProperty(_this$do, "contentType", getDefaultContentType(contentType)), _this$do));
       }
       /**
        * Does any Fetch request a given config object defines.
@@ -4537,7 +4601,7 @@ var Fetch = function () {
 
         if (!config.init) config.init = {};
 
-        if (config.contentType) {
+        if (config.contentType && config.contentType !== 'buffer') {
           if (!config.init.headers) config.init.headers = new Headers({});
           if (!config.init.headers.has('Content-Type')) config.init.headers.set('Content-Type', config.contentType);
         }
@@ -4596,9 +4660,25 @@ var Fetch = function () {
                     return _context.abrupt("return", response.formData());
 
                   case 11:
+                    if (!isContentType(config.contentType, Http.OCTET_STREAM)) {
+                      _context.next = 13;
+                      break;
+                    }
+
+                    return _context.abrupt("return", response.blob());
+
+                  case 13:
+                    if (!(config.contentType === 'buffer')) {
+                      _context.next = 15;
+                      break;
+                    }
+
+                    return _context.abrupt("return", response.arrayBuffer());
+
+                  case 15:
                     return _context.abrupt("return", response);
 
-                  case 12:
+                  case 16:
                   case "end":
                     return _context.stop();
                 }
@@ -4618,6 +4698,16 @@ var Fetch = function () {
 
   var isContentType = function isContentType(contentTypeA, contentTypeB) {
     return Util.notEmpty(contentTypeA) && contentTypeA.search(contentTypeB) > -1;
+  };
+
+  var getDefaultContentType = function getDefaultContentType(contentType) {
+    if (contentType === undefined) {
+      return Http.JSON;
+    } else if (contentType === null) {
+      return null;
+    } else {
+      return contentType;
+    }
   };
 
   return new Fetch();
@@ -4787,6 +4877,11 @@ var Http = function () {
 
   Http.TEXT_PLAIN = "text/plain";
   /**
+   * Content-Type application/octet-stream
+   */
+
+  Http.OCTET_STREAM = "application/octet-stream";
+  /**
    * The XMLHttpRequest made into the Promise pattern.
    */
 
@@ -4809,7 +4904,7 @@ var Http = function () {
 
         this.xhr.onload = function () {
           _this11.xhr.responseJSON = tryParseJSON(_this11.xhr.responseText);
-          isResponseOK(_this11.xhr.status) ? successHandler(resolveResponse(_this11.xhr.response), _this11.xhr) : errorHandler(_this11.xhr);
+          isResponseOK(_this11.xhr.status) ? successHandler(isContentTypeJson(_this11.config.contentType) ? resolveResponse(_this11.xhr.response) : _this11.xhr) : errorHandler(_this11.xhr);
         };
 
         if (this.config.onProgress) {
@@ -4892,7 +4987,7 @@ var Http = function () {
   };
 
   var isContentTypeJson = function isContentTypeJson(contentType) {
-    return Http.JSON.search(contentType.toLowerCase()) > -1 || contentType.toLowerCase().search(Http.JSON) > -1;
+    return contentType && (Http.JSON.search(contentType.toLowerCase()) > -1 || contentType.toLowerCase().search(Http.JSON) > -1);
   };
 
   var tryParseJSON = function tryParseJSON(text) {
