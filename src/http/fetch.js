@@ -34,7 +34,7 @@ const Fetch = (function() {
          * @param {string} contentType
          */
         get(url, contentType) {
-            return this.do({url: url, init: { method: 'GET' }, contentType: contentType || Http.JSON});
+            return this.do({url: url, init: { method: 'GET' }, contentType: getDefaultContentType(contentType)});
         }
 
         /**
@@ -44,7 +44,7 @@ const Fetch = (function() {
          * @param {string} contentType 
          */
         post(url, body, contentType) {
-            return this.do({url: url, body: body, init: { method: 'POST' }, contentType: contentType || Http.JSON});
+            return this.do({url: url, body: body, init: { method: 'POST' }, contentType: getDefaultContentType(contentType)});
         }
 
         /**
@@ -54,7 +54,7 @@ const Fetch = (function() {
          * @param {string} contentType 
          */
         put(url, body, contentType) {
-            return this.do({url: url, body: body, init: { method: 'PUT' }, contentType: contentType || Http.JSON});
+            return this.do({url: url, body: body, init: { method: 'PUT' }, contentType: getDefaultContentType(contentType)});
         }
 
         /**
@@ -63,7 +63,7 @@ const Fetch = (function() {
          * @param {string} contentType 
          */
         delete(url, contentType) {
-            return this.do({url: url, init: { method: 'DELETE' }, contentType: contentType || Http.JSON});
+            return this.do({url: url, init: { method: 'DELETE' }, contentType: getDefaultContentType(contentType)});
         }
 
         /**
@@ -73,7 +73,7 @@ const Fetch = (function() {
          * @param {string} contentType
          */
         patch(url, body, contentType) {
-            return this.do({url, url, body: body, init: { method: 'PATCH' }, contentType: contentType || Http.JSON});
+            return this.do({url, url, body: body, init: { method: 'PATCH' }, contentType: getDefaultContentType(contentType)});
         }
 
         /**
@@ -94,7 +94,7 @@ const Fetch = (function() {
                 throw new Error(`Error in fetch config object ${JSON.stringify(config)}, url must be set`);
             }
             if (!config.init) config.init = {};
-            if (config.contentType) {
+            if (config.contentType && config.contentType !== 'buffer') {
                 if (!config.init.headers)
                     config.init.headers = new Headers({});
                 if (!config.init.headers.has('Content-Type'))
@@ -124,6 +124,12 @@ const Fetch = (function() {
                     if (isContentType(config.contentType, Http.FORM_DATA)) {
                         return response.formData();
                     }
+                    if (isContentType(config.contentType, Http.OCTET_STREAM)) {
+                        return response.blob();
+                    }
+                    if (config.contentType === 'buffer') {
+                        return response.arrayBuffer();
+                    }
                     return response;
                 });
         }
@@ -131,6 +137,16 @@ const Fetch = (function() {
 
     const isContentType = (contentTypeA, contentTypeB) => {
         return Util.notEmpty(contentTypeA) && contentTypeA.search(contentTypeB) > -1;
+    }
+
+    const getDefaultContentType = (contentType) => {
+        if (contentType === undefined) {
+            return Http.JSON;
+        } else if (contentType === null) {
+            return null;
+        } else {
+            return contentType;
+        }
     }
 
     return new Fetch();

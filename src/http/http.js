@@ -117,6 +117,11 @@ const Http = (function() {
     Http.TEXT_PLAIN = "text/plain";
 
     /**
+     * Content-Type application/octet-stream
+     */
+    Http.OCTET_STREAM = "application/octet-stream";
+
+    /**
      * The XMLHttpRequest made into the Promise pattern.
      */
     class HttpAjax {
@@ -134,7 +139,10 @@ const Http = (function() {
         then(successHandler, errorHandler) {
             this.xhr.onload = () => {
                 this.xhr.responseJSON = tryParseJSON(this.xhr.responseText);
-                isResponseOK(this.xhr.status) ? successHandler(resolveResponse(this.xhr.response), this.xhr) : errorHandler(this.xhr)
+                isResponseOK(this.xhr.status) 
+                    ? successHandler(isContentTypeJson(this.config.contentType) 
+                        ? resolveResponse(this.xhr.response) : this.xhr)
+                    : errorHandler(this.xhr)
             };
             if (this.config.onProgress) {
                 this.xhr.onprogress = (event) => {
@@ -191,7 +199,7 @@ const Http = (function() {
     }
     
     const isContentTypeJson = (contentType) => {
-        return Http.JSON.search(contentType.toLowerCase()) > -1 || contentType.toLowerCase().search(Http.JSON) > -1;
+        return contentType && (Http.JSON.search(contentType.toLowerCase()) > -1 || contentType.toLowerCase().search(Http.JSON) > -1);
     }
     
     const tryParseJSON = (text) => {
