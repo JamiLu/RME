@@ -46,7 +46,7 @@ class RMEElemRenderer {
                 this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
             } else {
                 oldNode.setProps({
-                    ...this.excludeEventListeners(this.getBrowserSetProps(parent, index)), 
+                    ...this.getBrowserSetStyle(parent, index), 
                     ...newNode.getProps()
                 });
             }
@@ -69,27 +69,14 @@ class RMEElemRenderer {
     }
 
     /**
-     * Excludes event listeners from the given props object.
-     * @param {object} props 
-     * @returns The properties object not containing event listeners
-     */
-    excludeEventListeners(props) {
-        for (let p in props) {
-            if (props.hasOwnProperty(p) && p.indexOf('on') === 0) {
-                delete props[p];
-            }
-        }
-        return props;
-    }
-
-    /**
-     * Get browser set properties object of the node from the parent in the specific index.
+     * Get browser set style of the node if present from the parent in the specific index.
      * @param {object} parent 
      * @param {number} index 
-     * @returns Properties object of the node in the shadow three.
+     * @returns Properties object containing the style attribute of the node in the shadow three.
      */
-    getBrowserSetProps(parent, index) {
-        return this.wrap(parent.dom().children[index]).getProps();
+    getBrowserSetStyle(parent, index) {
+        const props = this.wrap(parent.dom().children[index]).getProps();
+        return props.style ? {style: props.style} : null
     }
 
     /**
