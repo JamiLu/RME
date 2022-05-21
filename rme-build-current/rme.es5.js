@@ -570,6 +570,170 @@ var AppManager = function () {
   var manager = new AppManager();
   return manager;
 }();
+
+var RMEElemRenderer = /*#__PURE__*/function () {
+  function RMEElemRenderer(root) {
+    _classCallCheck(this, RMEElemRenderer);
+
+    this.root = root;
+    this.mergedStage;
+    this.tobeRemoved = [];
+  }
+  /**
+   * Function merges a newStage to a oldStage. Merge rules are following.
+   * New stage has what old stage doesn't > add it.
+   * New stage has what old stage has > has it changed ? yes > change|update it : no > do nothing.
+   * New stage doesn't have what old stage has > remove it.
+   * @param {object} oldStage
+   * @param {object} newStage
+   * @returns The merged stage.
+   */
+
+
+  _createClass(RMEElemRenderer, [{
+    key: "merge",
+    value: function merge(oldStage, newStage) {
+      if (Util.isEmpty(this.root.getChildren())) {
+        this.root.append(newStage);
+        this.mergedStage = newStage;
+      } else {
+        this.render(this.root, oldStage, newStage, 0);
+        this.mergedStage = oldStage;
+        this.removeToBeRemoved();
+      }
+
+      return this.mergedStage;
+    }
+    /**
+     * Function is called recusively and goes through a oldStage and a newStage simultaneosly in recursion and comparing them and updating changed content.
+     * @param {object} parent 
+     * @param {object} oldNode 
+     * @param {object} newNode 
+     * @param {number} index 
+     */
+
+  }, {
+    key: "render",
+    value: function render(parent, oldNode, newNode, index) {
+      if (!oldNode && newNode) {
+        parent.append(newNode.duplicate());
+      } else if (oldNode && !newNode) {
+        this.tobeRemoved.push({
+          parent: parent,
+          child: this.wrap(parent.dom().children[index])
+        });
+      } else if (this.hasNodeChanged(oldNode, newNode)) {
+        if (oldNode.getTagName() !== newNode.getTagName() || oldNode.dom().children.length > 0 || newNode.dom().children.length > 0) {
+          this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
+        } else {
+          oldNode.setProps(_objectSpread(_objectSpread({}, this.getBrowserSetStyle(parent, index)), newNode.getProps()));
+        }
+      } else {
+        this.updateEventListeners(oldNode, newNode);
+        var i = 0;
+        var oldLength = oldNode ? oldNode.dom().children.length : 0;
+        var newLength = newNode ? newNode.dom().children.length : 0;
+
+        while (i < newLength || i < oldLength) {
+          this.render(this.wrap(parent.dom().children[index]), oldNode ? this.wrap(oldNode.dom().children[i]) : null, newNode ? this.wrap(newNode.dom().children[i]) : null, i);
+          i++;
+        }
+      }
+    }
+    /**
+     * Get browser set style of the node if present from the parent in the specific index.
+     * @param {object} parent 
+     * @param {number} index 
+     * @returns Properties object containing the style attribute of the node in the shadow three.
+     */
+
+  }, {
+    key: "getBrowserSetStyle",
+    value: function getBrowserSetStyle(parent, index) {
+      var props = this.wrap(parent.dom().children[index]).getProps();
+      return props.style ? {
+        style: props.style
+      } : null;
+    }
+    /**
+     * Update event listeners of the old node to event listeners of the new node.
+     * @param {object} oldNode 
+     * @param {object} newNode 
+     */
+
+  }, {
+    key: "updateEventListeners",
+    value: function updateEventListeners(oldNode, newNode) {
+      var listeners = this.getEventListeners(newNode);
+
+      if (Object.keys(listeners).length > 0) {
+        oldNode.setProps(_objectSpread(_objectSpread({}, oldNode.getProps()), listeners));
+      }
+    }
+    /**
+     * Get event listeners of the node
+     * @param {object} node 
+     * @returns An object containing defined event listeners
+     */
+
+  }, {
+    key: "getEventListeners",
+    value: function getEventListeners(node) {
+      var props = node.getProps();
+
+      for (var p in props) {
+        if (props.hasOwnProperty(p) && p.indexOf('on') !== 0) {
+          delete props[p];
+        }
+      }
+
+      return props;
+    }
+    /**
+     * Function removes all the marked as to be removed elements which did not come in the new stage by starting from the last to the first.
+     */
+
+  }, {
+    key: "removeToBeRemoved",
+    value: function removeToBeRemoved() {
+      if (this.tobeRemoved.length > 0) {
+        var lastIdx = this.tobeRemoved.length - 1;
+
+        while (lastIdx >= 0) {
+          this.tobeRemoved[lastIdx].parent.remove(this.tobeRemoved[lastIdx].child);
+          lastIdx--;
+        }
+
+        this.tobeRemoved = [];
+      }
+    }
+    /**
+     * Function takes two Elem objects as parameter and compares them if they are equal or have some properties changed.
+     * @param {object} oldNode 
+     * @param {object} newNode 
+     * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
+     */
+
+  }, {
+    key: "hasNodeChanged",
+    value: function hasNodeChanged(oldNode, newNode) {
+      return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && oldNode.getProps(true) !== newNode.getProps(true);
+    }
+    /**
+     * Function takes DOM node as a parameter and wraps it to Elem object.
+     * @param {object} node 
+     * @returns the Wrapped Elem object.
+     */
+
+  }, {
+    key: "wrap",
+    value: function wrap(node) {
+      if (!Util.isEmpty(node)) return Elem.wrap(node);
+    }
+  }]);
+
+  return RMEElemRenderer;
+}();
 /**
  * Manages between component shareable values.
  */
@@ -1189,184 +1353,6 @@ var Browser = /*#__PURE__*/function () {
 
   return Browser;
 }();
-
-var RMEElemRenderer = /*#__PURE__*/function () {
-  function RMEElemRenderer(root) {
-    _classCallCheck(this, RMEElemRenderer);
-
-    this.root = root;
-    this.mergedStage;
-    this.tobeRemoved = [];
-  }
-  /**
-   * Function merges a newStage to a oldStage. Merge rules are following.
-   * New stage has what old stage doesn't > add it.
-   * New stage has what old stage has > has it changed ? yes > change|update it : no > do nothing.
-   * New stage doesn't have what old stage has > remove it.
-   * @param {object} oldStage
-   * @param {object} newStage
-   * @returns The merged stage.
-   */
-
-
-  _createClass(RMEElemRenderer, [{
-    key: "merge",
-    value: function merge(oldStage, newStage) {
-      if (Util.isEmpty(this.root.getChildren())) {
-        this.root.append(newStage);
-        this.mergedStage = newStage;
-      } else {
-        this.render(this.root, oldStage, newStage, 0);
-        this.mergedStage = oldStage;
-        this.removeToBeRemoved();
-      }
-
-      return this.mergedStage;
-    }
-    /**
-     * Function is called recusively and goes through a oldStage and a newStage simultaneosly in recursion and comparing them and updating changed content.
-     * @param {object} parent 
-     * @param {object} oldNode 
-     * @param {object} newNode 
-     * @param {number} index 
-     */
-
-  }, {
-    key: "render",
-    value: function render(parent, oldNode, newNode, index) {
-      if (!oldNode && newNode) {
-        parent.append(newNode.duplicate());
-      } else if (oldNode && !newNode) {
-        this.tobeRemoved.push({
-          parent: parent,
-          child: this.wrap(parent.dom().children[index])
-        });
-      } else if (this.hasNodeChanged(oldNode, newNode)) {
-        if (oldNode.getTagName() !== newNode.getTagName() || oldNode.dom().children.length > 0 || newNode.dom().children.length > 0) {
-          this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
-        } else {
-          oldNode.setProps(_objectSpread(_objectSpread({}, this.excludeEventListeners(this.getBrowserSetProps(parent, index))), newNode.getProps()));
-        }
-      } else {
-        this.updateEventListeners(oldNode, newNode);
-        var i = 0;
-        var oldLength = oldNode ? oldNode.dom().children.length : 0;
-        var newLength = newNode ? newNode.dom().children.length : 0;
-
-        while (i < newLength || i < oldLength) {
-          this.render(this.wrap(parent.dom().children[index]), oldNode ? this.wrap(oldNode.dom().children[i]) : null, newNode ? this.wrap(newNode.dom().children[i]) : null, i);
-          i++;
-        }
-      }
-    }
-    /**
-     * Excludes event listeners from the given props object.
-     * @param {object} props 
-     * @returns The properties object not containing event listeners
-     */
-
-  }, {
-    key: "excludeEventListeners",
-    value: function excludeEventListeners(props) {
-      for (var p in props) {
-        if (props.hasOwnProperty(p) && p.indexOf('on') === 0) {
-          delete props[p];
-        }
-      }
-
-      return props;
-    }
-    /**
-     * Get browser set properties object of the node from the parent in the specific index.
-     * @param {object} parent 
-     * @param {number} index 
-     * @returns Properties object of the node in the shadow three.
-     */
-
-  }, {
-    key: "getBrowserSetProps",
-    value: function getBrowserSetProps(parent, index) {
-      return this.wrap(parent.dom().children[index]).getProps();
-    }
-    /**
-     * Update event listeners of the old node to event listeners of the new node.
-     * @param {object} oldNode 
-     * @param {object} newNode 
-     */
-
-  }, {
-    key: "updateEventListeners",
-    value: function updateEventListeners(oldNode, newNode) {
-      var listeners = this.getEventListeners(newNode);
-
-      if (Object.keys(listeners).length > 0) {
-        oldNode.setProps(_objectSpread(_objectSpread({}, oldNode.getProps()), listeners));
-      }
-    }
-    /**
-     * Get event listeners of the node
-     * @param {object} node 
-     * @returns An object containing defined event listeners
-     */
-
-  }, {
-    key: "getEventListeners",
-    value: function getEventListeners(node) {
-      var props = node.getProps();
-
-      for (var p in props) {
-        if (props.hasOwnProperty(p) && p.indexOf('on') !== 0) {
-          delete props[p];
-        }
-      }
-
-      return props;
-    }
-    /**
-     * Function removes all the marked as to be removed elements which did not come in the new stage by starting from the last to the first.
-     */
-
-  }, {
-    key: "removeToBeRemoved",
-    value: function removeToBeRemoved() {
-      if (this.tobeRemoved.length > 0) {
-        var lastIdx = this.tobeRemoved.length - 1;
-
-        while (lastIdx >= 0) {
-          this.tobeRemoved[lastIdx].parent.remove(this.tobeRemoved[lastIdx].child);
-          lastIdx--;
-        }
-
-        this.tobeRemoved = [];
-      }
-    }
-    /**
-     * Function takes two Elem objects as parameter and compares them if they are equal or have some properties changed.
-     * @param {object} oldNode 
-     * @param {object} newNode 
-     * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
-     */
-
-  }, {
-    key: "hasNodeChanged",
-    value: function hasNodeChanged(oldNode, newNode) {
-      return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && oldNode.getProps(true) !== newNode.getProps(true);
-    }
-    /**
-     * Function takes DOM node as a parameter and wraps it to Elem object.
-     * @param {object} node 
-     * @returns the Wrapped Elem object.
-     */
-
-  }, {
-    key: "wrap",
-    value: function wrap(node) {
-      if (!Util.isEmpty(node)) return Elem.wrap(node);
-    }
-  }]);
-
-  return RMEElemRenderer;
-}();
 /**
  * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
  * instance might have not been created at the time when components are created so the queue will wait 
@@ -1869,6 +1855,530 @@ var CSS = function () {
         style.setContent(prevContent + content);
       }
     }
+  };
+}();
+/**
+ * RMEElemTemplater class is able to create a Template out of an Elem object.
+ */
+
+
+var RMEElemTemplater = /*#__PURE__*/function () {
+  function RMEElemTemplater() {
+    _classCallCheck(this, RMEElemTemplater);
+
+    this.instance;
+    this.template = {};
+    this.deep = true;
+  }
+
+  _createClass(RMEElemTemplater, [{
+    key: "toTemplate",
+    value: function toTemplate(elem, deep) {
+      if (!Util.isEmpty(deep)) this.deep = deep;
+      this.resolve(elem, this.template);
+      return this.template;
+    }
+    /**
+     * Function is called recursively and resolves an Elem object and its children in recursion
+     * @param {object} elem 
+     * @param {object} parent 
+     */
+
+  }, {
+    key: "resolve",
+    value: function resolve(elem, parent) {
+      var resolved = this.resolveElem(elem, this.resolveProps(elem));
+
+      for (var p in parent) {
+        if (parent.hasOwnProperty(p)) {
+          if (Util.isArray(parent[p]._rme_type_)) parent[p]._rme_type_.push(resolved);else this.extendMap(parent[p], resolved);
+        }
+      }
+
+      var i = 0;
+      var children = Util.isArray(elem.getChildren()) ? elem.getChildren() : [elem.getChildren()];
+
+      if (children && this.deep) {
+        while (i < children.length) {
+          this.resolve(children[i], resolved);
+          i++;
+        }
+      }
+
+      this.template = resolved;
+    }
+  }, {
+    key: "extendMap",
+    value: function extendMap(map, next) {
+      for (var v in next) {
+        if (next.hasOwnProperty(v)) {
+          map[v] = next[v];
+        }
+      }
+    }
+    /**
+     * Function will attach given properties into a given Elem and returns the resolved Elem.
+     * @param {object} elem 
+     * @param {object} props 
+     * @returns The resolved elem with attached properties.
+     */
+
+  }, {
+    key: "resolveElem",
+    value: function resolveElem(elem, props) {
+      var el = {};
+      var children = elem.getChildren();
+
+      if (Util.isArray(children) && children.length > 1) {
+        var elTag = elem.getTagName().toLowerCase();
+        var elName = this.resolveId(elTag, props);
+        elName = this.resolveClass(elName, props);
+        elName = this.resolveAttrs(elName, props);
+        el[elName] = {
+          _rme_type_: [],
+          _rme_props_: props
+        };
+      } else {
+        el[elem.getTagName().toLowerCase()] = props;
+      }
+
+      return el;
+    }
+    /**
+     * Function will place an ID attribute into an element tag if the ID attribute is found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with the ID or without.
+     */
+
+  }, {
+    key: "resolveId",
+    value: function resolveId(tag, props) {
+      if (props.id) return tag + "#" + props.id;else return tag;
+    }
+    /**
+     * Function will place a class attribute into an element tag if the class attribute is found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with the classes or without.
+     */
+
+  }, {
+    key: "resolveClass",
+    value: function resolveClass(tag, props) {
+      if (props["class"]) return tag + "." + props["class"].replace(/ /g, ".");else return tag;
+    }
+    /**
+     * Function will resolve all other attributes and place them into an element tag if other attributes are found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with other attributes or without.
+     */
+
+  }, {
+    key: "resolveAttrs",
+    value: function resolveAttrs(tag, props) {
+      var tagName = tag;
+
+      for (var p in props) {
+        if (props.hasOwnProperty(p) && p !== 'id' && p !== 'class' && p.indexOf('on') !== 0) {
+          tagName += "[".concat(p, "=").concat(props[p], "]");
+        }
+      }
+
+      return tagName;
+    }
+    /**
+     * Resolves a given Elem object and returns its properties in an object.
+     * @param {object} elem 
+     * @returns The properties object of the given element.
+     */
+
+  }, {
+    key: "resolveProps",
+    value: function resolveProps(elem) {
+      var props = {};
+      var attributes = elem.dom().attributes;
+      var a = 0;
+
+      if (attributes) {
+        while (a < attributes.length) {
+          props[this.resolveAttributeNames(attributes[a].name)] = attributes[a].value;
+          a++;
+        }
+      }
+
+      if (elem.dom().hasChildNodes() && elem.dom().childNodes[0].nodeType === 3) {
+        props["text"] = elem.getText();
+      }
+
+      for (var p in elem.dom()) {
+        if (p.indexOf("on") !== 0 || Util.isEmpty(elem.dom()[p])) continue;else props[this.resolveListeners(p)] = elem.dom()[p];
+      }
+
+      return props;
+    }
+    /**
+     * Resolves a html data-* attributes by removing '-' and setting the next character to uppercase. 
+     * Resolves an aria* attirubtes by setting the next character to uppercase.
+     * If the attribute is not a data-* or an aria attribute then it is directly returned.
+     * @param {string} attrName 
+     * @returns Resolved attribute name.
+     */
+
+  }, {
+    key: "resolveAttributeNames",
+    value: function resolveAttributeNames(attrName) {
+      if (attrName.indexOf('data') === 0 && attrName.length > 'data'.length) {
+        while (attrName.search('-') > -1) {
+          attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search('-') + 1).toUpperCase());
+        }
+
+        return attrName;
+      } else if (attrName.indexOf('aria') === 0) {
+        return attrName.replace(attrName.charAt('aria'.length), attrName.charAt('aria'.length).toUpperCase());
+      } else {
+        return attrName;
+      }
+    }
+  }, {
+    key: "resolveListeners",
+    value: function resolveListeners(name) {
+      switch (name) {
+        case "onanimationstart":
+          return "onAnimationStart";
+
+        case "onanimationiteration":
+          return "onAnimationIteration";
+
+        case "onanimationend":
+          return "onAnimationEnd";
+
+        case "ontransitionend":
+          return "onTransitionEnd";
+
+        case "ondrag":
+          return "onDrag";
+
+        case "ondragend":
+          return "onDragEnd";
+
+        case "ondragenter":
+          return "onDragEnter";
+
+        case "ondragover":
+          return "onDragOver";
+
+        case "ondragstart":
+          return "onDragStart";
+
+        case "ondrop":
+          return "onDrop";
+
+        case "onclick":
+          return "onClick";
+
+        case "ondblclick":
+          return "onDoubleClick";
+
+        case "oncontextmenu":
+          return "onContextMenu";
+
+        case "onmousedown":
+          return "onMouseDown";
+
+        case "onmouseenter":
+          return "onMouseEnter";
+
+        case "onmouseleave":
+          return "onMouseLeave";
+
+        case "onmousemove":
+          return "onMouseMove";
+
+        case "onmouseover":
+          return "onMouseOver";
+
+        case "onmouseout":
+          return "onMouseOut";
+
+        case "onmouseup":
+          return "onMouseUp";
+
+        case "onwheel":
+          return "onWheel";
+
+        case "onscroll":
+          return "onScroll";
+
+        case "onresize":
+          return "onResize";
+
+        case "onerror":
+          return "onError";
+
+        case "onload":
+          return "onLoad";
+
+        case "onunload":
+          return "onUnload";
+
+        case "onbeforeunload":
+          return "onBeforeUnload";
+
+        case "onkeyup":
+          return "onKeyUp";
+
+        case "onkeydown":
+          return "onKeyDown";
+
+        case "onkeypress":
+          return "onKeyPress";
+
+        case "oninput":
+          return "onInput";
+
+        case "onchange":
+          return "onChange";
+
+        case "onsubmit":
+          return "onSubmit";
+
+        case "onselect":
+          return "onSelect";
+
+        case "onreset":
+          return "onReset";
+
+        case "onfocus":
+          return "onFocus";
+
+        case "onfocusin":
+          return "onFocusIn";
+
+        case "onfocusout":
+          return "onFocusOut";
+
+        case "onblur":
+          return "onBlur";
+
+        case "oncopy":
+          return "onCopy";
+
+        case "oncut":
+          return "onCut";
+
+        case "onpaste":
+          return "onPaste";
+
+        case "onabort":
+          return "onAbort";
+
+        case "onwaiting":
+          return "onWaiting";
+
+        case "onvolumechange":
+          return "onVolumeChange";
+
+        case "ontimeupdate":
+          return "onTimeUpdate";
+
+        case "onseeking":
+          return "onSeeking";
+
+        case "onseekend":
+          return "onSeekEnd";
+
+        case "onratechange":
+          return "onRateChange";
+
+        case "onprogress":
+          return "onProgress";
+
+        case "onloadmetadata":
+          return "onLoadMetadata";
+
+        case "onloadeddata":
+          return "onLoadedData";
+
+        case "onloadstart":
+          return "onLoadStart";
+
+        case "onplaying":
+          return "onPlaying";
+
+        case "onplay":
+          return "onPlay";
+
+        case "onpause":
+          return "onPause";
+
+        case "onended":
+          return "onEnded";
+
+        case "ondurationchange":
+          return "onDurationChange";
+
+        case "oncanplay":
+          return "onCanPlay";
+
+        case "oncanplaythrough":
+          return "onCanPlayThrough";
+
+        case "onstalled":
+          return "onStalled";
+
+        case "onsuspend":
+          return "onSuspend";
+
+        case "onpopstate":
+          return "onPopState";
+
+        case "onstorage":
+          return "onStorage";
+
+        case "onhashchange":
+          return "onHashChange";
+
+        case "onafterprint":
+          return "onAfterPrint";
+
+        case "onbeforeprint":
+          return "onBeforePrint";
+
+        case "onpagehide":
+          return "onPageHide";
+
+        case "onpageshow":
+          return "onPageShow";
+      }
+    }
+  }, {
+    key: "toLiteralString",
+    value: function toLiteralString(elem) {
+      var props = this.resolveProps(elem);
+      var string = this.resolveId(elem.getTagName().toLowerCase(), props);
+      string = this.resolveClass(string, props);
+      string = this.resolveAttrs(string, props);
+      return string;
+    }
+    /**
+     * Function by default resolves a given element and its' children and returns template representation of the element.
+     * @param {object} elem 
+     * @param {boolean} deep 
+     * @returns Template object representation of the Elem
+     */
+
+  }], [{
+    key: "toTemplate",
+    value: function toTemplate(elem, deep) {
+      return RMEElemTemplater.getInstance().toTemplate(elem, deep);
+    }
+    /**
+     * Function resolves and returns properties of a given Elem object.
+     * @param {object} elem 
+     * @returns The properties object of the given Elem.
+     */
+
+  }, {
+    key: "getElementProps",
+    value: function getElementProps(elem) {
+      return RMEElemTemplater.getInstance().resolveProps(elem);
+    }
+  }, {
+    key: "toLiteralString",
+    value: function toLiteralString(elem) {
+      return RMEElemTemplater.getInstance().toLiteralString(elem);
+    }
+  }, {
+    key: "getInstance",
+    value: function getInstance() {
+      if (!this.instance) this.instance = new RMEElemTemplater();
+      return this.instance;
+    }
+  }]);
+
+  return RMEElemTemplater;
+}();
+
+var EventPipe = function () {
+  /**
+   * EventPipe class can be used to multicast and send custom events to registered listeners.
+   * Each event in an event queue will be sent to each registerd listener.
+   */
+  var EventPipe = /*#__PURE__*/function () {
+    function EventPipe() {
+      _classCallCheck(this, EventPipe);
+
+      this.eventsQueue = [];
+      this.callQueue = [];
+      this.loopTimeout;
+    }
+
+    _createClass(EventPipe, [{
+      key: "containsEvent",
+      value: function containsEvent() {
+        return this.eventsQueue.find(function (ev) {
+          return ev.type === event.type;
+        });
+      }
+      /**
+       * Function sends an event object though the EventPipe. The event must have a type attribute
+       * defined otherwise an error is thrown. 
+       * Example defintion of the event object. 
+       * { 
+       *   type: 'some event',
+       *   ...payload
+       * }
+       * If an event listener is defined the sent event will be received on the event listener.
+       * @param {object} event 
+       */
+
+    }, {
+      key: "send",
+      value: function send(event) {
+        if (Util.isEmpty(event.type)) throw new Error('Event must have type attribute.');
+        if (!this.containsEvent()) this.eventsQueue.push(event);
+        this.loopEvents();
+      }
+    }, {
+      key: "loopEvents",
+      value: function loopEvents() {
+        var _this7 = this;
+
+        if (this.loopTimeout) Util.clearTimeout(this.loopTimeout);
+        this.loopTimeout = Util.setTimeout(function () {
+          _this7.callQueue.forEach(function (eventCallback) {
+            return _this7.eventsQueue.forEach(function (ev) {
+              return eventCallback(ev);
+            });
+          });
+
+          _this7.eventsQueue = [];
+          _this7.callQueue = [];
+        });
+      }
+      /**
+       * Function registers an event listener function that receives an event sent through the
+       * EventPipe. Each listener will receive each event that are in an event queue. The listener
+       * function receives the event as a parameter.
+       * @param {function} eventCallback 
+       */
+
+    }, {
+      key: "receive",
+      value: function receive(eventCallback) {
+        this.callQueue.push(eventCallback);
+      }
+    }]);
+
+    return EventPipe;
+  }();
+
+  var eventPipe = new EventPipe();
+  return {
+    send: eventPipe.send.bind(eventPipe),
+    receive: eventPipe.receive.bind(eventPipe)
   };
 }();
 
@@ -2853,10 +3363,10 @@ var Elem = function () {
     }, {
       key: "click",
       value: function click() {
-        var _this7 = this;
+        var _this8 = this;
 
         Util.setTimeout(function () {
-          return _this7.html.click();
+          return _this8.html.click();
         });
         return this;
       }
@@ -2868,10 +3378,10 @@ var Elem = function () {
     }, {
       key: "focus",
       value: function focus() {
-        var _this8 = this;
+        var _this9 = this;
 
         Util.setTimeout(function () {
-          return _this8.html.focus();
+          return _this9.html.focus();
         });
         return this;
       }
@@ -2883,10 +3393,10 @@ var Elem = function () {
     }, {
       key: "blur",
       value: function blur() {
-        var _this9 = this;
+        var _this10 = this;
 
         Util.setTimeout(function () {
-          return _this9.html.blur();
+          return _this10.html.blur();
         });
         return this;
       }
@@ -3933,530 +4443,6 @@ var Elem = function () {
   }();
 
   return Elem;
-}();
-/**
- * RMEElemTemplater class is able to create a Template out of an Elem object.
- */
-
-
-var RMEElemTemplater = /*#__PURE__*/function () {
-  function RMEElemTemplater() {
-    _classCallCheck(this, RMEElemTemplater);
-
-    this.instance;
-    this.template = {};
-    this.deep = true;
-  }
-
-  _createClass(RMEElemTemplater, [{
-    key: "toTemplate",
-    value: function toTemplate(elem, deep) {
-      if (!Util.isEmpty(deep)) this.deep = deep;
-      this.resolve(elem, this.template);
-      return this.template;
-    }
-    /**
-     * Function is called recursively and resolves an Elem object and its children in recursion
-     * @param {object} elem 
-     * @param {object} parent 
-     */
-
-  }, {
-    key: "resolve",
-    value: function resolve(elem, parent) {
-      var resolved = this.resolveElem(elem, this.resolveProps(elem));
-
-      for (var p in parent) {
-        if (parent.hasOwnProperty(p)) {
-          if (Util.isArray(parent[p]._rme_type_)) parent[p]._rme_type_.push(resolved);else this.extendMap(parent[p], resolved);
-        }
-      }
-
-      var i = 0;
-      var children = Util.isArray(elem.getChildren()) ? elem.getChildren() : [elem.getChildren()];
-
-      if (children && this.deep) {
-        while (i < children.length) {
-          this.resolve(children[i], resolved);
-          i++;
-        }
-      }
-
-      this.template = resolved;
-    }
-  }, {
-    key: "extendMap",
-    value: function extendMap(map, next) {
-      for (var v in next) {
-        if (next.hasOwnProperty(v)) {
-          map[v] = next[v];
-        }
-      }
-    }
-    /**
-     * Function will attach given properties into a given Elem and returns the resolved Elem.
-     * @param {object} elem 
-     * @param {object} props 
-     * @returns The resolved elem with attached properties.
-     */
-
-  }, {
-    key: "resolveElem",
-    value: function resolveElem(elem, props) {
-      var el = {};
-      var children = elem.getChildren();
-
-      if (Util.isArray(children) && children.length > 1) {
-        var elTag = elem.getTagName().toLowerCase();
-        var elName = this.resolveId(elTag, props);
-        elName = this.resolveClass(elName, props);
-        elName = this.resolveAttrs(elName, props);
-        el[elName] = {
-          _rme_type_: [],
-          _rme_props_: props
-        };
-      } else {
-        el[elem.getTagName().toLowerCase()] = props;
-      }
-
-      return el;
-    }
-    /**
-     * Function will place an ID attribute into an element tag if the ID attribute is found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with the ID or without.
-     */
-
-  }, {
-    key: "resolveId",
-    value: function resolveId(tag, props) {
-      if (props.id) return tag + "#" + props.id;else return tag;
-    }
-    /**
-     * Function will place a class attribute into an element tag if the class attribute is found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with the classes or without.
-     */
-
-  }, {
-    key: "resolveClass",
-    value: function resolveClass(tag, props) {
-      if (props["class"]) return tag + "." + props["class"].replace(/ /g, ".");else return tag;
-    }
-    /**
-     * Function will resolve all other attributes and place them into an element tag if other attributes are found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with other attributes or without.
-     */
-
-  }, {
-    key: "resolveAttrs",
-    value: function resolveAttrs(tag, props) {
-      var tagName = tag;
-
-      for (var p in props) {
-        if (props.hasOwnProperty(p) && p !== 'id' && p !== 'class' && p.indexOf('on') !== 0) {
-          tagName += "[".concat(p, "=").concat(props[p], "]");
-        }
-      }
-
-      return tagName;
-    }
-    /**
-     * Resolves a given Elem object and returns its properties in an object.
-     * @param {object} elem 
-     * @returns The properties object of the given element.
-     */
-
-  }, {
-    key: "resolveProps",
-    value: function resolveProps(elem) {
-      var props = {};
-      var attributes = elem.dom().attributes;
-      var a = 0;
-
-      if (attributes) {
-        while (a < attributes.length) {
-          props[this.resolveAttributeNames(attributes[a].name)] = attributes[a].value;
-          a++;
-        }
-      }
-
-      if (elem.dom().hasChildNodes() && elem.dom().childNodes[0].nodeType === 3) {
-        props["text"] = elem.getText();
-      }
-
-      for (var p in elem.dom()) {
-        if (p.indexOf("on") !== 0 || Util.isEmpty(elem.dom()[p])) continue;else props[this.resolveListeners(p)] = elem.dom()[p];
-      }
-
-      return props;
-    }
-    /**
-     * Resolves a html data-* attributes by removing '-' and setting the next character to uppercase. 
-     * Resolves an aria* attirubtes by setting the next character to uppercase.
-     * If the attribute is not a data-* or an aria attribute then it is directly returned.
-     * @param {string} attrName 
-     * @returns Resolved attribute name.
-     */
-
-  }, {
-    key: "resolveAttributeNames",
-    value: function resolveAttributeNames(attrName) {
-      if (attrName.indexOf('data') === 0 && attrName.length > 'data'.length) {
-        while (attrName.search('-') > -1) {
-          attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search('-') + 1).toUpperCase());
-        }
-
-        return attrName;
-      } else if (attrName.indexOf('aria') === 0) {
-        return attrName.replace(attrName.charAt('aria'.length), attrName.charAt('aria'.length).toUpperCase());
-      } else {
-        return attrName;
-      }
-    }
-  }, {
-    key: "resolveListeners",
-    value: function resolveListeners(name) {
-      switch (name) {
-        case "onanimationstart":
-          return "onAnimationStart";
-
-        case "onanimationiteration":
-          return "onAnimationIteration";
-
-        case "onanimationend":
-          return "onAnimationEnd";
-
-        case "ontransitionend":
-          return "onTransitionEnd";
-
-        case "ondrag":
-          return "onDrag";
-
-        case "ondragend":
-          return "onDragEnd";
-
-        case "ondragenter":
-          return "onDragEnter";
-
-        case "ondragover":
-          return "onDragOver";
-
-        case "ondragstart":
-          return "onDragStart";
-
-        case "ondrop":
-          return "onDrop";
-
-        case "onclick":
-          return "onClick";
-
-        case "ondblclick":
-          return "onDoubleClick";
-
-        case "oncontextmenu":
-          return "onContextMenu";
-
-        case "onmousedown":
-          return "onMouseDown";
-
-        case "onmouseenter":
-          return "onMouseEnter";
-
-        case "onmouseleave":
-          return "onMouseLeave";
-
-        case "onmousemove":
-          return "onMouseMove";
-
-        case "onmouseover":
-          return "onMouseOver";
-
-        case "onmouseout":
-          return "onMouseOut";
-
-        case "onmouseup":
-          return "onMouseUp";
-
-        case "onwheel":
-          return "onWheel";
-
-        case "onscroll":
-          return "onScroll";
-
-        case "onresize":
-          return "onResize";
-
-        case "onerror":
-          return "onError";
-
-        case "onload":
-          return "onLoad";
-
-        case "onunload":
-          return "onUnload";
-
-        case "onbeforeunload":
-          return "onBeforeUnload";
-
-        case "onkeyup":
-          return "onKeyUp";
-
-        case "onkeydown":
-          return "onKeyDown";
-
-        case "onkeypress":
-          return "onKeyPress";
-
-        case "oninput":
-          return "onInput";
-
-        case "onchange":
-          return "onChange";
-
-        case "onsubmit":
-          return "onSubmit";
-
-        case "onselect":
-          return "onSelect";
-
-        case "onreset":
-          return "onReset";
-
-        case "onfocus":
-          return "onFocus";
-
-        case "onfocusin":
-          return "onFocusIn";
-
-        case "onfocusout":
-          return "onFocusOut";
-
-        case "onblur":
-          return "onBlur";
-
-        case "oncopy":
-          return "onCopy";
-
-        case "oncut":
-          return "onCut";
-
-        case "onpaste":
-          return "onPaste";
-
-        case "onabort":
-          return "onAbort";
-
-        case "onwaiting":
-          return "onWaiting";
-
-        case "onvolumechange":
-          return "onVolumeChange";
-
-        case "ontimeupdate":
-          return "onTimeUpdate";
-
-        case "onseeking":
-          return "onSeeking";
-
-        case "onseekend":
-          return "onSeekEnd";
-
-        case "onratechange":
-          return "onRateChange";
-
-        case "onprogress":
-          return "onProgress";
-
-        case "onloadmetadata":
-          return "onLoadMetadata";
-
-        case "onloadeddata":
-          return "onLoadedData";
-
-        case "onloadstart":
-          return "onLoadStart";
-
-        case "onplaying":
-          return "onPlaying";
-
-        case "onplay":
-          return "onPlay";
-
-        case "onpause":
-          return "onPause";
-
-        case "onended":
-          return "onEnded";
-
-        case "ondurationchange":
-          return "onDurationChange";
-
-        case "oncanplay":
-          return "onCanPlay";
-
-        case "oncanplaythrough":
-          return "onCanPlayThrough";
-
-        case "onstalled":
-          return "onStalled";
-
-        case "onsuspend":
-          return "onSuspend";
-
-        case "onpopstate":
-          return "onPopState";
-
-        case "onstorage":
-          return "onStorage";
-
-        case "onhashchange":
-          return "onHashChange";
-
-        case "onafterprint":
-          return "onAfterPrint";
-
-        case "onbeforeprint":
-          return "onBeforePrint";
-
-        case "onpagehide":
-          return "onPageHide";
-
-        case "onpageshow":
-          return "onPageShow";
-      }
-    }
-  }, {
-    key: "toLiteralString",
-    value: function toLiteralString(elem) {
-      var props = this.resolveProps(elem);
-      var string = this.resolveId(elem.getTagName().toLowerCase(), props);
-      string = this.resolveClass(string, props);
-      string = this.resolveAttrs(string, props);
-      return string;
-    }
-    /**
-     * Function by default resolves a given element and its' children and returns template representation of the element.
-     * @param {object} elem 
-     * @param {boolean} deep 
-     * @returns Template object representation of the Elem
-     */
-
-  }], [{
-    key: "toTemplate",
-    value: function toTemplate(elem, deep) {
-      return RMEElemTemplater.getInstance().toTemplate(elem, deep);
-    }
-    /**
-     * Function resolves and returns properties of a given Elem object.
-     * @param {object} elem 
-     * @returns The properties object of the given Elem.
-     */
-
-  }, {
-    key: "getElementProps",
-    value: function getElementProps(elem) {
-      return RMEElemTemplater.getInstance().resolveProps(elem);
-    }
-  }, {
-    key: "toLiteralString",
-    value: function toLiteralString(elem) {
-      return RMEElemTemplater.getInstance().toLiteralString(elem);
-    }
-  }, {
-    key: "getInstance",
-    value: function getInstance() {
-      if (!this.instance) this.instance = new RMEElemTemplater();
-      return this.instance;
-    }
-  }]);
-
-  return RMEElemTemplater;
-}();
-
-var EventPipe = function () {
-  /**
-   * EventPipe class can be used to multicast and send custom events to registered listeners.
-   * Each event in an event queue will be sent to each registerd listener.
-   */
-  var EventPipe = /*#__PURE__*/function () {
-    function EventPipe() {
-      _classCallCheck(this, EventPipe);
-
-      this.eventsQueue = [];
-      this.callQueue = [];
-      this.loopTimeout;
-    }
-
-    _createClass(EventPipe, [{
-      key: "containsEvent",
-      value: function containsEvent() {
-        return this.eventsQueue.find(function (ev) {
-          return ev.type === event.type;
-        });
-      }
-      /**
-       * Function sends an event object though the EventPipe. The event must have a type attribute
-       * defined otherwise an error is thrown. 
-       * Example defintion of the event object. 
-       * { 
-       *   type: 'some event',
-       *   ...payload
-       * }
-       * If an event listener is defined the sent event will be received on the event listener.
-       * @param {object} event 
-       */
-
-    }, {
-      key: "send",
-      value: function send(event) {
-        if (Util.isEmpty(event.type)) throw new Error('Event must have type attribute.');
-        if (!this.containsEvent()) this.eventsQueue.push(event);
-        this.loopEvents();
-      }
-    }, {
-      key: "loopEvents",
-      value: function loopEvents() {
-        var _this10 = this;
-
-        if (this.loopTimeout) Util.clearTimeout(this.loopTimeout);
-        this.loopTimeout = Util.setTimeout(function () {
-          _this10.callQueue.forEach(function (eventCallback) {
-            return _this10.eventsQueue.forEach(function (ev) {
-              return eventCallback(ev);
-            });
-          });
-
-          _this10.eventsQueue = [];
-          _this10.callQueue = [];
-        });
-      }
-      /**
-       * Function registers an event listener function that receives an event sent through the
-       * EventPipe. Each listener will receive each event that are in an event queue. The listener
-       * function receives the event as a parameter.
-       * @param {function} eventCallback 
-       */
-
-    }, {
-      key: "receive",
-      value: function receive(eventCallback) {
-        this.callQueue.push(eventCallback);
-      }
-    }]);
-
-    return EventPipe;
-  }();
-
-  var eventPipe = new EventPipe();
-  return {
-    send: eventPipe.send.bind(eventPipe),
-    receive: eventPipe.receive.bind(eventPipe)
-  };
 }();
 
 var Fetch = function () {
