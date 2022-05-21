@@ -45,9 +45,14 @@ class RMEElemRenderer {
             if (oldNode.getTagName() !== newNode.getTagName() || (oldNode.dom().children.length > 0 || newNode.dom().children.length > 0)) {
                 this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
             } else {
-                oldNode.setProps(newNode.getProps());
+                oldNode.setProps({
+                    ...this.excludeEventListeners(this.getBrowserSetProps(parent, index)), 
+                    ...newNode.getProps()
+                });
             }
         } else {
+            this.updateEventListeners(oldNode, newNode);
+            
             let i = 0;
             let oldLength = oldNode ? oldNode.dom().children.length : 0;
             let newLength = newNode ? newNode.dom().children.length : 0;
@@ -61,6 +66,57 @@ class RMEElemRenderer {
                 i++;
             }
         }
+    }
+
+    /**
+     * Excludes event listeners from the given props object.
+     * @param {object} props 
+     * @returns The properties object not containing event listeners
+     */
+    excludeEventListeners(props) {
+        for (let p in props) {
+            if (props.hasOwnProperty(p) && p.indexOf('on') === 0) {
+                delete props[p];
+            }
+        }
+        return props;
+    }
+
+    /**
+     * Get browser set properties object of the node from the parent in the specific index.
+     * @param {object} parent 
+     * @param {number} index 
+     * @returns Properties object of the node in the shadow three.
+     */
+    getBrowserSetProps(parent, index) {
+        return this.wrap(parent.dom().children[index]).getProps();
+    }
+
+    /**
+     * Update event listeners of the old node to event listeners of the new node.
+     * @param {object} oldNode 
+     * @param {object} newNode 
+     */
+    updateEventListeners(oldNode, newNode) {
+        const listeners = this.getEventListeners(newNode);
+        if (Object.keys(listeners).length > 0) {
+            oldNode.setProps({...oldNode.getProps(), ...listeners});
+        }
+    }
+
+    /**
+     * Get event listeners of the node
+     * @param {object} node 
+     * @returns An object containing defined event listeners
+     */
+    getEventListeners(node) {
+        const props = node.getProps();
+        for (let p in props) {
+            if (props.hasOwnProperty(p) && p.indexOf('on') !== 0) {
+                delete props[p]
+            }
+        }
+        return props;
     }
 
     /**
