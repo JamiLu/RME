@@ -1,8 +1,10 @@
+import { Component, useValue } from "../../src";
+
 export const actions = useValue({result: '', statement: ''});
 
 const [getOperation, setOperation] = actions;
 
-const keyPadButton = props => ({
+const KeyPadButton = props => ({
     'button.w3-button.w3-jumbo.keypad-button': {
         text: props.text,
         styles: props.styles,
@@ -23,16 +25,16 @@ const keyPadButton = props => ({
     }
 });
 
-const operationButton = props => ({
-    keyPadButton: {
+const OperationButton = props => ({
+    KeyPadButton: {
         text: props.text,
         styles: props.styles ? props.styles : undefined,
         class: props.class ? props.class : 'w3-pale-blue'
     }
 });
 
-const numberButton = props => ({
-    keyPadButton: {
+const NumberButton = props => ({
+    KeyPadButton: {
         text: props.text,
         class: 'w3-light-gray'
     }
@@ -49,4 +51,4 @@ const KeyPad = props => ({
     }))
 });
 
-Component(keyPadButton, operationButton, numberButton, KeyPad);
+Component(KeyPadButton, OperationButton, NumberButton, KeyPad);

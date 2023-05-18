@@ -1,34 +1,32 @@
-import { Component, bindState, useState } from '../../src/index';
+import { Component } from '../../src/index';
 
-const FormExample = props => ({
-    fragment: {
+export const FormExample = (props, ops) => ({
+    _: {
         h2: 'Form Example',
         TitleHeader: props,
         Form: {
             input: event => {
-                useState(props, state => ({
-                    ...state,
-                    [event.target.name]: event.target.value
-                }));
+                console.log('ie', event);
+                ops.updateState({ [event.target.name]: event.target.value });
             }
         }
     }
 });
 
-const TitleHeader = props => ({h5: `Welcome ${props.fname || ''} ${props.lname || ''}`});
+const TitleHeader = ({ fname, lname }) => ({h5: `Welcome ${fname || ''} ${lname || ''}`});
 
-const Form = props => ({
+const Form = ({ input }) => ({
     div: {
         'label[for=fname]': 'First name',
         'input#fname[type=text][name=fname][placeholder=First name]': {
-            onInput: props.input
+            onInput: input
         },
         br: {},
         'label[for=lname]': 'Last name',
         'input#lname[type=text][name=lname][placeholder=Last name]': {
-            onInput: props.input
+            onInput: input
         },
     }
 });
 
-Component(bindState(FormExample), TitleHeader, Form);
+Component(FormExample, TitleHeader, Form);
