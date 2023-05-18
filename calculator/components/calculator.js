@@ -1,4 +1,3 @@
-import { Component } from '../../src';
 
 import './keypad';
 import './screen';

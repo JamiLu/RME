@@ -1,4 +1,3 @@
-import { Component, useValue } from "../../src";
 
 export const actions = useValue({result: '', statement: ''});
 

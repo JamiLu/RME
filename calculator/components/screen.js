@@ -1,4 +1,3 @@
-import { Component } from '../../src';
 
 import { actions } from './keypad';
 
@@ -10,7 +9,7 @@ const ResultScreen = () => {
     return {
         'div.result-screen': () => {
             const OPS = /(\+|\-|\*|\/)/g;
-            let matches = statement.match(OPS) || [];
+            let matches = statement.match(OPS) || [];
             statement = statement.split(OPS).reduce((res, val) => {
                 let current = val;
                 if (matches.indexOf(val) > -1)
