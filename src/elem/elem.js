@@ -19,7 +19,7 @@ let Elem = (function() {
         constructor(type) {
             if(Util.isString(type)) {
                 this.html = document.createElement(type);
-            } else if(type.nodeType !== undefined && type.ownerDocument !== undefined && type.nodeType >= 1 && type.ownerDocument instanceof HTMLDocument) {
+            } else if(type.nodeType !== undefined && type.ownerDocument !== undefined && type.nodeType >= 1 && type.ownerDocument instanceof Document) {
                 this.html = type;
             } else {
                 throw "type must be a string or a HTMLDocument";
@@ -1658,10 +1658,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         static wrap(html) {
-            if(!Util.isEmpty(html))
-                return new Elem(html);
-            else 
-                throw "Could not wrap a html element - html: " + html;
+            return new Elem(html);
         }
 
         /**
@@ -1673,13 +1670,8 @@ let Elem = (function() {
          * @returns An array of the Elem objects or a single Elem object. 
          */
         static wrapElems(htmlDoc) {
-            var eArr = [];
-            var i = 0;
-            while(i < htmlDoc.length) {
-                    eArr.push(Elem.wrap(htmlDoc[i]));
-                i++;
-            }
-            return eArr.length === 1 ? eArr[0] : eArr;
+            const wrapped = Array.from(htmlDoc).map(Elem.wrap);
+            return wrapped.length === 1 ? wrapped[0] : wrapped;
         }
     }
 

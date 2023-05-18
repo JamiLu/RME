@@ -91,7 +91,9 @@ class Tree {
     static getHead() {
         try {
             return Elem.wrap(document.head);
-        } catch (e) {}
+        } catch (e) {
+            console.log(e);
+        }
     }
 
     /**

@@ -8,7 +8,10 @@ class Util {
      * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
      */
     static isEmpty(value) {
-        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
+        return (value === null || value === undefined)
+            || (Util.isObject(value) && Object.keys(value).length === 0)
+            || (Util.isString(value) && value === "")
+            || (Util.isArray(value) && value.length === 0);
     }
 
     /**

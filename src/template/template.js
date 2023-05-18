@@ -1,7 +1,7 @@
 import Elem from '../elem';
 import Messages from '../messages';
 import Util from '../util';
-import RMEComponentManager from '../component/manager';
+import RMEComponentManagerV2 from '../component/manager';
 import RMETemplateFragmentHelper from './fragment';
 
 let Template = (function() {
@@ -14,160 +14,193 @@ let Template = (function() {
         constructor() {
             this.template = {};
             this.root = null;
+            this.appName;
+            this.context;
         }
 
         /**
          * Method takes a template as parameter, starts resolving it and returns 
          * a created element tree. 
          * @param {object} template
+         * @param {Elem} Elem
+         * @param {string} appName
          * @returns Elem instance element tree.
          */
-        setTemplateAndResolve(template, parent) {
+        setTemplateAndResolve(template, parent, appName = '', context = '') {
             this.template = template;
+            this.appName = appName;
+            this.context = context;
             if (parent) {
                 this.root = parent;
-                this.resolve(this.template, this.root, 1);
+                this.resolveNextParent(this.template, this.root, 1);
             } else {
-                this.resolve(this.template, this.root, 0);
+                this.resolveRootAndTemplate();
+                this.resolveNextParent(this.template, this.root, 1);
             }
             return this.root;
+        }
+
+        /**
+         * Resolve the root and the template parameters
+         */
+        resolveRootAndTemplate() {
+            const key = Object.keys(this.template).shift();
+            this.root = this.resolveChild(key, this.template[key], null, 0, 0);
+            
+            if (Util.isFunction(this.template[key])) {
+                this.template = this.template[key].call(this.root, this.root);
+            } else {
+                this.template = this.template[key];
+            }
+        }
+
+        /**
+         * Resolves properties of the each template object and returns them in the resolved array.
+         * The array contains three arrays, attrs array, listeners array and children array.
+         * @param {object} template 
+         * @param {Elem} parent 
+         * @returns Array that contains three arrays
+         */
+        resolveTemplateProperties(template, parent) {
+            const attrs = [];
+            const listeners = [];
+            const children = [];
+
+            if (Util.isString(template) || Util.isNumber(template)) {
+                if (Util.isString(template) && this.isMessage(template)) {
+                    attrs.push({key: 'message', val: template});
+                } else {
+                    attrs.push({key: 'text', val: template});
+                }
+            } else if (Util.isArray(template)) {
+                template.forEach(obj => {
+                    const key = Object.keys(obj).shift();
+                    const val = Object.values(obj).shift();
+                    children.push({ key, val: Template.isComponent(key) && Util.isFunction(val) ? {} : val });
+                });
+            } else if (Util.isObject(template)) {
+                Object.keys(template).forEach((key, i) => {
+                    if (Template.isAttr(key, parent)) {
+                        attrs.push({key, val: template[key]});
+                    } else if (this.isEventKeyVal(key, template[key])) {
+                        listeners.push({parentProp: parent[key], func: template[key]});
+                    } else if (Template.isTag(Template.getElementName(key))) {
+                        children.push({key, val: template[key]});
+                    } else if (Template.isComponent(key)) {
+                        children.push({key, val: !Util.isFunction(template[key]) ? template[key] : {}});
+                    } else if (RMETemplateFragmentHelper.isFragmentKey(key)) {
+                        children.push({key, val: template[key]});
+                    }
+                });
+            }
+
+            return [attrs, listeners, children];
         }
 
         /**
          * Method resolves a given template recusively. The method and
          * parameters are used internally.
          * @param {object} template
-         * @param {object} parent
+         * @param {Elem} parent
          * @param {number} round
+         * @param {number} invoked
          */
-        resolve(template, parent, round) {
-            for (var obj in template) {
-                if (template.hasOwnProperty(obj)) {
-                    if (round === 0) {
-                        this.root = this.resolveElement(obj, template[obj]);
-                        if (this.isArray(template[obj])) {
-                            ++round;
-                            this.resolveArray(template[obj], this.root, round);
-                        } else if (!Template.isComponent(obj) && Util.isObject(template[obj])) {
-                            ++round;
-                            this.resolve(template[obj], this.root, round);
-                        } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
-                            ++round;
-                            this.resolveStringNumber(this.root, template[obj]);
-                        } else if (Util.isFunction(template[obj])) {
-                            ++round;
-                            this.resolveFunction(this.root, template[obj], round);
-                        } else if (Template.isAttr(obj, this.root)) {
-                            this.resolveAttributes(this.root, obj, this.resolveFunctionBasedAttribute(template[obj]))
-                        } else if (this.isEventKeyVal(obj, template[obj])) {
-                            this.bindEventToElement(this.root, template[obj], this.root[obj]);
-                        }
-                    } else {
-                        if (Template.isAttr(obj, parent)) {
-                            this.resolveAttributes(parent, obj, this.resolveFunctionBasedAttribute(template[obj]));
-                        } else if (this.isEventKeyVal(obj, template[obj])) {
-                            this.bindEventToElement(parent, template[obj], parent[obj]);
-                        } else {
-                            ++round;
-                            var child = this.resolveElement(obj, template[obj]);
-                            if (RMETemplateFragmentHelper.isFragment(child)) {
-                                this.resolveFragment(RMETemplateFragmentHelper.resolveFragmentValue(child, template[obj]), parent, round);
-                            } else {
-                                parent.append(child);
-                                if (this.isArray(template[obj])) {
-                                    this.resolveArray(template[obj], child, round);
-                                } else if (!Template.isComponent(obj) && Util.isObject(template[obj])) {
-                                    this.resolve(template[obj], child, round);
-                                } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
-                                    this.resolveStringNumber(child, template[obj]);
-                                } else if (Util.isFunction(template[obj])) {
-                                    this.resolveFunction(child, template[obj], round);
-                                }
-                            }
-                        }
+        resolve(template, parent, round, parentContext) {
+            const [attrs, listeners, children] = this.resolveTemplateProperties(template, parent);
+
+            attrs.forEach(attr => this.resolveAttributes(parent, attr.key, this.resolveFunctionValue(attr.val)));
+
+            listeners.forEach(listener => this.bindEventToElement(parent, listener.func, listener.parentProp));
+
+            children.forEach((rawChild, idx) => {
+                if (RMETemplateFragmentHelper.isFragmentKey(rawChild.key)) {
+                    this.resolveNextParent(rawChild.val, parent, round, parentContext + rawChild.key);
+                } else {
+                    const child = this.resolveChild(rawChild.key, rawChild.val, parent, round, idx, parentContext);
+                    parent.append(child);
+
+                    if (!Template.isComponent(rawChild.key)) {
+                        this.resolveNextParent(rawChild.val, child, round, parentContext);
                     }
                 }
-            }
-        }
+            });
 
-        bindEventToElement(elemInstance, sourceFunction, targetFunction) {
-            targetFunction.call(elemInstance, sourceFunction);
+            round++;
         }
 
         /**
-         * Method receives three parameters that represent pieces of the HTML tree. Method resolves
-         * given parameters accordingly and eventually HTML nodes are appended into the HTML tree.
-         * @param {*} fragment 
-         * @param {*} parent 
-         * @param {*} round 
+         * Resolves the next child element by the given parameters. The child can be a HTML element, a component or a fragment. Returns resolved child element.
+         * @param {string} key child name e.g. component name, HTML tag or fragment
+         * @param {object|array} val properties for the resolvable child
+         * @param {Elem} parent Elem
+         * @param {number} round number
+         * @param {number} invoked number
+         * @returns Elem instance child element
          */
-        resolveFragment(fragment, parent, round) {
-            if (this.isArray(fragment)) {
-                this.resolveArray(fragment, parent, round);
-            } else if (Util.isFunction(fragment)) {
-                const ret = fragment.call(parent, parent);
-                if (this.isArray(ret))
-                    this.resolveArray(ret, parent, round);
-                else
-                    Template.resolveToParent(ret, parent);
+        resolveChild(key, val, parent, round, invoked, parentContext = '') {
+            const name = Template.getElementName(key);
+            if (RMEComponentManagerV2.hasComponent(name)) {
+                const component = RMEComponentManagerV2.getComponent(name, this.resolveComponentLiteralVal(val), `${parentContext}${round}${invoked}`, this.appName);
+                if (RMETemplateFragmentHelper.isFragment(component) && Util.notEmpty(component)) {
+                    this.resolveNextParent(RMETemplateFragmentHelper.resolveFragmentValue(component, val), parent, round);
+                    return null;
+                } else if (Util.notEmpty(component)) {
+                    return this.resolveElement(key, component);
+                }
+                return component;
             } else {
-                this.resolve(fragment, parent, round);
+                return this.resolveStringNumber(this.resolveElement(key, val), val);
             }
+        }
+
+        /**
+         * Resolves component literal values and converts it to a properties object that the component understands.
+         * The given parameter is returned as is if the parameter is not a string nor a number literal.
+         * @param {string|number} val 
+         * @returns Resolved properties object or the given value if the value was not a string nor a number.
+         */
+        resolveComponentLiteralVal(val) {
+            if (Util.isString(val) && this.isMessage(val)) {
+                return { message: val };
+            } else if (Util.isString(val) || Util.isNumber(val)) {
+                return { text: val };
+            } else {
+                return val
+            }
+        }
+
+        /**
+         * Resolves next parent element and its' attributes.
+         * @param {object} obj 
+         * @param {Elem} parent 
+         * @param {number} round 
+         * @param {string} parentContext 
+         */
+        resolveNextParent(obj, parent, round, parentContext = '') {
+            const arr = Array.of(this.resolveFunctionValue(obj)).flat();
+            const parentTag = Util.isEmpty(parent) ? parentContext : parentContext + parent.getTagName().toLowerCase();
+            arr.forEach((item, i) => this.resolve(item, parent, round, `${this.context}${parentTag}[${i}]`));
+        }
+
+        /**
+         * Bind event listener from the source function to the target function.
+         * @param {Elem} elemInstance 
+         * @param {function} sourceFunction 
+         * @param {function} targetFunction 
+         */
+        bindEventToElement(elemInstance, sourceFunction, targetFunction) {
+            targetFunction.call(elemInstance, sourceFunction);
         }
 
         /**
          * Method resolves function based attribute values. If the given attribute value
          * is type function then the function is invoked and its return value will be returned otherwise
          * the given attribute value is returned.
-         * @param {*} attr 
+         * @param {*} value 
          * @returns Resolved attribute value.
          */
-        resolveFunctionBasedAttribute(attrValue) {
-            return Util.isFunction(attrValue) ? attrValue.call() : attrValue;
-        }
-
-
-        /**
-         * Checks if the given parameter is an Array.
-         * 
-         * @param {*} nextValue 
-         * @returns True if the given value is an Array.
-         */
-        isArray(nextValue) {
-            return Util.isArray(nextValue) || (!Util.isEmpty(nextValue) && Util.isArray(nextValue._rme_type_));
-        }
-
-        /**
-         * Method resolves a given array template elements.
-         * @param {array} array
-         * @param {parent} parent
-         * @param {round}
-         */
-        resolveArray(nextValue, parent, round) {
-            let array = nextValue._rme_type_ || nextValue;
-            if (nextValue._rme_props_) {
-                this.resolve(nextValue._rme_props_, parent, round);
-            }
-            let i = 0;                
-            while (i < array.length) {
-                let o = array[i];
-                for (let key in o) {
-                    if (o.hasOwnProperty(key)) {
-                        if (Util.isObject(o[key])) {
-                            this.resolve(o, parent, round);
-                        } else if (Util.isString(o[key]) || Util.isNumber(o[key])) {
-                            let el = this.resolveElement(key);
-                            this.resolveStringNumber(el, o[key]);
-                            parent.append(el);
-                        } else if (Util.isFunction(o[key])) {
-                            let el = this.resolveElement(key);
-                            this.resolveFunction(el, o[key]);
-                            parent.append(el);
-                        }
-                    }
-                }
-                i++;
-            }
+        resolveFunctionValue(value) {
+            return Util.isFunction(value) ? value.call() : value;
         }
 
         /**
@@ -176,30 +209,12 @@ let Template = (function() {
          * @param {*} value 
          */
         resolveStringNumber(elem, value) {
-            if(Util.isString(value) && this.isMessage(value))
+            if (Util.isString(value) && this.isMessage(value)) {
                 this.resolveMessage(elem, value);
-            else
+            } else if (Util.isString(value) || Util.isNumber(value)) {
                 elem.setText(value);
-        }
-    
-        /**
-         * Resolves function based tempalte implementation.
-         * @param {object} elem
-         * @param {func} func
-         */
-        resolveFunction(elem, func, round) {
-            let ret = func.call(elem, elem);
-            if (!Util.isEmpty(ret)) {
-                if (Util.isString(ret) && this.isMessage(ret)) {
-                    this.resolveMessage(elem, ret);
-                } else if (Util.isString(ret) || Util.isNumber(ret)) {
-                    elem.setText(ret);
-                } else if(this.isArray(ret)) {
-                    this.resolveArray(ret, elem, round)
-                } else if (Util.isObject(ret)) {
-                    this.resolve(ret, elem, round);
-                }
             }
+            return elem;
         }
 
         /**
@@ -214,27 +229,20 @@ let Template = (function() {
         }
 
         /**
-         * Resolves an element and some basic attributes from a give tag. Method throws an exception if 
-         * the element could not be resolved.
+         * Resolves a element (HTML tag) and some basic attributes from the given tag.
          * @param {string} tag
          * @param {object} obj
          * @returns Null or resolved Elem instance elemenet.
          */
         resolveElement(tag, obj) {
             let resolved = null;
-            var match = [];
-            var el = Template.getElementName(tag);
-            if (RMEComponentManager.hasComponent(el)) {
-                el = el.replace(/component:/, "");
-                resolved = RMEComponentManager.getComponent(el, obj);
-                if (Util.isEmpty(resolved))
-                    return resolved;
-            } else if (Util.isEmpty(el)) {
-                throw `Template resolver could not find element: ${el} from the given tag: ${tag}`;
-            } else if (RMETemplateFragmentHelper.isFragmentKey(el)) {
-                return 'fragment'
-            } else {
+            let match = [];
+            let el = Template.getElementName(tag);
+
+            if (Util.isString(el) && Template.isTag(el)) {
                 resolved = new Elem(el);
+            } else {
+                resolved = obj // for component parent element
             }
 
             match = tag.match(/[a-z0-9]+\#[a-zA-Z0-9\-]+/); //find id
@@ -462,28 +470,19 @@ let Template = (function() {
          * @returns True if the component exist or the key contains component keyword and exist, otherwise false.
          */
         static isComponent(key) {
-            return RMEComponentManager.hasComponent(Template.getElementName(key));
+            return RMEComponentManagerV2.hasComponent(Template.getElementName(key));
         }
 
         /**
          * Method takes a template as parameter, starts resolving it and 
          * returns a created element tree.
-         * @param {object} template
-         * @returns Elem instance element tree.
+         * @param {object} template - JSON notation template object
+         * @param {Elem} Elem - Elem object (optional)
+         * @param {string} appName - App instance name (optional)
+         * @returns Element tree of Elem instance objects.
          */
-        static resolveTemplate(template) {
-            return Template.create().setTemplateAndResolve(template);
-        }
-
-        /**
-         * Method takes a template and a parent element as parameter and it resolves the given template
-         * into the given parent.
-         * @param {*} template
-         * @param {*} parent
-         * @returns Elem instance element tree.
-         */
-        static resolveToParent(template, parent) {
-            return Template.create().setTemplateAndResolve(template, parent);
+        static resolveTemplate(template, parent, appName, context) {
+            return Template.create().setTemplateAndResolve(template, parent, appName, context);
         }
 
         /**
@@ -619,7 +618,7 @@ let Template = (function() {
                 return true;
             else if (key === "form" && (Template.isElem(elem.getTagName(), ["button", "fieldset", "input", "label", "meter", "object", "output", "select", "textarea"])))
                 return true;
-            else if (key.indexOf("data") === 0 && (!RMEComponentManager.hasComponent(key) && !Template.isElem(elem.getTagName(), ["data"]) || Template.isElem(elem.getTagName(), ["object"])))
+            else if (key.indexOf("data") === 0 && (!RMEComponentManagerV2.hasComponent(key) && !Template.isElem(elem.getTagName(), ["data"]) || Template.isElem(elem.getTagName(), ["object"])))
                 return true;
 
             let attrs = {
@@ -712,12 +711,12 @@ let Template = (function() {
         }
 
     }
+
     return {
         resolve: Template.resolveTemplate,
         isTemplate: Template.isTemplate,
         isTag: Template.isTag,
-        updateElemProps: Template.updateElemProps,
-        resolveToParent: Template.resolveToParent
+        updateElemProps: Template.updateElemProps
     }
 }());
 
