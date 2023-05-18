@@ -1,7 +1,5 @@
 "use strict";
 
-function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
-
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
@@ -24,6 +22,8 @@ function _iterableToArrayLimit(arr, i) { var _i = arr == null ? null : typeof Sy
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
+function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
@@ -33,8 +33,235 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 /** RME BUILD FILE **/
 
 /**
+ * General Utility methods.
+ */
+var Util = /*#__PURE__*/function () {
+  function Util() {
+    _classCallCheck(this, Util);
+  }
+
+  _createClass(Util, null, [{
+    key: "isEmpty",
+    value:
+    /**
+     * Checks is a given value empty.
+     * @param {*} value
+     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
+     */
+    function isEmpty(value) {
+      return value === null || value === undefined || Util.isObject(value) && Object.keys(value).length === 0 || Util.isString(value) && value === "" || Util.isArray(value) && value.length === 0;
+    }
+    /**
+     * Checks is the given value not empty. This function is a negation to the Util.isEmpty function.
+     * @param {*} value 
+     * @returns True if the value is not empty otherwise false.
+     */
+
+  }, {
+    key: "notEmpty",
+    value: function notEmpty(value) {
+      return !Util.isEmpty(value);
+    }
+    /**
+     * Get the type of the given value.
+     * @param {*} value
+     * @returns The type of the given value.
+     */
+
+  }, {
+    key: "getType",
+    value: function getType(value) {
+      return _typeof(value);
+    }
+    /**
+     * Checks is a given value is a given type.
+     * @param {*} value
+     * @param {string} type
+     * @returns True if the given value is the given type otherwise false.
+     */
+
+  }, {
+    key: "isType",
+    value: function isType(value, type) {
+      return Util.getType(value) === type;
+    }
+    /**
+     * Checks is a given parameter a function.
+     * @param {*} func 
+     * @returns True if the given parameter is fuction otherwise false.
+     */
+
+  }, {
+    key: "isFunction",
+    value: function isFunction(func) {
+      return Util.isType(func, "function");
+    }
+    /**
+     * Checks is a given parameter a boolean.
+     * @param {*} boolean
+     * @returns True if the given parameter is boolean otherwise false.
+     */
+
+  }, {
+    key: "isBoolean",
+    value: function isBoolean(_boolean) {
+      return Util.isType(_boolean, "boolean");
+    }
+    /**
+     * Checks is a given parameter a string.
+     * @param {*} string
+     * @returns True if the given parameter is string otherwise false.
+     */
+
+  }, {
+    key: "isString",
+    value: function isString(string) {
+      return Util.isType(string, "string");
+    }
+    /**
+     * Checks is a given parameter a number.
+     * @param {*} number
+     * @returns True if the given parameter is number otherwise false.
+     */
+
+  }, {
+    key: "isNumber",
+    value: function isNumber(number) {
+      return Util.isType(number, "number");
+    }
+    /**
+     * Checks is a given parameter a symbol.
+     * @param {*} symbol
+     * @returns True if the given parameter is symbol otherwise false.
+     */
+
+  }, {
+    key: "isSymbol",
+    value: function isSymbol(symbol) {
+      return Util.isType(symbol, "symbol");
+    }
+    /**
+     * Checks is a given parameter a object.
+     * @param {*} object
+     * @returns True if the given parameter is object otherwise false.
+     */
+
+  }, {
+    key: "isObject",
+    value: function isObject(object) {
+      return Util.isType(object, "object");
+    }
+    /**
+     * Checks is a given parameter an array.
+     * @param {*} array
+     * @returns True if the given parameter is array otherwise false.
+     */
+
+  }, {
+    key: "isArray",
+    value: function isArray(array) {
+      return Array.isArray(array);
+    }
+    /**
+     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The timeout object.
+     */
+
+  }, {
+    key: "setTimeout",
+    value: function setTimeout(callback, milliseconds) {
+      if (!Util.isFunction(callback)) {
+        throw "callback not fuction";
+      }
+
+      for (var _len = arguments.length, params = new Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+        params[_key - 2] = arguments[_key];
+      }
+
+      return window.setTimeout(callback, milliseconds, params);
+    }
+    /**
+     * Removes a timeout that was created by setTimeout method.
+     * @param {object} timeoutObject
+     */
+
+  }, {
+    key: "clearTimeout",
+    value: function clearTimeout(timeoutObject) {
+      window.clearTimeout(timeoutObject);
+    }
+    /**
+     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The interval object.
+     */
+
+  }, {
+    key: "setInterval",
+    value: function setInterval(callback, milliseconds) {
+      if (!Util.isFunction(callback)) {
+        throw "callback not fuction";
+      }
+
+      for (var _len2 = arguments.length, params = new Array(_len2 > 2 ? _len2 - 2 : 0), _key2 = 2; _key2 < _len2; _key2++) {
+        params[_key2 - 2] = arguments[_key2];
+      }
+
+      return window.setInterval(callback, milliseconds, params);
+    }
+    /**
+     * Removes an interval that was created by setInterval method.
+     */
+
+  }, {
+    key: "clearInterval",
+    value: function clearInterval(intervalObject) {
+      window.clearInterval(intervalObject);
+    }
+    /**
+     * Encodes a string to Base64.
+     * @param {string} string
+     * @returns The base64 encoded string.
+     */
+
+  }, {
+    key: "encodeBase64String",
+    value: function encodeBase64String(string) {
+      if (!Util.isString(string)) {
+        throw "the given parameter is not a string: " + string;
+      }
+
+      return window.btoa(string);
+    }
+    /**
+     * Decodes a base 64 encoded string.
+     * @param {string} string
+     * @returns The base64 decoded string.
+     */
+
+  }, {
+    key: "decodeBase64String",
+    value: function decodeBase64String(string) {
+      if (!Util.isString(string)) {
+        throw "the given parameter is not a string: " + string;
+      }
+
+      return window.atob(string);
+    }
+  }]);
+
+  return Util;
+}();
+/**
  * Manages between component shareable values.
  */
+
+
 var ValueStore = function () {
   var ValueStore = /*#__PURE__*/function () {
     function ValueStore() {
@@ -108,6 +335,54 @@ var ValueStore = function () {
 
   var valueStore = new ValueStore();
   return valueStore;
+}();
+/**
+ * The createApp function is a shortcut function to create an RME application.
+ * @param {string} selector
+ * @param {function} component
+ * @param {string} appName
+ * @returns a created app instance.
+ */
+
+
+var createApp = function () {
+  var matchSelector = function matchSelector(key) {
+    var match = key.match(/#[a-zA-Z-0-9\-]+/); // id
+
+    if (!match) {
+      match = key.match(/\.[a-zA-Z-0-9\-]+/); // class
+    }
+
+    return match ? match.join() : undefined;
+  };
+
+  return function (template, appName) {
+    if (!Util.isObject(template)) {
+      throw new Error('The app creation template must be an object.');
+    }
+
+    var selector = matchSelector(Object.keys(template).shift());
+
+    if (Util.isEmpty(selector)) {
+      throw new Error('The root selector could not be parsed from the template. Selector should be type an #id or a .class');
+    }
+
+    return RMEAppBuilder.name(appName).root(selector).create(Object.values(template).shift());
+  };
+}();
+/**
+ * The function will set the given value in the app value state. The value is accessible by
+ * a returned getter and a setter function.
+ * @param {*} value Value to set in the app state
+ * @param {string} appName Optional app name
+ * @returns An array containing the getter and the setter functions for the given value.
+ */
+
+
+var useValue = function () {
+  return function (value, appName) {
+    return ValueStore.useValue(value, appName);
+  };
 }();
 /**
  * Keeps RME App instances in memory
@@ -554,7 +829,7 @@ var RMEElemRenderer = /*#__PURE__*/function () {
   }, {
     key: "hasNodeChanged",
     value: function hasNodeChanged(oldNode, newNode) {
-      return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && oldNode.getProps(true) !== newNode.getProps(true);
+      return !!oldNode && !!newNode && oldNode.getProps(true) !== newNode.getProps(true);
     }
     /**
      * Function takes DOM node as a parameter and wraps it to Elem object.
@@ -565,7 +840,7 @@ var RMEElemRenderer = /*#__PURE__*/function () {
   }, {
     key: "wrap",
     value: function wrap(node) {
-      if (!Util.isEmpty(node)) return Elem.wrap(node);
+      if (node) return Elem.wrap(node);
     }
   }]);
 
@@ -1111,61 +1386,14 @@ var Browser = /*#__PURE__*/function () {
 
   return Browser;
 }();
-/**
- * The createApp function is a shortcut function to create an RME application.
- * @param {string} selector
- * @param {function} component
- * @param {string} appName
- * @returns a created app instance.
- */
-
-
-var createApp = function () {
-  var matchSelector = function matchSelector(key) {
-    var match = key.match(/#[a-zA-Z-0-9\-]+/); // id
-
-    if (!match) {
-      match = key.match(/\.[a-zA-Z-0-9\-]+/); // class
-    }
-
-    return match ? match.join() : undefined;
-  };
-
-  return function (template, appName) {
-    if (!Util.isObject(template)) {
-      throw new Error('The app creation template must be an object.');
-    }
-
-    var selector = matchSelector(Object.keys(template).shift());
-
-    if (Util.isEmpty(selector)) {
-      throw new Error('The root selector could not be parsed from the template. Selector should be type an #id or a .class');
-    }
-
-    return RMEAppBuilder.name(appName).root(selector).create(Object.values(template).shift());
-  };
-}();
-/**
- * The function will set the given value in the app value state. The value is accessible by
- * a returned getter and a setter function.
- * @param {*} value Value to set in the app state
- * @param {string} appName Optional app name
- * @returns An array containing the getter and the setter functions for the given value.
- */
-
-
-var useValue = function () {
-  return function (value, appName) {
-    return ValueStore.useValue(value, appName);
-  };
-}();
 
 var RMEAppComponent = /*#__PURE__*/function () {
-  function RMEAppComponent(renderHook, appName) {
+  function RMEAppComponent(renderHook, appName, parentContext) {
     _classCallCheck(this, RMEAppComponent);
 
     this.store = useValue({}, appName);
     this.appName = appName;
+    this.parentContext = parentContext;
     this.shouldUpdate = true;
     this.renderHook = renderHook;
     this.afterRenderTasks = [];
@@ -1209,7 +1437,7 @@ var RMEAppComponent = /*#__PURE__*/function () {
 
       if (this.shouldUpdate) {
         result = this.renderHook(nextProps, ops);
-        result = Template.isTemplate(result) ? Template.resolve(result, null, this.appName) : result;
+        result = Template.isTemplate(result) ? Template.resolve(result, null, this.appName, this.parentContext) : result;
       } else {
         result = this.prevResult;
       }
@@ -1278,8 +1506,8 @@ var Component = function () {
   };
 
   return function () {
-    for (var _len = arguments.length, components = new Array(_len), _key = 0; _key < _len; _key++) {
-      components[_key] = arguments[_key];
+    for (var _len3 = arguments.length, components = new Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+      components[_key3] = arguments[_key3];
     }
 
     components.forEach(function (component) {
@@ -1316,13 +1544,13 @@ var RMEComponentManagerV2 = function () {
     }, {
       key: "getComponent",
       value: function getComponent(name, props) {
-        var round = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+        var parentContext = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '';
         var appName = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '';
-        var component = this.componentInstanceMap[appName + name + round];
+        var component = this.componentInstanceMap[appName + name + parentContext];
 
         if (!component) {
-          component = new RMEAppComponent(this.componentFunctionMap[name], appName);
-          this.componentInstanceMap[appName + name + round] = component;
+          component = new RMEAppComponent(this.componentFunctionMap[name], appName, parentContext);
+          this.componentInstanceMap[appName + name + parentContext] = component;
         }
 
         return component.render(props);
@@ -1559,7 +1787,7 @@ var Elem = function () {
 
       if (Util.isString(type)) {
         this.html = document.createElement(type);
-      } else if (type.nodeType !== undefined && type.ownerDocument !== undefined && type.nodeType >= 1 && type.ownerDocument instanceof HTMLDocument) {
+      } else if (type.nodeType !== undefined && type.ownerDocument !== undefined && type.nodeType >= 1 && type.ownerDocument instanceof Document) {
         this.html = type;
       } else {
         throw "type must be a string or a HTMLDocument";
@@ -1808,8 +2036,8 @@ var Elem = function () {
         var newState = [];
         var i = 0;
 
-        for (var _len2 = arguments.length, elems = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-          elems[_key2] = arguments[_key2];
+        for (var _len4 = arguments.length, elems = new Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
+          elems[_key4] = arguments[_key4];
         }
 
         var max = elems.length;
@@ -2220,8 +2448,8 @@ var Elem = function () {
 
     }, {
       key: "setEditable",
-      value: function setEditable(_boolean) {
-        this.setAttribute('contenteditable', _boolean);
+      value: function setEditable(_boolean2) {
+        this.setAttribute('contenteditable', _boolean2);
         return this;
       }
       /**
@@ -2244,8 +2472,8 @@ var Elem = function () {
 
     }, {
       key: "setDisabled",
-      value: function setDisabled(_boolean2) {
-        if (Util.isBoolean(_boolean2) && _boolean2 === true || Util.isString(_boolean2) && _boolean2 === 'disabled') {
+      value: function setDisabled(_boolean3) {
+        if (Util.isBoolean(_boolean3) && _boolean3 === true || Util.isString(_boolean3) && _boolean3 === 'disabled') {
           this.setAttribute('disabled', 'disabled');
         } else {
           this.removeAttribute('disabled');
@@ -2273,8 +2501,8 @@ var Elem = function () {
 
     }, {
       key: "setChecked",
-      value: function setChecked(_boolean3) {
-        if (Util.isBoolean(_boolean3) && _boolean3 === true || Util.isString(_boolean3) && _boolean3 === 'checked') {
+      value: function setChecked(_boolean4) {
+        if (Util.isBoolean(_boolean4) && _boolean4 === true || Util.isString(_boolean4) && _boolean4 === 'checked') {
           this.setAttribute('checked', 'checked');
           this.html.checked = true;
         } else {
@@ -2304,8 +2532,8 @@ var Elem = function () {
 
     }, {
       key: "setSelected",
-      value: function setSelected(_boolean4) {
-        if (Util.isBoolean(_boolean4) && _boolean4 === true || Util.isString(_boolean4) && _boolean4 === 'selected') {
+      value: function setSelected(_boolean5) {
+        if (Util.isBoolean(_boolean5) && _boolean5 === true || Util.isString(_boolean5) && _boolean5 === 'selected') {
           this.setAttribute('selected', 'selected');
         } else {
           this.removeAttribute('selected');
@@ -2460,8 +2688,8 @@ var Elem = function () {
 
     }, {
       key: "setVisible",
-      value: function setVisible(_boolean5) {
-        this.html.style.visibility = _boolean5 ? "" : "hidden";
+      value: function setVisible(_boolean6) {
+        this.html.style.visibility = _boolean6 ? "" : "hidden";
         return this;
       }
       /**
@@ -2473,8 +2701,8 @@ var Elem = function () {
 
     }, {
       key: "display",
-      value: function display(_boolean6) {
-        this.html.style.display = _boolean6 ? "" : "none";
+      value: function display(_boolean7) {
+        this.html.style.display = _boolean7 ? "" : "none";
         return this;
       }
       /**
@@ -2485,8 +2713,8 @@ var Elem = function () {
 
     }, {
       key: "setDraggable",
-      value: function setDraggable(_boolean7) {
-        this.setAttribute("draggable", _boolean7);
+      value: function setDraggable(_boolean8) {
+        this.setAttribute("draggable", _boolean8);
         return this;
       }
       /**
@@ -2501,8 +2729,8 @@ var Elem = function () {
         var i = 0;
         var paramArray = [];
 
-        for (var _len3 = arguments.length, params = new Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
-          params[_key3 - 1] = arguments[_key3];
+        for (var _len5 = arguments.length, params = new Array(_len5 > 1 ? _len5 - 1 : 0), _key5 = 1; _key5 < _len5; _key5++) {
+          params[_key5 - 1] = arguments[_key5];
         }
 
         while (i < params.length) {
@@ -3516,7 +3744,7 @@ var Elem = function () {
     }, {
       key: "wrap",
       value: function wrap(html) {
-        if (!Util.isEmpty(html)) return new Elem(html);else throw "Could not wrap a html element - html: " + html;
+        return new Elem(html);
       }
       /**
        * Takes an array of HTMLDocument elements and wraps them inside an Elem instance.
@@ -3530,15 +3758,8 @@ var Elem = function () {
     }, {
       key: "wrapElems",
       value: function wrapElems(htmlDoc) {
-        var eArr = [];
-        var i = 0;
-
-        while (i < htmlDoc.length) {
-          eArr.push(Elem.wrap(htmlDoc[i]));
-          i++;
-        }
-
-        return eArr.length === 1 ? eArr[0] : eArr;
+        var wrapped = Array.from(htmlDoc).map(Elem.wrap);
+        return wrapped.length === 1 ? wrapped[0] : wrapped;
       }
     }]);
 
@@ -4990,8 +5211,8 @@ var Messages = function () {
     }, {
       key: "getMessage",
       value: function getMessage(text) {
-        for (var _len4 = arguments.length, params = new Array(_len4 > 1 ? _len4 - 1 : 0), _key4 = 1; _key4 < _len4; _key4++) {
-          params[_key4 - 1] = arguments[_key4];
+        for (var _len6 = arguments.length, params = new Array(_len6 > 1 ? _len6 - 1 : 0), _key6 = 1; _key6 < _len6; _key6++) {
+          params[_key6 - 1] = arguments[_key6];
         }
 
         if (Util.isEmpty(params[0][0])) {
@@ -5173,8 +5394,8 @@ var Messages = function () {
     }, {
       key: "message",
       value: function message(text) {
-        for (var _len5 = arguments.length, params = new Array(_len5 > 1 ? _len5 - 1 : 0), _key5 = 1; _key5 < _len5; _key5++) {
-          params[_key5 - 1] = arguments[_key5];
+        for (var _len7 = arguments.length, params = new Array(_len7 > 1 ? _len7 - 1 : 0), _key7 = 1; _key7 < _len7; _key7++) {
+          params[_key7 - 1] = arguments[_key7];
         }
 
         return Messages.getInstance().getMessage(text, params);
@@ -5240,8 +5461,8 @@ var configure = function () {
   return function () {
     var config = {};
 
-    for (var _len6 = arguments.length, params = new Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
-      params[_key6] = arguments[_key6];
+    for (var _len8 = arguments.length, params = new Array(_len8), _key8 = 0; _key8 < _len8; _key8++) {
+      params[_key8] = arguments[_key8];
     }
 
     params.forEach(function (param) {
@@ -6042,228 +6263,6 @@ var RMETemplateFragmentHelper = function () {
 
   return new RMETemplateFragmentHelper();
 }();
-/**
- * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
- * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
- * 
- * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
- * operation functionalities.
- */
-
-
-var Tree = /*#__PURE__*/function () {
-  function Tree() {
-    _classCallCheck(this, Tree);
-  }
-
-  _createClass(Tree, null, [{
-    key: "get",
-    value:
-    /**
-     * Uses CSS selector to find elements on the HTML Document Tree. 
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} selector 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-    function get(selector) {
-      return Elem.wrapElems(document.querySelectorAll(selector));
-    }
-    /**
-     * Uses CSS selector to find the first match element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} selector 
-     * @returns An Elem instance.
-     */
-
-  }, {
-    key: "getFirst",
-    value: function getFirst(selector) {
-      try {
-        return Elem.wrap(document.querySelector(selector));
-      } catch (e) {}
-    }
-    /**
-     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
-     * Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
-     * @param {string} tag 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-
-  }, {
-    key: "getByTag",
-    value: function getByTag(tag) {
-      return Elem.wrapElems(document.getElementsByTagName(tag));
-    }
-    /**
-     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
-     * Found elements will be wrappedn in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} name 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-
-  }, {
-    key: "getByName",
-    value: function getByName(name) {
-      return Elem.wrapElems(document.getElementsByName(name));
-    }
-    /**
-     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
-     * Found element will be wrapped in an Elem instance.
-     * @param {string} id 
-     * @returns Elem instance.
-     */
-
-  }, {
-    key: "getById",
-    value: function getById(id) {
-      try {
-        return Elem.wrap(document.getElementById(id));
-      } catch (e) {}
-    }
-    /**
-     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
-     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
-     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
-     * @param {string} classname 
-     * @returns An array of Elem instances or a single Elem instance.
-     */
-
-  }, {
-    key: "getByClass",
-    value: function getByClass(classname) {
-      return Elem.wrapElems(document.getElementsByClassName(classname));
-    }
-    /**
-     * @returns body wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getBody",
-    value: function getBody() {
-      try {
-        return Elem.wrap(document.body);
-      } catch (e) {}
-    }
-    /**
-     * @returns head wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getHead",
-    value: function getHead() {
-      try {
-        return Elem.wrap(document.head);
-      } catch (e) {}
-    }
-    /**
-     * @returns title of the html document page.
-     */
-
-  }, {
-    key: "getTitle",
-    value: function getTitle() {
-      return document.title;
-    }
-    /**
-     * Set an new title for html document page.
-     * @param {string} title 
-     */
-
-  }, {
-    key: "setTitle",
-    value: function setTitle(title) {
-      document.title = title;
-    }
-    /**
-     * @returns active element wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getActiveElement",
-    value: function getActiveElement() {
-      try {
-        return Elem.wrap(document.activeElement);
-      } catch (e) {}
-    }
-    /**
-     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
-     */
-
-  }, {
-    key: "getAnchors",
-    value: function getAnchors() {
-      return Elem.wrapElems(document.anchors);
-    }
-    /**
-     * @returns <html> element.
-     */
-
-  }, {
-    key: "getHtmlElement",
-    value: function getHtmlElement() {
-      return document.documentElement;
-    }
-    /**
-     * @returns <!DOCTYPE> element.
-     */
-
-  }, {
-    key: "getDoctype",
-    value: function getDoctype() {
-      return document.doctype;
-    }
-    /**
-     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
-     */
-
-  }, {
-    key: "getEmbeds",
-    value: function getEmbeds() {
-      return Elem.wrapElems(document.embeds);
-    }
-    /**
-     * @returns an array of image elements (<img>) wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getImages",
-    value: function getImages() {
-      return Elem.wrapElems(document.images);
-    }
-    /**
-     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getLinks",
-    value: function getLinks() {
-      return Elem.wrapElems(document.links);
-    }
-    /**
-     * @returns an array of scripts wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getScripts",
-    value: function getScripts() {
-      return Elem.wrapElems(document.scripts);
-    }
-    /**
-     * @returns an array of form elements wrapped in an Elem instance.
-     */
-
-  }, {
-    key: "getForms",
-    value: function getForms() {
-      return Elem.wrapElems(document.forms);
-    }
-  }]);
-
-  return Tree;
-}();
 
 var Template = function () {
   /**
@@ -6278,6 +6277,7 @@ var Template = function () {
       this.template = {};
       this.root = null;
       this.appName;
+      this.context;
     }
     /**
      * Method takes a template as parameter, starts resolving it and returns 
@@ -6293,15 +6293,17 @@ var Template = function () {
       key: "setTemplateAndResolve",
       value: function setTemplateAndResolve(template, parent) {
         var appName = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '';
+        var context = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '';
         this.template = template;
         this.appName = appName;
+        this.context = context;
 
         if (parent) {
           this.root = parent;
-          this.resolve(this.template, this.root, 1);
+          this.resolveNextParent(this.template, this.root, 1);
         } else {
           this.resolveRootAndTemplate();
-          this.resolve(this.template, this.root, 1);
+          this.resolveNextParent(this.template, this.root, 1);
         }
 
         return this.root;
@@ -6314,7 +6316,7 @@ var Template = function () {
       key: "resolveRootAndTemplate",
       value: function resolveRootAndTemplate() {
         var key = Object.keys(this.template).shift();
-        this.root = this.resolveElement(key, this.template[key], 0);
+        this.root = this.resolveChild(key, this.template[key], null, 0, 0);
 
         if (Util.isFunction(this.template[key])) {
           this.template = this.template[key].call(this.root, this.root);
@@ -6361,7 +6363,7 @@ var Template = function () {
             });
           });
         } else if (Util.isObject(template)) {
-          Object.keys(template).forEach(function (key) {
+          Object.keys(template).forEach(function (key, i) {
             if (Template.isAttr(key, parent)) {
               attrs.push({
                 key: key,
@@ -6384,7 +6386,7 @@ var Template = function () {
               });
             } else if (RMETemplateFragmentHelper.isFragmentKey(key)) {
               children.push({
-                key: 'fragment',
+                key: key,
                 val: template[key]
               });
             }
@@ -6404,10 +6406,8 @@ var Template = function () {
 
     }, {
       key: "resolve",
-      value: function resolve(template, parent, round) {
+      value: function resolve(template, parent, round, parentContext) {
         var _this17 = this;
-
-        var invoked = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
 
         var _this$resolveTemplate = this.resolveTemplateProperties(template, parent),
             _this$resolveTemplate2 = _slicedToArray(_this$resolveTemplate, 3),
@@ -6416,27 +6416,21 @@ var Template = function () {
             children = _this$resolveTemplate2[2];
 
         attrs.forEach(function (attr) {
-          return _this17.resolveAttributes(parent, attr.key, _this17.resolveFunctionBasedAttribute(attr.val));
+          return _this17.resolveAttributes(parent, attr.key, _this17.resolveFunctionValue(attr.val));
         });
         listeners.forEach(function (listener) {
           return _this17.bindEventToElement(parent, listener.func, listener.parentProp);
         });
         children.forEach(function (rawChild, idx) {
           if (RMETemplateFragmentHelper.isFragmentKey(rawChild.key)) {
-            _this17.resolveFragment(rawChild.val, parent, round, idx);
+            _this17.resolveNextParent(rawChild.val, parent, round, parentContext + rawChild.key);
           } else {
-            var child = _this17.resolveChild(rawChild.key, rawChild.val, parent, round + invoked, idx);
+            var child = _this17.resolveChild(rawChild.key, rawChild.val, parent, round, idx, parentContext);
 
             parent.append(child);
 
-            if (!Template.isComponent(rawChild.key) && Util.isObject(rawChild.val)) {
-              _this17.resolve(rawChild.val, child, round);
-            } else if ((Util.isString(rawChild.val) || Util.isNumber(rawChild.val)) && !Template.isComponent(rawChild.key)) {
-              _this17.resolveStringNumber(child, rawChild.val);
-            } else if (_this17.isArray(rawChild.val)) {
-              _this17.resolveArray(rawChild.val, child, round);
-            } else if (Util.isFunction(rawChild.val)) {
-              _this17.resolveFunction(child, rawChild.val, round);
+            if (!Template.isComponent(rawChild.key)) {
+              _this17.resolveNextParent(rawChild.val, child, round, parentContext);
             }
           }
         });
@@ -6455,13 +6449,14 @@ var Template = function () {
     }, {
       key: "resolveChild",
       value: function resolveChild(key, val, parent, round, invoked) {
+        var parentContext = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : '';
         var name = Template.getElementName(key);
 
         if (RMEComponentManagerV2.hasComponent(name)) {
-          var component = RMEComponentManagerV2.getComponent(name, this.resolveComponentLiteralVal(val), "".concat(round).concat(invoked), this.appName);
+          var component = RMEComponentManagerV2.getComponent(name, this.resolveComponentLiteralVal(val), "".concat(parentContext).concat(round).concat(invoked), this.appName);
 
           if (RMETemplateFragmentHelper.isFragment(component) && Util.notEmpty(component)) {
-            this.resolveFragment(RMETemplateFragmentHelper.resolveFragmentValue(component, val), parent, round);
+            this.resolveNextParent(RMETemplateFragmentHelper.resolveFragmentValue(component, val), parent, round);
             return null;
           } else if (Util.notEmpty(component)) {
             return this.resolveElement(key, component);
@@ -6469,7 +6464,7 @@ var Template = function () {
 
           return component;
         } else {
-          return this.resolveElement(key, val);
+          return this.resolveStringNumber(this.resolveElement(key, val), val);
         }
       }
       /**
@@ -6495,6 +6490,26 @@ var Template = function () {
         }
       }
       /**
+       * Resolves next parent element and its' attributes.
+       * @param {object} obj 
+       * @param {Elem} parent 
+       * @param {number} round 
+       * @param {string} parentContext 
+       */
+
+    }, {
+      key: "resolveNextParent",
+      value: function resolveNextParent(obj, parent, round) {
+        var _this18 = this;
+
+        var parentContext = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '';
+        var arr = Array.of(this.resolveFunctionValue(obj)).flat();
+        var parentTag = Util.isEmpty(parent) ? parentContext : parentContext + parent.getTagName().toLowerCase();
+        arr.forEach(function (item, i) {
+          return _this18.resolve(item, parent, round, "".concat(_this18.context).concat(parentTag, "[").concat(i, "]"));
+        });
+      }
+      /**
        * Bind event listener from the source function to the target function.
        * @param {Elem} elemInstance 
        * @param {function} sourceFunction 
@@ -6507,85 +6522,17 @@ var Template = function () {
         targetFunction.call(elemInstance, sourceFunction);
       }
       /**
-       * Method receives three parameters that represent pieces of the HTML tree. Method resolves
-       * given parameters accordingly and eventually HTML nodes are appended into the HTML tree.
-       * @param {*} fragment 
-       * @param {*} parent 
-       * @param {number} round 
-       * @param {number} invoked
-       */
-
-    }, {
-      key: "resolveFragment",
-      value: function resolveFragment(fragment, parent, round, invoked) {
-        if (this.isArray(fragment)) {
-          this.resolveArray(fragment, parent, round);
-        } else if (Util.isFunction(fragment)) {
-          var ret = fragment.call(parent, parent);
-          if (this.isArray(ret)) this.resolveArray(ret, parent, round);else this.resolve(ret, parent, round, invoked);
-        } else {
-          this.resolve(fragment, parent, round, invoked);
-        }
-      }
-      /**
        * Method resolves function based attribute values. If the given attribute value
        * is type function then the function is invoked and its return value will be returned otherwise
        * the given attribute value is returned.
-       * @param {*} attr 
+       * @param {*} value 
        * @returns Resolved attribute value.
        */
 
     }, {
-      key: "resolveFunctionBasedAttribute",
-      value: function resolveFunctionBasedAttribute(attrValue) {
-        return Util.isFunction(attrValue) ? attrValue.call() : attrValue;
-      }
-      /**
-       * Checks if the given parameter is an Array.
-       * 
-       * @param {*} nextValue 
-       * @returns True if the given value is an Array.
-       */
-
-    }, {
-      key: "isArray",
-      value: function isArray(nextValue) {
-        return Util.isArray(nextValue) || !Util.isEmpty(nextValue) && Util.isArray(nextValue._rme_type_);
-      }
-      /**
-       * Method resolves a given array template elements.
-       * @param {array} array
-       * @param {parent} parent
-       * @param {number} round
-       */
-
-    }, {
-      key: "resolveArray",
-      value: function resolveArray(array, parent, round) {
-        var i = 0;
-
-        while (i < array.length) {
-          var o = array[i];
-
-          for (var key in o) {
-            if (o.hasOwnProperty(key)) {
-              if (Util.isObject(o[key])) {
-                this.resolve(o, parent, round, i);
-              } else if (Util.isString(o[key]) || Util.isNumber(o[key])) {
-                var el = this.resolveElement(key);
-                this.resolveStringNumber(el, o[key]);
-                parent.append(el);
-              } else if (Util.isFunction(o[key])) {
-                var _el = this.resolveElement(key);
-
-                this.resolveFunction(_el, o[key]);
-                parent.append(_el);
-              }
-            }
-          }
-
-          i++;
-        }
+      key: "resolveFunctionValue",
+      value: function resolveFunctionValue(value) {
+        return Util.isFunction(value) ? value.call() : value;
       }
       /**
        * Function will set String or Number values for the given element.
@@ -6596,28 +6543,13 @@ var Template = function () {
     }, {
       key: "resolveStringNumber",
       value: function resolveStringNumber(elem, value) {
-        if (Util.isString(value) && this.isMessage(value)) this.resolveMessage(elem, value);else elem.setText(value);
-      }
-      /**
-       * Resolves function based tempalte implementation.
-       * @param {object} elem
-       * @param {func} func
-       */
-
-    }, {
-      key: "resolveFunction",
-      value: function resolveFunction(elem, func, round) {
-        var ret = func.call(elem, elem);
-
-        if (Util.notEmpty(ret)) {
-          if (Util.isString(ret) || Util.isNumber(ret)) {
-            this.resolveStringNumber(elem, ret);
-          } else if (this.isArray(ret)) {
-            this.resolveArray(ret, elem, round);
-          } else if (Util.isObject(ret)) {
-            this.resolve(ret, elem, round);
-          }
+        if (Util.isString(value) && this.isMessage(value)) {
+          this.resolveMessage(elem, value);
+        } else if (Util.isString(value) || Util.isNumber(value)) {
+          elem.setText(value);
         }
+
+        return elem;
       }
       /**
        * Function will check if the given message is actually a message or not. The function
@@ -6925,8 +6857,8 @@ var Template = function () {
 
     }, {
       key: "resolveTemplate",
-      value: function resolveTemplate(template, parent, appName) {
-        return Template.create().setTemplateAndResolve(template, parent, appName);
+      value: function resolveTemplate(template, parent, appName, context) {
+        return Template.create().setTemplateAndResolve(template, parent, appName, context);
       }
       /**
        * Method will apply the properties given to the element. Old properties are overridden.
@@ -7164,229 +7096,226 @@ var Template = function () {
   };
 }();
 /**
- * General Utility methods.
+ * Tree class reads the HTML Document Tree and returns elements found from there. The Tree class does not have 
+ * HTML Document Tree editing functionality except setTitle(title) method that will set the title of the HTML Document.
+ * 
+ * Majority of the methods in the Tree class will return found elements wrapped in an Elem instance as it offers easier
+ * operation functionalities.
  */
 
 
-var Util = /*#__PURE__*/function () {
-  function Util() {
-    _classCallCheck(this, Util);
+var Tree = /*#__PURE__*/function () {
+  function Tree() {
+    _classCallCheck(this, Tree);
   }
 
-  _createClass(Util, null, [{
-    key: "isEmpty",
+  _createClass(Tree, null, [{
+    key: "get",
     value:
     /**
-     * Checks is a given value empty.
-     * @param {*} value
-     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
+     * Uses CSS selector to find elements on the HTML Document Tree. 
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} selector 
+     * @returns An array of Elem instances or a single Elem instance.
      */
-    function isEmpty(value) {
-      return value === null || value === undefined || value === "" || Util.isArray(value) && value.length === 0;
+    function get(selector) {
+      return Elem.wrapElems(document.querySelectorAll(selector));
     }
     /**
-     * Checks is the given value not empty. This function is a negation to the Util.isEmpty function.
-     * @param {*} value 
-     * @returns True if the value is not empty otherwise false.
+     * Uses CSS selector to find the first match element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} selector 
+     * @returns An Elem instance.
      */
 
   }, {
-    key: "notEmpty",
-    value: function notEmpty(value) {
-      return !Util.isEmpty(value);
+    key: "getFirst",
+    value: function getFirst(selector) {
+      try {
+        return Elem.wrap(document.querySelector(selector));
+      } catch (e) {}
     }
     /**
-     * Get the type of the given value.
-     * @param {*} value
-     * @returns The type of the given value.
+     * Uses a HTML Document tag name to find matched elements on the HTML Document Tree e.g. div, span, p.
+     * Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instanes are returned otherwise a single Elem instance.
+     * @param {string} tag 
+     * @returns An array of Elem instances or a single Elem instance.
      */
 
   }, {
-    key: "getType",
-    value: function getType(value) {
-      return _typeof(value);
+    key: "getByTag",
+    value: function getByTag(tag) {
+      return Elem.wrapElems(document.getElementsByTagName(tag));
     }
     /**
-     * Checks is a given value is a given type.
-     * @param {*} value
-     * @param {string} type
-     * @returns True if the given value is the given type otherwise false.
+     * Uses a HTML Document element name attribute to find matching elements on the HTML Document Tree.
+     * Found elements will be wrappedn in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} name 
+     * @returns An array of Elem instances or a single Elem instance.
      */
 
   }, {
-    key: "isType",
-    value: function isType(value, type) {
-      return Util.getType(value) === type;
+    key: "getByName",
+    value: function getByName(name) {
+      return Elem.wrapElems(document.getElementsByName(name));
     }
     /**
-     * Checks is a given parameter a function.
-     * @param {*} func 
-     * @returns True if the given parameter is fuction otherwise false.
+     * Uses a HTML Document element id to find a matching element on the HTML Document Tree.
+     * Found element will be wrapped in an Elem instance.
+     * @param {string} id 
+     * @returns Elem instance.
      */
 
   }, {
-    key: "isFunction",
-    value: function isFunction(func) {
-      return Util.isType(func, "function");
+    key: "getById",
+    value: function getById(id) {
+      try {
+        return Elem.wrap(document.getElementById(id));
+      } catch (e) {}
     }
     /**
-     * Checks is a given parameter a boolean.
-     * @param {*} boolean
-     * @returns True if the given parameter is boolean otherwise false.
+     * Uses a HTML Document element class string to find matching elements on the HTML Document Tree e.g. "main emphasize-green".
+     * Method will try to find elements having any of the given classes. Found elements will be wrapped in an Elem instance.
+     * If found many then an array of Elem instances are returned otherwise a single Elem instance.
+     * @param {string} classname 
+     * @returns An array of Elem instances or a single Elem instance.
      */
 
   }, {
-    key: "isBoolean",
-    value: function isBoolean(_boolean8) {
-      return Util.isType(_boolean8, "boolean");
+    key: "getByClass",
+    value: function getByClass(classname) {
+      return Elem.wrapElems(document.getElementsByClassName(classname));
     }
     /**
-     * Checks is a given parameter a string.
-     * @param {*} string
-     * @returns True if the given parameter is string otherwise false.
+     * @returns body wrapped in an Elem instance.
      */
 
   }, {
-    key: "isString",
-    value: function isString(string) {
-      return Util.isType(string, "string");
+    key: "getBody",
+    value: function getBody() {
+      try {
+        return Elem.wrap(document.body);
+      } catch (e) {}
     }
     /**
-     * Checks is a given parameter a number.
-     * @param {*} number
-     * @returns True if the given parameter is number otherwise false.
+     * @returns head wrapped in an Elem instance.
      */
 
   }, {
-    key: "isNumber",
-    value: function isNumber(number) {
-      return Util.isType(number, "number");
-    }
-    /**
-     * Checks is a given parameter a symbol.
-     * @param {*} symbol
-     * @returns True if the given parameter is symbol otherwise false.
-     */
-
-  }, {
-    key: "isSymbol",
-    value: function isSymbol(symbol) {
-      return Util.isType(symbol, "symbol");
-    }
-    /**
-     * Checks is a given parameter a object.
-     * @param {*} object
-     * @returns True if the given parameter is object otherwise false.
-     */
-
-  }, {
-    key: "isObject",
-    value: function isObject(object) {
-      return Util.isType(object, "object");
-    }
-    /**
-     * Checks is a given parameter an array.
-     * @param {*} array
-     * @returns True if the given parameter is array otherwise false.
-     */
-
-  }, {
-    key: "isArray",
-    value: function isArray(array) {
-      return Array.isArray(array);
-    }
-    /**
-     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The timeout object.
-     */
-
-  }, {
-    key: "setTimeout",
-    value: function setTimeout(callback, milliseconds) {
-      if (!Util.isFunction(callback)) {
-        throw "callback not fuction";
+    key: "getHead",
+    value: function getHead() {
+      try {
+        return Elem.wrap(document.head);
+      } catch (e) {
+        console.log(e);
       }
-
-      for (var _len7 = arguments.length, params = new Array(_len7 > 2 ? _len7 - 2 : 0), _key7 = 2; _key7 < _len7; _key7++) {
-        params[_key7 - 2] = arguments[_key7];
-      }
-
-      return window.setTimeout(callback, milliseconds, params);
     }
     /**
-     * Removes a timeout that was created by setTimeout method.
-     * @param {object} timeoutObject
+     * @returns title of the html document page.
      */
 
   }, {
-    key: "clearTimeout",
-    value: function clearTimeout(timeoutObject) {
-      window.clearTimeout(timeoutObject);
+    key: "getTitle",
+    value: function getTitle() {
+      return document.title;
     }
     /**
-     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The interval object.
+     * Set an new title for html document page.
+     * @param {string} title 
      */
 
   }, {
-    key: "setInterval",
-    value: function setInterval(callback, milliseconds) {
-      if (!Util.isFunction(callback)) {
-        throw "callback not fuction";
-      }
-
-      for (var _len8 = arguments.length, params = new Array(_len8 > 2 ? _len8 - 2 : 0), _key8 = 2; _key8 < _len8; _key8++) {
-        params[_key8 - 2] = arguments[_key8];
-      }
-
-      return window.setInterval(callback, milliseconds, params);
+    key: "setTitle",
+    value: function setTitle(title) {
+      document.title = title;
     }
     /**
-     * Removes an interval that was created by setInterval method.
+     * @returns active element wrapped in an Elem instance.
      */
 
   }, {
-    key: "clearInterval",
-    value: function clearInterval(intervalObject) {
-      window.clearInterval(intervalObject);
+    key: "getActiveElement",
+    value: function getActiveElement() {
+      try {
+        return Elem.wrap(document.activeElement);
+      } catch (e) {}
     }
     /**
-     * Encodes a string to Base64.
-     * @param {string} string
-     * @returns The base64 encoded string.
+     * @returns array of anchors (<a> with name attribute) wrapped in Elem an instance.
      */
 
   }, {
-    key: "encodeBase64String",
-    value: function encodeBase64String(string) {
-      if (!Util.isString(string)) {
-        throw "the given parameter is not a string: " + string;
-      }
-
-      return window.btoa(string);
+    key: "getAnchors",
+    value: function getAnchors() {
+      return Elem.wrapElems(document.anchors);
     }
     /**
-     * Decodes a base 64 encoded string.
-     * @param {string} string
-     * @returns The base64 decoded string.
+     * @returns <html> element.
      */
 
   }, {
-    key: "decodeBase64String",
-    value: function decodeBase64String(string) {
-      if (!Util.isString(string)) {
-        throw "the given parameter is not a string: " + string;
-      }
+    key: "getHtmlElement",
+    value: function getHtmlElement() {
+      return document.documentElement;
+    }
+    /**
+     * @returns <!DOCTYPE> element.
+     */
 
-      return window.atob(string);
+  }, {
+    key: "getDoctype",
+    value: function getDoctype() {
+      return document.doctype;
+    }
+    /**
+     * @returns an arry of embedded (<embed>) elements wrapped in Elem an instance.
+     */
+
+  }, {
+    key: "getEmbeds",
+    value: function getEmbeds() {
+      return Elem.wrapElems(document.embeds);
+    }
+    /**
+     * @returns an array of image elements (<img>) wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getImages",
+    value: function getImages() {
+      return Elem.wrapElems(document.images);
+    }
+    /**
+     * @returns an array of <a> and <area> elements that have href attribute wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getLinks",
+    value: function getLinks() {
+      return Elem.wrapElems(document.links);
+    }
+    /**
+     * @returns an array of scripts wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getScripts",
+    value: function getScripts() {
+      return Elem.wrapElems(document.scripts);
+    }
+    /**
+     * @returns an array of form elements wrapped in an Elem instance.
+     */
+
+  }, {
+    key: "getForms",
+    value: function getForms() {
+      return Elem.wrapElems(document.forms);
     }
   }]);
 
-  return Util;
+  return Tree;
 }();
