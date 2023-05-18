@@ -1,6 +1,5 @@
 const Path = require('path');
 const FileSystem = require('fs');
-const UTF8 = 'utf-8';
 const rmeFile = 'rme.js';
 const rmeBuildPath = Path.resolve(__dirname, '../rme-build-current/');
 const rmeBuildTarget = Path.join(rmeBuildPath, rmeFile);
@@ -26,10 +25,6 @@ const mergeFile = (path, toFile) => {
     } catch (e) {
         console.error(e);
     }
-    // FileSystem.readFile(path, UTF8, (err, data) => {
-    //     let parsedData = data.replace(/^import.*\';\n$|^export default.*\;$|^export {.*\}$/gms, '');
-    //     FileSystem.appendFile(toFile, parsedData, err => console.log(err ? err : 'file merged '+path));
-    // });
 }
 
 const ls = (path) => {
@@ -47,19 +42,16 @@ const ls = (path) => {
 
 FileSystem.writeFileSync(rmeBuildTarget, '/** RME BUILD FILE **/\n');
 ls(rmeDevPath);
-// console.log('jobs', mergePromises);
 
+// organize files
 priorityFiles.forEach((pf, i) => {
 
     const removed = mergeJobs.splice(mergeJobs.findIndex(job => {
-        // console.log('job', job);
         return job.name.search(pf) > -1;
     }), 1);
-    // console.log('removed', removed)
+    
     mergeJobs.splice(i, 0, removed[0]);
 
 });
 
-
-// console.log('jobs', mergePromises);
 mergeJobs.forEach(mergeJob => mergeJob.job());
