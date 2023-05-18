@@ -20,7 +20,7 @@ const createApp = (function() {
         return match ? match.join() : undefined;
     }
 
-    return (template, appName) => {
+    return (template) => {
         if (!Util.isObject(template)) {
             throw new Error('The app creation template must be an object.');
         }
@@ -29,7 +29,7 @@ const createApp = (function() {
             throw new Error('The root selector could not be parsed from the template. Selector should be type an #id or a .class');
         }
 
-        return RMEAppBuilder.name(appName).root(selector).create(Object.values(template).shift());
+        return RMEAppBuilder.root(selector).create(Object.values(template).shift());
     }
 
 })();

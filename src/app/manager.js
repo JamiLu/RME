@@ -29,21 +29,18 @@ const RMEAppManager = (function() {
     const get = (name) => getFrom()[name];
 
     /**
-     * If the given name parameter is not empty then it will be returned otherwise a 
-     * next available application name is created and returned.
-     * @see createName
-     * @param {name} name 
-     * @returns Application name
-     */
-    const checkName = (name) => Util.notEmpty(name) ? name : createName();
-
-    /**
      * Get application instance by name or return default application instance.
      * The default application instance is returned if the given name parameter is empty.
      * @param {string} name 
      * @returns Application instance
      */
     const getOrDefault = (name) => Util.notEmpty(name) ? get(name) : get(`${prefix}0`);
+
+    /**
+     * Returns an array containing all application instances.
+     * @returns Array
+     */
+    const getAll = () => Object.values(getFrom());
 
     /**
      * Creates a next available application name.
@@ -59,7 +56,8 @@ const RMEAppManager = (function() {
     return {
         set,
         get,
-        checkName,
+        getAll,
+        createName,
         getOrDefault
     }
 

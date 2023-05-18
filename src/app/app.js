@@ -9,22 +9,11 @@ import { ready } from '../rme';
 const RMEAppBuilder = (function() {
 
     const holder = {
-        appName: undefined,
         appRoot: undefined
     }
 
     class Builder {
 
-        /**
-         * Function will set a name for an application. If the name is not set then a default name is used.
-         * @param {string} name 
-         * @returns Builder
-         */
-        static name(name) {
-            holder.appName = RMEAppManager.checkName(name);
-            return Builder;
-        }
-    
         /**
          * Function will set a root for an application. If the root is not set then body is used by default.
          * @param {string} root 
@@ -40,7 +29,6 @@ const RMEAppBuilder = (function() {
          * @returns Builder
          */
         static reset() {
-            holder.appName = undefined;
             holder.appRoot = undefined;
             return Builder;
         }
@@ -54,7 +42,7 @@ const RMEAppBuilder = (function() {
             if (!(Template.isTemplate(object) || RMETemplateFragmentHelper.isFragment(object))) {
                 throw new Error('App template must start with a valid html tag or a fragment key');
             }
-            const app = new AppInstance(holder.appName ?? RMEAppManager.checkName(), holder.appRoot, object);
+            const app = new AppInstance(RMEAppManager.createName(), holder.appRoot, object);
             RMEAppManager.set(app.name, app);
             Builder.reset();
             return app;
@@ -147,7 +135,6 @@ const RMEAppBuilder = (function() {
     }
 
     return {
-        name: Builder.name,
         root: Builder.root,
         create: Builder.create
     }
