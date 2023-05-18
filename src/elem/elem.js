@@ -22,7 +22,7 @@ let Elem = (function() {
             } else if(type.nodeType !== undefined && type.ownerDocument !== undefined && type.nodeType >= 1 && type.ownerDocument instanceof Document) {
                 this.html = type;
             } else {
-                throw "type must be a string or a HTMLDocument";
+                throw "type must be a string or a Document";
             }
         }
 
