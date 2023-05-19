@@ -72,7 +72,7 @@ const Messages = (function() {
         /**
          * Resolves translated message key and returns a resolved message if exist
          * otherwise returns the given key.
-         * @param {string} text 
+         * @param {string} text key
          * @returns A resolved message if exist otherwise the given key.
          */
         resolveMessage(text) {
@@ -86,7 +86,7 @@ const Messages = (function() {
         /**
          * Resolves a translated message key from the map. Returns a resolved message 
          * if found otherwise returns the key.
-         * @param {string} text 
+         * @param {string} text key
          * @returns A resolved message
          */
         resolveMessagesMap(text) {
@@ -103,7 +103,7 @@ const Messages = (function() {
         /**
          * Resolves a translated message key from the array. Returns a resolved message
          * if found otherwise returns the key.
-         * @param {string} text 
+         * @param {string} text key
          * @returns A resolved message
          */
         resolveMessagesArray(text) {
@@ -127,11 +127,7 @@ const Messages = (function() {
          */
         resolveParams(msg, params) {
             if (Util.notEmpty(msg)) {
-                let i = 0;
-                while (i < params.length) {
-                    msg = msg.replace(`{${i}}`, params[i]);
-                    i++;
-                }
+                params.forEach((param, i) => msg = msg.replace(`{${i}}`, param));
                 return msg;
             }
         }
