@@ -108,7 +108,7 @@ let Template = (function() {
         resolve(template, parent, round, parentContext) {
             const [attrs, listeners, children] = this.resolveTemplateProperties(template, parent);
 
-            attrs.forEach(attr => this.resolveAttributes(parent, attr.key, this.resolveFunctionValue(attr.val)));
+            attrs.forEach(attr => this.resolveAttributes(parent, attr.key, this.resolveFunctionValue(attr.val, parent)));
 
             listeners.forEach(listener => this.bindEventToElement(parent, listener.func, listener.parentProp));
 
@@ -177,7 +177,7 @@ let Template = (function() {
          * @param {string} parentContext 
          */
         resolveNextParent(obj, parent, round, parentContext = '') {
-            const arr = Array.of(this.resolveFunctionValue(obj)).flat();
+            const arr = Array.of(this.resolveFunctionValue(obj, parent)).flat();
             const parentTag = Util.isEmpty(parent) ? parentContext : parentContext + parent.getTagName().toLowerCase();
             arr.forEach((item, i) => this.resolve(item, parent, round, `${this.context}${parentTag}[${i}]`));
         }
@@ -196,11 +196,12 @@ let Template = (function() {
          * Method resolves function based attribute values. If the given attribute value
          * is type function then the function is invoked and its return value will be returned otherwise
          * the given attribute value is returned.
-         * @param {*} value 
+         * @param {*} value
+         * @param {Elem} parent
          * @returns Resolved attribute value.
          */
-        resolveFunctionValue(value) {
-            return Util.isFunction(value) ? value.call() : value;
+        resolveFunctionValue(value, parent) {
+            return Util.isFunction(value) ? value.call(parent, parent) : value;
         }
 
         /**
