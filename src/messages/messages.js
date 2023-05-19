@@ -76,9 +76,9 @@ let Messages = (function() {
          * @returns A resolved message if exist otherwise the given key.
          */
         resolveMessage(text) {
-            if(this.messagesType === "array") {
+            if (this.messagesType === 'array') {
                 return this.resolveMessagesArray(text);
-            } else if(this.messagesType === "map") {
+            } else if (this.messagesType === 'map') {
                 return this.resolveMessagesMap(text);
             }
         }
@@ -91,8 +91,8 @@ let Messages = (function() {
          */
         resolveMessagesMap(text) {
             let msg = text;
-            for(let i in this.messages) {
-                if(i === text) {
+            for (let i in this.messages) {
+                if (i === text) {
                     msg = this.messages[i];
                     break;
                 }
@@ -109,8 +109,8 @@ let Messages = (function() {
         resolveMessagesArray(text) {
             let i = 0;
             let msg = text;
-            while(i < this.messages.length) {
-                if(!Util.isEmpty(this.messages[i][text])) {
+            while (i < this.messages.length) {
+                if (Util.notEmpty(this.messages[i][text])) {
                     msg = this.messages[i][text];
                     break;
                 }
@@ -126,10 +126,10 @@ let Messages = (function() {
          * @returns The message with resolved message parameteres if parameters exist.
          */
         resolveParams(msg, params) {
-            if(!Util.isEmpty(msg)) {
+            if (Util.notEmpty(msg)) {
                 let i = 0;
-                while(i < params.length) {
-                    msg = msg.replace("{"+i+"}", params[i]);
+                while (i < params.length) {
+                    msg = msg.replace(`{${i}}`, params[i]);
                     i++;
                 }
                 return msg;
