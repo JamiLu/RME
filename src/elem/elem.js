@@ -833,7 +833,6 @@ let Elem = (function() {
                     paramArray.push(params[i]);
                 i++;
             }
-            paramArray.push(this);
             this.setText(Messages.message(message, paramArray));
             return this;
         }

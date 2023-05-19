@@ -1,5 +1,7 @@
+import RMEAppManager from '../app/manager';
 import Elem from '../elem';
 import Util from '../util';
+import { ready } from '../rme';
 
 let Messages = (function() {
     /**
@@ -7,36 +9,31 @@ let Messages = (function() {
      * using of translated content.
      */
     class Messages {
+        static ins;
         constructor() {
-            this.instance = this;
+            this.ins = this;
             this.messages = [];
-            this.locale = "";
+            this.locale = '';
             this.translated = [];
             this.load = function() {};
             this.messagesType;
-            this.app;
             this.ready = false;
-            this.registerMessages();
-        }
-
-        /**
-         * Initializes the Messages
-         */
-        registerMessages() {
-            document.addEventListener("readystatechange", () => {
-                if(document.readyState === "complete") {
-                    this.ready = true;
-                    this.runTranslated.call(this);
-                }
+            ready(() => {
+                this.ready = true;
+                this.runTranslated();
             });
         }
 
+        /**
+         * Loader function is used to load new messages.
+         * The loader function is called automatically when the locale used in the Messages changes.
+         * @param {function} loader
+         */
         setLoad(loader) {
+            if (!Util.isFunction(loader)) {
+                throw new Error('Message loader must be a function');
+            }
             this.load = loader;
-        }
-
-        setAppInstance(appInstance) {
-            this.app = appInstance;
         }
 
         setLocale(locale) {
@@ -45,23 +42,30 @@ let Messages = (function() {
         }
 
         setMessages(messages) {
-            if(Util.isArray(messages))
-                this.messagesType = "array";
-            else if(Util.isObject(messages))
-                this.messagesType = "map";
-            else
-                throw "messages must be type array or object";
+            if (Util.isArray(messages)) {
+                this.messagesType = 'array';
+            } else if (Util.isObject(messages)) {
+                this.messagesType = 'map';
+            } else {
+                throw new Error('Given messages must be an array or an object');
+            }
             this.messages = messages;
-            this.runTranslated.call(this);
+            this.runTranslated();
         }
 
+        /**
+         * GetMessage function is used to retrieve translated messages. The function also supports message parameters
+         * that can be given as a comma separeted list.
+         * @param {string} text
+         * @param {*} params
+         * @returns A resolved message or the given key if the message is not found.
+         */
         getMessage(text, ...params) {
-            if(Util.isEmpty(params[0][0])) {
+            if (Util.isEmpty(params.flat(2))) {
                 return this.resolveMessage(text);
             } else {
-                this.getTranslatedElemIfExist(text, params[0][0]);
                 let msg = this.resolveMessage(text);
-                return this.resolveParams(msg, params[0][0]);
+                return this.resolveParams(msg, params.flat(2));
             }
         }
 
@@ -133,43 +137,20 @@ let Messages = (function() {
         }
 
         /**
-         * Function gets a Elem object and inserts it into a translated object array if it exists.
-         * @param {string} key 
-         * @param {*} params 
-         */
-        getTranslatedElemIfExist(key, params) {
-            let last = params[params.length - 1];
-            if (Util.isObject(last) && last instanceof Elem) {
-                last = params.pop()
-                if (Util.isEmpty(this.app)) {
-                    this.translated.push({key: key, params: params, obj: last});
-                }
-            }
-        }
-
-        /**
          * Function goes through the translated objects array and sets a translated message to the translated elements.
          */
         runTranslated() {
-            if(Util.isEmpty(this.app) && this.ready) {
-                Util.setTimeout(() => {
-                    let i = 0;
-                    while(i < this.translated.length) {
-                        this.translated[i].obj.setText.call(this.translated[i].obj, Messages.message(this.translated[i].key, this.translated[i].params));
-                        i++;
-                    }
-                });
-            } else if(this.ready) {
-                this.app.refresh();
+            if (this.ready) {
+                RMEAppManager.getAll().forEach(app => app.refresh());
             }
         }
 
         /**
-         * Function returns current locale of the Messages
-         * @returns Current locale
+         * Returns currently used locale string used by the Messages.
+         * @returns Locale string
          */
         static locale() {
-            return Messages.getInstance().locale;
+            return Messages.instance.locale;
         }
 
         /**
@@ -179,61 +160,48 @@ let Messages = (function() {
          * @param {object} locale Event
          */
         static lang(locale) {
-            let loc;
-            if(Util.isObject(locale) && locale instanceof Event) {
+            let nextLocale;
+            if (locale instanceof Event) {
                 locale.preventDefault();
-                let el = Elem.wrap(locale.target);
-                loc = el.getHref();
-                if(Util.isEmpty(loc))
-                    loc = el.getValue();
-                if(Util.isEmpty(loc))
-                    loc = el.getText();
-            } else if(Util.isString(locale))
-                loc = locale;
-            else
-                throw "Given parameter must be type string or instance of Event, given value: " + locale;
-            if(!Util.isEmpty(loc))
-                Messages.getInstance().setLocale(loc).load.call(null, 
-                    Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
+                const el = Elem.wrap(locale.target);
+                nextLocale = el.getHref() || el.getValue() || el.getText();
+            } else if (Util.isString(locale)) {
+                nextLocale = locale;
+            } else {
+                throw new Error('The parameter locale must be an instance of the Event or a string');
+            }
+            if (Util.notEmpty(nextLocale)) {
+                Messages.instance.setLocale(nextLocale).load.call(Messages.instance, Messages.locale(),
+                    Messages.instance.setMessages.bind(Messages.instance));
+            }
         }
 
         /**
-         * Message function is used to retrieve translated messages. The function also supports message parameters
-         * that can be given as a comma separeted list. 
+         * Message function returns a message from the message bundle or a message key if the message was not found.
+         * The function also supports message parameters that can be given as a comma separeted list.
          * @param {string} text 
          * @param {*} params 
          * @returns A resolved message or the given key if the message is not found.
          */
         static message(text, ...params) {
-            return Messages.getInstance().getMessage(text, params);
+            return Messages.instance.getMessage(text, params);
         }
 
         /**
-         * Load function is used to load new messages or change already loaded messages.
          * Implementation of the function receives two parameters. The one of the parameters is the changed locale and 
          * the other is setMessages(messagesArrayOrObject) function that is used to change the translated messages.
-         * This function is called automatically when language is changed by calling the Messages.lang() function.
-         * @param {function} loader 
+         * Set a message loader function.
+         * The function receives two parameters a locale and a setMessages function. The locale is currently used locale
+         * and the setMessages function applies the given messages.
          */
         static load(loader) {
-            if(!Util.isFunction(loader))
-                throw "loader must be type function " + Util.getType(loader);
-            Messages.getInstance().setLoad(loader);
+            Messages.instance.setLoad(loader);
         }
 
-        /**
-         * Set the app instance to be invoked on the Messages update.
-         * @param {object} appInstance 
-         */
-        static setApp(appInstance) {
-            Messages.getInstance().setAppInstance(appInstance);
-            return Messages;
-        }
-
-        static getInstance() {
-            if(!this.instance)
-                this.instance = new Messages();
-            return this.instance;
+        static get instance() {
+            if(!this.ins)
+                this.ins = new Messages();
+            return this.ins;
         }
     }
 
@@ -241,8 +209,7 @@ let Messages = (function() {
         lang: Messages.lang,
         message: Messages.message,
         load: Messages.load,
-        locale: Messages.locale,
-        setApp: Messages.setApp
+        locale: Messages.locale
     };
 }());
 

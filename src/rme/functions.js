@@ -23,11 +23,6 @@ const configure = (function() {
                     ...config,
                     router: param
                 }
-            } else if (param.load) {
-                config = {
-                    ...config,
-                    messages: param
-                }
             } else if (param.name) {
                 config = {
                     ...config,
@@ -38,9 +33,6 @@ const configure = (function() {
 
         if (Util.notEmpty(config.router))
             config.router.setApp(config.app);
-
-        if (Util.notEmpty(config.messages))
-            config.messages.setApp(config.app);
 
         if (Util.notEmpty(config.app))
             config.app.setRouter(config.router);
