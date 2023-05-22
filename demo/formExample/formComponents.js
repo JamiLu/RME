@@ -6,7 +6,6 @@ export const FormExample = (props, ops) => ({
         TitleHeader: props,
         Form: {
             input: event => {
-                console.log('ie', event);
                 ops.updateState({ [event.target.name]: event.target.value });
             }
         }
