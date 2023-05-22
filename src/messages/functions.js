@@ -1,5 +1,5 @@
 import Messages from './messages';
-import Util from '../util'
+import Util from '../util';
 
 const useMessages = (function() {
 
