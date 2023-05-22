@@ -182,7 +182,7 @@ const ValueStore = (function() {
 
     class ValueStore {
         constructor() {
-            this.values = {};
+            this.values = new Map();
             this.valueRefGenerator = new RefGenerator('val');
         }
     
@@ -197,15 +197,15 @@ const ValueStore = (function() {
                 value = value(value);
             }
             const ref = this.valueRefGenerator.next();
-            this.values[ref] = value;
+            this.values.set(ref, value);
     
-            const getter = () => this.values[ref];
+            const getter = () => this.values.get(ref);
             const setter = (next, update) => {
                 if (Util.isFunction(next)) {
                     next = next(getter());
                 }
     
-                this.values[ref] = next;
+                this.values.set(ref, next);
                 
                 if (update !== false) {
                     RMEAppManager.getOrDefault(appName).refresh();
@@ -254,7 +254,7 @@ const createApp = (function() {
         return match ? match.join() : undefined;
     }
 
-    return (template, appName) => {
+    return (template) => {
         if (!Util.isObject(template)) {
             throw new Error('The app creation template must be an object.');
         }
@@ -263,7 +263,7 @@ const createApp = (function() {
             throw new Error('The root selector could not be parsed from the template. Selector should be type an #id or a .class');
         }
 
-        return RMEAppBuilder.name(appName).root(selector).create(Object.values(template).shift());
+        return RMEAppBuilder.root(selector).create(Object.values(template).shift());
     }
 
 })();
@@ -312,21 +312,18 @@ const RMEAppManager = (function() {
     const get = (name) => getFrom()[name];
 
     /**
-     * If the given name parameter is not empty then it will be returned otherwise a 
-     * next available application name is created and returned.
-     * @see createName
-     * @param {name} name 
-     * @returns Application name
-     */
-    const checkName = (name) => Util.notEmpty(name) ? name : createName();
-
-    /**
      * Get application instance by name or return default application instance.
      * The default application instance is returned if the given name parameter is empty.
      * @param {string} name 
      * @returns Application instance
      */
     const getOrDefault = (name) => Util.notEmpty(name) ? get(name) : get(`${prefix}0`);
+
+    /**
+     * Returns an array containing all application instances.
+     * @returns Array
+     */
+    const getAll = () => Object.values(getFrom());
 
     /**
      * Creates a next available application name.
@@ -342,7 +339,8 @@ const RMEAppManager = (function() {
     return {
         set,
         get,
-        checkName,
+        getAll,
+        createName,
         getOrDefault
     }
 
@@ -353,22 +351,11 @@ const RMEAppManager = (function() {
 const RMEAppBuilder = (function() {
 
     const holder = {
-        appName: undefined,
         appRoot: undefined
     }
 
     class Builder {
 
-        /**
-         * Function will set a name for an application. If the name is not set then a default name is used.
-         * @param {string} name 
-         * @returns Builder
-         */
-        static name(name) {
-            holder.appName = RMEAppManager.checkName(name);
-            return Builder;
-        }
-    
         /**
          * Function will set a root for an application. If the root is not set then body is used by default.
          * @param {string} root 
@@ -384,7 +371,6 @@ const RMEAppBuilder = (function() {
          * @returns Builder
          */
         static reset() {
-            holder.appName = undefined;
             holder.appRoot = undefined;
             return Builder;
         }
@@ -398,7 +384,7 @@ const RMEAppBuilder = (function() {
             if (!(Template.isTemplate(object) || RMETemplateFragmentHelper.isFragment(object))) {
                 throw new Error('App template must start with a valid html tag or a fragment key');
             }
-            const app = new AppInstance(holder.appName ?? RMEAppManager.checkName(), holder.appRoot, object);
+            const app = new AppInstance(RMEAppManager.createName(), holder.appRoot, object);
             RMEAppManager.set(app.name, app);
             Builder.reset();
             return app;
@@ -409,14 +395,10 @@ const RMEAppBuilder = (function() {
         constructor(name, root, object) {
             this.rawStage = object;
             this.name = name;
-            this.root; 
-            this.state = {};
+            this.root;
             this.renderer;
             this.oldStage = "";
-            this.router;
             this.ready = false;
-            this.refresh = this.refreshApp.bind(this);
-            this.afterRefreshCallQueue = [];
             this.refreshQueue;
             this.bindReadyListener(root);
         }
@@ -435,63 +417,27 @@ const RMEAppBuilder = (function() {
             this.root = Util.isEmpty(root) ? Tree.getBody() : Tree.getFirst(root);
             this.renderer = new RMEElemRenderer(this.root);
             this.ready = true;
-            this.refreshApp();
+            this.refresh();
         }
     
-        refreshApp() {
+        refresh() {
             if (this.ready) {
-                if (this.refreshQueue)
+                if (this.refreshQueue) {
                     Util.clearTimeout(this.refreshQueue);
-
+                }
                 this.refreshQueue = Util.setTimeout(() => {
                     const freshStage = Template.resolve({[this.root.toLiteralString()]: { ...this.rawStage }}, null, this.name);
-    
-                    if (Util.notEmpty(this.router)) {
-                        let state = this.router.getCurrentState();
-                        if (Util.notEmpty(state.current)) {
-                            let selector = state.root;
-                            let element = state.current;
-                            if (RMETemplateFragmentHelper.isFragment(element)) {
-                                const fragment = {};
-                                fragment[state.rootElem.toLiteralString()] = {
-                                    ...RMETemplateFragmentHelper.resolveFragmentValue(element, fragment)
-                                };
-                                freshStage.getFirst(selector).replace(Template.resolve(fragment));
-                            } else {
-                                freshStage.getFirst(selector).append(element);
-                            }
-                            if (Util.notEmpty(state.onAfter)) this.afterRefreshCallQueue.push(state.onAfter);
-                        }
-                    }
 
                     if (this.oldStage.toString() !== freshStage.toString()) {
                         this.oldStage = this.renderer.merge(freshStage);
                     }
-                    this.refreshAppDone();
                     Util.clearTimeout(this.refreshQueue);
                 });
             }
         }
-
-        refreshAppDone() {
-            this.afterRefreshCallQueue.forEach(callback => callback());
-            this.afterRefreshCallQueue = [];
-        }
-
-        addAfterRefreshCallback(callback) {
-            if(Util.isFunction(callback)) {
-                this.afterRefreshCallQueue.push(callback)
-            }
-        }
-    
-        setRouter(router) {
-            this.router = router;
-        }
-    
     }
 
     return {
-        name: Builder.name,
         root: Builder.root,
         create: Builder.create
     }
@@ -1436,7 +1382,7 @@ let Elem = (function() {
             } else if(type.nodeType !== undefined && type.ownerDocument !== undefined && type.nodeType >= 1 && type.ownerDocument instanceof Document) {
                 this.html = type;
             } else {
-                throw "type must be a string or a HTMLDocument";
+                throw "type must be a string or a Document";
             }
         }
 
@@ -2247,7 +2193,6 @@ let Elem = (function() {
                     paramArray.push(params[i]);
                 i++;
             }
-            paramArray.push(this);
             this.setText(Messages.message(message, paramArray));
             return this;
         }
@@ -4103,43 +4048,65 @@ Key.COMMA = ",";
 Key.DOT = ".";
 
 
+const useMessages = (function() {
 
-let Messages = (function() {
+    /**
+     * UseMessages function has three functionalities. 1. Set a message loader function. 2. Change locale. 3. Return currenly used locale string.
+     * If the locale parameter is set then the locale is changed to the given locale. The locale parameter can be either a string or an Event.
+     * If the locale is an Event then the locale string is attempted to be parsed from the href, the value or the text of the Event.target.
+     * If the loader parameter is set then the existing message loader function will be replaced with the currently given.
+     * The useMessage function will return the currently used locale string as a return value.
+     * @param {string|Event} locale
+     * @param {Function} loader
+     * @returns Locale string
+     */
+    return (locale, loader) => {
+        if (Util.isFunction(loader)) {
+            Messages.load((locale, setMessages) => setMessages(loader(locale)));
+        }
+        if (Util.isString(locale) || locale instanceof Event) {
+            Messages.lang(locale);
+        }
+        return Messages.locale();
+    }
+}());
+
+
+
+
+
+
+const Messages = (function() {
     /**
      * Messages class handles internationalization. The class offers public methods that enable easy 
      * using of translated content.
      */
     class Messages {
+        static ins;
         constructor() {
-            this.instance = this;
+            this.ins = this;
             this.messages = [];
-            this.locale = "";
+            this.locale = '';
             this.translated = [];
             this.load = function() {};
             this.messagesType;
-            this.app;
             this.ready = false;
-            this.registerMessages();
-        }
-
-        /**
-         * Initializes the Messages
-         */
-        registerMessages() {
-            document.addEventListener("readystatechange", () => {
-                if(document.readyState === "complete") {
-                    this.ready = true;
-                    this.runTranslated.call(this);
-                }
+            ready(() => {
+                this.ready = true;
+                this.runTranslated();
             });
         }
 
+        /**
+         * Loader function is used to load new messages.
+         * The loader function is called automatically when the locale used in the Messages changes.
+         * @param {function} loader
+         */
         setLoad(loader) {
+            if (!Util.isFunction(loader)) {
+                throw new Error('Message loader must be a function');
+            }
             this.load = loader;
-        }
-
-        setAppInstance(appInstance) {
-            this.app = appInstance;
         }
 
         setLocale(locale) {
@@ -4148,36 +4115,43 @@ let Messages = (function() {
         }
 
         setMessages(messages) {
-            if(Util.isArray(messages))
-                this.messagesType = "array";
-            else if(Util.isObject(messages))
-                this.messagesType = "map";
-            else
-                throw "messages must be type array or object";
+            if (Util.isArray(messages)) {
+                this.messagesType = 'array';
+            } else if (Util.isObject(messages)) {
+                this.messagesType = 'map';
+            } else {
+                throw new Error('Given messages must be an array or an object');
+            }
             this.messages = messages;
-            this.runTranslated.call(this);
+            this.runTranslated();
         }
 
+        /**
+         * GetMessage function is used to retrieve translated messages. The function also supports message parameters
+         * that can be given as a comma separeted list.
+         * @param {string} text
+         * @param {*} params
+         * @returns A resolved message or the given key if the message is not found.
+         */
         getMessage(text, ...params) {
-            if(Util.isEmpty(params[0][0])) {
+            if (Util.isEmpty(params.flat(2))) {
                 return this.resolveMessage(text);
             } else {
-                this.getTranslatedElemIfExist(text, params[0][0]);
                 let msg = this.resolveMessage(text);
-                return this.resolveParams(msg, params[0][0]);
+                return this.resolveParams(msg, params.flat(2));
             }
         }
 
         /**
          * Resolves translated message key and returns a resolved message if exist
          * otherwise returns the given key.
-         * @param {string} text 
+         * @param {string} text key
          * @returns A resolved message if exist otherwise the given key.
          */
         resolveMessage(text) {
-            if(this.messagesType === "array") {
+            if (this.messagesType === 'array') {
                 return this.resolveMessagesArray(text);
-            } else if(this.messagesType === "map") {
+            } else if (this.messagesType === 'map') {
                 return this.resolveMessagesMap(text);
             }
         }
@@ -4185,13 +4159,13 @@ let Messages = (function() {
         /**
          * Resolves a translated message key from the map. Returns a resolved message 
          * if found otherwise returns the key.
-         * @param {string} text 
+         * @param {string} text key
          * @returns A resolved message
          */
         resolveMessagesMap(text) {
             let msg = text;
-            for(let i in this.messages) {
-                if(i === text) {
+            for (let i in this.messages) {
+                if (i === text) {
                     msg = this.messages[i];
                     break;
                 }
@@ -4202,14 +4176,14 @@ let Messages = (function() {
         /**
          * Resolves a translated message key from the array. Returns a resolved message
          * if found otherwise returns the key.
-         * @param {string} text 
+         * @param {string} text key
          * @returns A resolved message
          */
         resolveMessagesArray(text) {
             let i = 0;
             let msg = text;
-            while(i < this.messages.length) {
-                if(!Util.isEmpty(this.messages[i][text])) {
+            while (i < this.messages.length) {
+                if (Util.notEmpty(this.messages[i][text])) {
                     msg = this.messages[i][text];
                     break;
                 }
@@ -4225,28 +4199,9 @@ let Messages = (function() {
          * @returns The message with resolved message parameteres if parameters exist.
          */
         resolveParams(msg, params) {
-            if(!Util.isEmpty(msg)) {
-                let i = 0;
-                while(i < params.length) {
-                    msg = msg.replace("{"+i+"}", params[i]);
-                    i++;
-                }
+            if (Util.notEmpty(msg)) {
+                params.forEach((param, i) => msg = msg.replace(`{${i}}`, param));
                 return msg;
-            }
-        }
-
-        /**
-         * Function gets a Elem object and inserts it into a translated object array if it exists.
-         * @param {string} key 
-         * @param {*} params 
-         */
-        getTranslatedElemIfExist(key, params) {
-            let last = params[params.length - 1];
-            if (Util.isObject(last) && last instanceof Elem) {
-                last = params.pop()
-                if (Util.isEmpty(this.app)) {
-                    this.translated.push({key: key, params: params, obj: last});
-                }
             }
         }
 
@@ -4254,25 +4209,17 @@ let Messages = (function() {
          * Function goes through the translated objects array and sets a translated message to the translated elements.
          */
         runTranslated() {
-            if(Util.isEmpty(this.app) && this.ready) {
-                Util.setTimeout(() => {
-                    let i = 0;
-                    while(i < this.translated.length) {
-                        this.translated[i].obj.setText.call(this.translated[i].obj, Messages.message(this.translated[i].key, this.translated[i].params));
-                        i++;
-                    }
-                });
-            } else if(this.ready) {
-                this.app.refresh();
+            if (this.ready) {
+                RMEAppManager.getAll().forEach(app => app.refresh());
             }
         }
 
         /**
-         * Function returns current locale of the Messages
-         * @returns Current locale
+         * Returns currently used locale string used by the Messages.
+         * @returns Locale string
          */
         static locale() {
-            return Messages.getInstance().locale;
+            return Messages.instance.locale;
         }
 
         /**
@@ -4282,61 +4229,48 @@ let Messages = (function() {
          * @param {object} locale Event
          */
         static lang(locale) {
-            let loc;
-            if(Util.isObject(locale) && locale instanceof Event) {
+            let nextLocale;
+            if (locale instanceof Event) {
                 locale.preventDefault();
-                let el = Elem.wrap(locale.target);
-                loc = el.getHref();
-                if(Util.isEmpty(loc))
-                    loc = el.getValue();
-                if(Util.isEmpty(loc))
-                    loc = el.getText();
-            } else if(Util.isString(locale))
-                loc = locale;
-            else
-                throw "Given parameter must be type string or instance of Event, given value: " + locale;
-            if(!Util.isEmpty(loc))
-                Messages.getInstance().setLocale(loc).load.call(null, 
-                    Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
+                const el = Elem.wrap(locale.target);
+                nextLocale = el.getHref() || el.getValue() || el.getText();
+            } else if (Util.isString(locale)) {
+                nextLocale = locale;
+            } else {
+                throw new Error('The parameter locale must be an instance of the Event or a string');
+            }
+            if (Util.notEmpty(nextLocale)) {
+                Messages.instance.setLocale(nextLocale).load.call(Messages.instance, Messages.locale(),
+                    Messages.instance.setMessages.bind(Messages.instance));
+            }
         }
 
         /**
-         * Message function is used to retrieve translated messages. The function also supports message parameters
-         * that can be given as a comma separeted list. 
+         * Message function returns a message from the message bundle or a message key if the message was not found.
+         * The function also supports message parameters that can be given as a comma separeted list.
          * @param {string} text 
          * @param {*} params 
          * @returns A resolved message or the given key if the message is not found.
          */
         static message(text, ...params) {
-            return Messages.getInstance().getMessage(text, params);
+            return Messages.instance.getMessage(text, params);
         }
 
         /**
-         * Load function is used to load new messages or change already loaded messages.
          * Implementation of the function receives two parameters. The one of the parameters is the changed locale and 
          * the other is setMessages(messagesArrayOrObject) function that is used to change the translated messages.
-         * This function is called automatically when language is changed by calling the Messages.lang() function.
-         * @param {function} loader 
+         * Set a message loader function.
+         * The function receives two parameters a locale and a setMessages function. The locale is currently used locale
+         * and the setMessages function applies the given messages.
          */
         static load(loader) {
-            if(!Util.isFunction(loader))
-                throw "loader must be type function " + Util.getType(loader);
-            Messages.getInstance().setLoad(loader);
+            Messages.instance.setLoad(loader);
         }
 
-        /**
-         * Set the app instance to be invoked on the Messages update.
-         * @param {object} appInstance 
-         */
-        static setApp(appInstance) {
-            Messages.getInstance().setAppInstance(appInstance);
-            return Messages;
-        }
-
-        static getInstance() {
-            if(!this.instance)
-                this.instance = new Messages();
-            return this.instance;
+        static get instance() {
+            if(!this.ins)
+                this.ins = new Messages();
+            return this.ins;
         }
     }
 
@@ -4344,57 +4278,9 @@ let Messages = (function() {
         lang: Messages.lang,
         message: Messages.message,
         load: Messages.load,
-        locale: Messages.locale,
-        setApp: Messages.setApp
+        locale: Messages.locale
     };
 }());
-
-
-/**
- * The configure function will configure given Components. Advantage of this function is that the Compoments can be given in 
- * any order and they will be recognized automatically.
- * 
- * Example use case would be to invoke configure(App.get(), Router, Messages);
- * 
- * This function can be conbined with a createApp('#app', AppComponent) function as follows:
- * configure(createApp('#app', AppComponent), Router, Messages); This is probably the shortest way to 
- * create the RME application.
- * @param {*} params comma separated list of components
- */
-const configure = (function() {
-
-    return (...params) => {
-        let config = {};
-        params.forEach(param => {
-            if (param.routes) {
-                config = {
-                    ...config,
-                    router: param
-                }
-            } else if (param.load) {
-                config = {
-                    ...config,
-                    messages: param
-                }
-            } else if (param.name) {
-                config = {
-                    ...config,
-                    app: param
-                }
-            } 
-        });
-
-        if (Util.notEmpty(config.router))
-            config.router.setApp(config.app);
-
-        if (Util.notEmpty(config.messages))
-            config.messages.setApp(config.app);
-
-        if (Util.notEmpty(config.app))
-            config.app.setRouter(config.router);
-    }
-
-})();
 
 
 /**
@@ -4465,464 +4351,405 @@ const ready = (function() {
 
 
 
-let Router = (function() {
-    /**
-     * Router class handles and renders route elements that are given by Router.routes() method.
-     * The method takes an array of route objects that are defined as follows: {route: "url", elem: elemObject, hide: true|false|undefined}.
-     * The first element the array of route objects is by default the root route object in which all other route objects 
-     * are rendered into.
-     */
-    class Router {
-        constructor() {
-            this.instance = null;
-            this.root = null;
-            this.origRoot = null;
-            this.routes = [];
-            this.origRoutes = [];
-            this.currentRoute = {};
-            this.prevUrl = location.pathname;
-            this.loadCall = () => this.navigateUrl(location.pathname);
-            this.hashCall = () => this.navigateUrl(location.hash);
-            this.useHistory =  true;
-            this.autoListen = true;
-            this.useHash = false;
-            this.scrolltop = true;
-            this.app;
-            this.registerRouter();
-        }
+const useHashRouter = (function() {
 
-        /**
-         * Initializes the Router.
-         */
-        registerRouter() {
-            document.addEventListener("readystatechange", () => {
-                if(document.readyState === "complete") {
-                    let check = Util.setInterval(() => {
-                        let hasRoot = !Util.isEmpty(this.root.elem) ? document.querySelector(this.root.elem) : false;
-                        if(hasRoot) {
-                            Util.clearInterval(check);
-                            this.resolveRoutes();
-                        }
-                    }, 50)
-                }
-            });
-        }
+    return (routes, globalScrollTop = true) => {
+        Component(RMEHashRouter);
 
-        /**
-         * Register listeners according to the useHistory and the autoListen state.
-         */
-        registerListeners() {
-            if(this.useHistory && this.autoListen)
-                window.addEventListener("load", this.loadCall);
-            else if(!this.useHistory && this.autoListen)
-                window.addEventListener("hashchange", this.hashCall);
-            
-            if(!this.autoListen)
-                window.addEventListener("popstate", this.onPopState.bind(this));
-        }
-
-        /**
-         * Clear the registered listeners.
-         */
-        clearListeners() {
-            window.removeEventListener("load", this.loadCall);
-            window.removeEventListener("hashchange", this.hashCall);
-
-            if(!this.autoListen)
-                window.removeEventListener("popstate", this.onPopState);
-        }
-
-        /**
-         * On popstate call is registered if the auto listen is false. It listens the browsers history change and renders accordingly.
-         */
-        onPopState() {
-            if (this.useHistory) {
-                this.renderRoute(location.pathname);
-                Browser.scrollTo(0, 0);
-            } else {
-                this.renderRoute(location.hash);
+        return {
+            RMEHashRouter: {
+                routes,
+                globalScrollTop
             }
-        }
-
-        /**
-         * Set the router to use a history implementation or an anchor hash implementation.
-         * If true then the history implementation is used. Default is true.
-         * @param {boolean} use
-         */
-        setUseHistory(use) {
-            this.useHistory = use;
-        }
-
-        /**
-         * Set the Router to auto listen url change to true or false.
-         * @param {boolean} listen
-         */
-        setAutoListen(listen) {
-            this.autoListen = listen;
-        }
-
-        /**
-         * Set auto scroll up true or false.
-         * @param {boolean} auto 
-         */
-        setAutoScrollUp(auto) {
-            this.scrolltop = auto;
-        }
-
-        /**
-         * Set the app instance that the Router invokes on update.
-         * @param {object} appInstance 
-         */
-        setApp(appInstance) {
-            this.app = appInstance;
-        }
-
-        /**
-         * Resolves the root and the first page.
-         */
-        resolveRoutes() {
-            if(Util.isString(this.root.elem)) {
-                this.root.elem = this.resolveElem(this.root.elem);
-            } else if(Util.isEmpty(this.root)) {
-                this.root = this.routes.shift();
-                this.root.elem = this.resolveElem(this.root.elem);
-                this.origRoot = this.root.elem;
-            }
-            if(this.useHash) {
-                this.renderRoute(location.hash);
-            } else {
-                this.renderRoute(location.pathname);
-            }
-        }
-
-        /**
-         * Set the routes and if a root is not set then the first element will be the root route element.
-         * @param {array} routes
-         */
-        setRoutes(routes) {
-            this.routes = routes;
-        }
-
-        /**
-         * Add a route into the Router. {route: "url", elem: elemObject}
-         * @param {object} route
-         */
-        addRoute(route) {
-            this.routes.push(route);
-        }
-
-        /**
-         * Set a root route object into the Router. {route: "url", elem: elemObject}
-         * @param {object} route
-         */
-        setRoot(route) {
-            this.root = route;
-            this.origRoot = route.elem;
-        }
-
-        /**
-         * Method resolves element. If elem is string gets a component of the name if exist otherwise creates a new elemen of the name.
-         * If both does not apply then method assumes the elem to be an element and returns it.
-         * @param {*} elem 
-         */
-        resolveElem(elem, props) {
-            if (Util.isFunction(elem) && RMEComponentManagerV2.hasComponent(elem.valueOf().name)) {
-                return RMEComponentManagerV2.getComponent(elem.valueOf().name, props);
-            } else if (Util.isString(elem) && RMEComponentManagerV2.hasComponent(elem)) {
-                return RMEComponentManagerV2.getComponent(elem, props);
-            } else if (Util.isString(elem) && this.isSelector(elem)) {
-                return Tree.getFirst(elem);
-            } else if (elem instanceof Elem) {
-                return elem;
-            } else if (Util.isEmpty(elem)) {
-                return elem;
-            }
-            throw new Error(`Could not resolve a route elem: ${elem}`);
-        }
-
-        /**
-         * Function checks if a tag starts with a dot or hashtag or is a HTML tag.
-         * If described conditions are met then the tag is supposed to be a selector.
-         * @param {string} tag 
-         * @returns True if the tag is a selector otherwise false.
-         */
-        isSelector(tag) {
-            return tag.charAt(0) === '.'
-                || tag.charAt(0) === '#'
-                || Template.isTag(tag);
-        }
-
-        /**
-         * Method navigates to the url and renders a route element inside the root route element if found.
-         * @param {string} url
-         */
-        navigateUrl(url) {
-            var route = this.findRoute(url);
-            if (Util.notEmpty(route) && this.useHistory && !route.hide) {
-                history.pushState(null, null, url);
-            } else if (Util.notEmpty(route) && !route.hide) {
-                location.href = url;
-            }
-            if (Util.notEmpty(this.root) && Util.notEmpty(route)) {
-                if ((route.scrolltop === true) || (route.scrolltop === undefined && this.scrolltop)) {
-                    if (window.scrollY > 0)
-                        Browser.scrollTo(0, 0);
-                }
-                this.prevUrl = this.getUrlPath(url);
-                this.currentRoute = route;
-                if (Util.isEmpty(this.app)) {
-                    if (Util.notEmpty(route.onBefore)) route.onBefore();
-                    this.root.elem.render(this.resolveElem(route.elem, route.compProps));
-                    if (Util.notEmpty(route.onAfter)) route.onAfter();
-                } else {
-                    if (Util.notEmpty(route.onBefore)) route.onBefore();
-                    this.app.refresh();
-                }
-            }
-        }
-
-        /**
-         * Method looks for a route by the url. If the router is found then it will be returned otherwise returns null
-         * @param {string} url
-         * @param {boolean} force match route even though the previous url and the current url are the same
-         * @returns The found router or null if not found.
-         */
-        findRoute(url, force) {
-            var i = 0;
-            if(!Util.isEmpty(url) && (this.prevUrl !== this.getUrlPath(url) || force)) {
-                while(i < this.routes.length) {
-                    if(this.matches(this.routes[i].route, url))
-                        return this.routes[i];
-                    i++;
-                }
-            }
-            return null;
-        }
-
-        /**
-         * Method will look for a route by the url and if the route is found then it will be rendered 
-         * inside the root route element.
-         * @param {string} url
-         */
-        renderRoute(url) {
-            var route = this.findRoute(url, true);
-            if(!Util.isEmpty(route) && Util.isEmpty(this.app)) {
-                if (!Util.isEmpty(route.onBefore)) route.onBefore();
-                this.root.elem.render(this.resolveElem(route.elem, route.compProps));
-                this.currentRoute = route;
-                if (!Util.isEmpty(route.onAfter)) route.onAfter();
-            } else if(Util.isEmpty(this.app)) {
-                this.root.elem.render();
-            } else if(!Util.isEmpty(route) && !Util.isEmpty(this.app)) {
-                if (!Util.isEmpty(route.onBefore)) route.onBefore();
-                this.app.refresh();
-                this.currentRoute = route;
-            }
-
-            this.prevUrl = location.pathname;
-        }
-
-        /**
-         * Method matches a given url parameters and returns true if the urls matches.
-         * @param {string} url
-         * @param {string} newUrl
-         * @returns True if the given urls matches otherwise false.
-         */
-        matches(url, newUrl) {
-            if (this.useHistory) {
-                url = Util.isString(url) ? url.replace(/\*/g, '.*').replace(/\/{2,}/g, '/') : url;
-                let path = this.getUrlPath(newUrl);
-                let found = path.match(url);
-                if (!Util.isEmpty(found))
-                    found = found.join();
-                return found === path && new RegExp(url).test(newUrl);
-            } else {
-                if (Util.isString(url)) {
-                    url = url.replace(/\*/g, '.*');
-                    if (url.charAt(0) !== '#')
-                        url = `#${url}`;
-                }
-                let hash = newUrl.match(/\#{1}.*/).join();
-                let found = hash.match(url);
-                if (!Util.isEmpty(found))
-                    found = found.join();
-                return found === hash && new RegExp(url).test(newUrl);
-            }
-        }
-
-        /**
-         * Cut the protocol and domain of the url off if exist.
-         * For example https://www.example.com/example -> /example
-         * @param {string} url 
-         * @returns The path of the url.
-         */
-        getUrlPath(url) {
-            return this.useHash ? url : url.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
-        }
-
-        /**
-         * @returns The current status of the Router in an object.
-         */
-        getCurrentState() {
-            return {
-                root: this.origRoot,
-                rootElem: this.root.elem,
-                current: this.resolveElem(this.currentRoute.elem, this.currentRoute.compProps),
-                onAfter: this.currentRoute.onAfter
-            }
-        }
-
-        /**
-         * Method will try to find a route according to the given parameter. The supported parameter combinations are url, event or elem & event. 
-         * The first paramter can either be an URL or an Event or an Elem. The second parameter is an Event if the first parameter is an Elem.
-         * If the route is found, then the Router will update a new url to the browser and render the found route element.
-         * @param {string} url
-         * @param {object} url type event
-         * @param {object} url type Elem
-         * @param {object} event
-         */
-        static navigate(url, event) {
-            if(Util.isString(url))
-                Router.getInstance().navigateUrl(url);
-            else if(Util.isObject(url) && url instanceof Event) {
-                if(!Router.getInstance().autoListen || Router.getInstance().useHash)
-                    url.preventDefault();
-                Router.getInstance().navigateUrl(url.target.href);
-            } else if(Util.isObject(url) && url instanceof Elem && !Util.isEmpty(event) && Util.isObject(event) && event instanceof Event) {
-                if(!Router.getInstance().autoListen || Router.getInstance().useHash)
-                    event.preventDefault();
-                Router.getInstance().navigateUrl(url.getHref());
-            }
-        }
-
-        /**
-         * Set a root element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
-         * @param {object} elem
-         * @returns Router
-         */
-        static root(elem) {
-            Router.getInstance().setRoot({elem: elem});
-            return Router;
-        }
-
-        /**
-         * Add a new route element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
-         * @param {string} url
-         * @param {object} elem
-         * @param {boolean} hide
-         */
-        static add(url, elem, hide) {
-            Router.getInstance().addRoute({route: url, elem: elem, hide: hide});
-            return Router;
-        }
-
-        /**
-         * Set an array of routes that the Router uses. If a root is not set then the first item in the given routes array will be the root route element.
-         * @param {array} routes
-         */
-        static routes(routes) {
-            if(!Util.isArray(routes))
-                throw "Could not set routes. Given parameter: \"" + routes + "\" is not an array."
-            Router.getInstance().setRoutes(routes);
-            return Router;
-        }
-
-        /**
-         * Method sets the Router to use an url implementation. The url implementation defaults to HTML standard that pressing a link
-         * will cause the browser reload a new page. After reload the new page is rendered. If you wish to skip reload then you should 
-         * set the parameter manual to true.
-         * @param {boolean} manual
-         * @returns Router
-         */
-        static url(manual) {
-            Router.getInstance().setUseHistory(true);
-            Router.getInstance().registerListeners();
-            if(Util.isBoolean(manual) && manual) {
-                Router.manual();
-            }
-            return Router;
-        }
-
-        /**
-         * Method sets the Router not to automatically follow url changes. If this method is invoked 
-         * the user must explicitly define a method that calls Router.navigate in order to have navigation working
-         * properly when going forward and backward in the history. The method will not 
-         * do anything if the url implementation is not used.
-         * @returns Router
-         */
-        static manual() {
-            if(Router.getInstance().useHistory) {
-                history.scrollRestoration = 'manual';
-                Router.getInstance().clearListeners();
-                Router.getInstance().setAutoListen(false);
-                Router.getInstance().registerListeners();
-            }
-            return Router;
-        }
-
-        /**
-         * Method sets the Router to use a hash implementation. When this implementation is used 
-         * there is no need to manually use Router.navigate function because change
-         * of the hash is automatically followed.
-         * @returns Router
-         */
-        static hash() {
-            Router.getInstance().setUseHistory(false);
-            Router.getInstance().setAutoListen(true);
-            Router.getInstance().registerListeners();
-            Router.getInstance().useHash = true;
-            return Router;
-        }
-
-        /**
-         * Method sets default level behavior for route naviagation. If the given value is true then the Browser auto-scrolls up 
-         * when navigating to a new resource. If set false then the Browser does not auto-scroll up. Default value is true.
-         * @param {boolean} auto 
-         * @returns Router
-         */
-        static scroll(auto) {
-            if(Util.isBoolean(auto)) {
-                Router.getInstance().setAutoScrollUp(auto);
-            }
-            return Router;
-        }
-
-        /**
-         * Set the app instance to be invoked on the Router update.
-         * @param {object} appInstance 
-         * @returns Router
-         */
-        static setApp(appInstance) {
-            if(!Util.isEmpty(appInstance))
-                Router.getInstance().setApp(appInstance);
-            return Router;
-        }
-
-        /**
-         * @returns The current status of the router.
-         */
-        static getCurrentState() {
-            return Router.getInstance().getCurrentState();
-        }
-
-        static getInstance() {
-            if(Util.isEmpty(this.instance))
-                this.instance = new Router();
-            return this.instance;
-        }
-    }
-    return {
-        navigate: Router.navigate,
-        root: Router.root,
-        add: Router.add,
-        routes: Router.routes,
-        url: Router.url,
-        hash: Router.hash,
-        scroll: Router.scroll,
-        getCurrentState: Router.getCurrentState,
-        setApp: Router.setApp,
+        };
     }
 }());
+
+const useAutoUrlRouter = (function() {
+
+    return (routes) => {
+        Component(RMEOnLoadUrlRouter);
+
+        return {
+            RMEOnLoadUrlRouter: {
+                routes
+            }
+        }
+    }
+}());
+
+const useUrlRouter = (function() {
+    
+    return (routes, globalScrollTop = true) => {
+        Component(RMEUrlRouter);
+
+        return {
+            RMEUrlRouter: {
+                listenLoad: false,
+                routes,
+                globalScrollTop,
+            }
+        }
+    }
+}());
+
+const useRouter = (function() {
+
+    return (url) => {
+        if (Util.isString(url)) {
+            RMERouterContext.navigateTo(url);
+        } else if (url instanceof Event) {
+            url.preventDefault();
+            RMERouterContext.navigateTo(url.target.href);
+        }
+    }
+}());
+
+
+
+const RMEHashRouter = (props, { asyncTask, updateState }) => {
+    const { routes, url = location.hash, prevUrl, prevRoute, globalScrollTop, init } = props;
+
+    if (!routes) {
+        return null;
+    }
+
+    if (!init) {
+        RMERouterContext.setRouter(routes, (url) => {
+            updateState({
+                url: url
+            });
+        });
+        asyncTask(() => {
+            window.addEventListener('hashchange', () => {
+                updateState({
+                    init: true,
+                    url: location.hash
+                });
+            });
+        });
+    }
+
+    let route;
+
+    if (url !== prevUrl) {
+        route = RMERouterUtils.findRoute(url, routes, RMERouterUtils.hashMatch);
+        asyncTask(() => {
+            updateState({
+                prevUrl: url,
+                prevRoute: route
+            }, false);
+        });
+    } else {
+        route = prevRoute;
+    }
+
+    if (Util.notEmpty(route)) {
+        if (Util.isFunction(route.onBefore)) {
+            route.onBefore(route);
+        }
+        if (Util.isFunction(route.onAfter)) {
+            asyncTask(() => route.onAfter(route));
+        }
+        if (route.hide) {
+            location.href = prevUrl;
+        }
+        if (window.scrollY > 0 && ((route.scrolltop === true) || (route.scrolltop === undefined && globalScrollTop))) {
+            scrollTo(0, 0);
+        }
+    }
+
+    return {
+        _: !!route ? RMERouterUtils.resolveRouteElem(route.elem, route.props) : null
+    }
+};
+
+
+
+
+
+const RMEOnLoadUrlRouter  = (props, { asyncTask }) => {
+    const { routes } = props;
+
+    if (!routes) {
+        return null;
+    }
+
+    const route = RMERouterUtils.findRoute(location.pathname, routes, RMERouterUtils.urlMatch);
+
+    if (Util.notEmpty(route)) {
+        if (Util.isFunction(route.onBefore)) {
+            route.onBefore(route);
+        }
+        if (Util.isFunction(route.onAfter)) {
+            asyncTask(() => route.onAfter(route));
+        }
+    }
+
+    return {
+        _: !!route ? RMERouterUtils.resolveRouteElem(route.elem, route.props) : null
+    }
+}
+
+
+
+const RMERouterContext = (function() {
+
+    class RouterContext {
+        constructor() {
+            this.ins;
+            this.routers = [];
+        }
+
+        /**
+         * Set a router into the context store by the key and the value.
+         * @param {string} key the router key
+         * @param {Function} value the router routes and the navigation hook
+         */
+        set(key, value) {
+            if ((!!key && !!value) && !this.has(key)) {
+                this.routers.push({ key, ...value });
+            }
+        }
+
+        /**
+         * Searches fo the routers by the router key if router is found the function will return true.
+         * @param {string} key 
+         * @returns True if found otherwise false
+         */
+        has(key) {
+            return !!this.routers.find(route => route.key === key);
+        }
+
+        /**
+         * Searches the router by the url. The navigation hook of the last mathced router is returned.
+         * If no routers match then an empty function will be returned instead.
+         * @param {string} url 
+         * @returns The router navigation hook
+         */
+        get(url) {
+            let found;
+            let prevFoundRouter;
+
+            if (url.match(/^\/[^#]/) || url === '/') {
+                const urlRouters = this.routers.filter(router => router.key.match(/^:\//));
+
+                found = urlRouters.find((router, idx) => {
+                    const route = RMERouterUtils.findRoute(url, router.routes, RMERouterUtils.urlMatch);
+
+                    if (!!route) {
+                        prevFoundRouter = router;
+                    }
+                    return !!route && idx === urlRouters.length - 1;
+                });
+
+                found = found || prevFoundRouter;
+            } else {
+                const hashRouters = this.routers.filter(router => router.key.match(/^:#?/));
+
+                found = hashRouters.find((router, idx) => {
+                    const route = RMERouterUtils.findRoute(url, router.routes, RMERouterUtils.hashMatch);
+
+                    if (!!route) {
+                        prevFoundRouter = router;
+                    }
+                    return !!route && idx === hashRouters.length - 1;
+                });
+
+                found = found || prevFoundRouter;
+            }
+
+            return !!found ? found.navigateHook : () => undefined;
+        }
+
+        /**
+         * Creates a string key from the route array
+         * @param {array} routes 
+         * @returns {string} RouterContext key
+         */
+        static createContextKey(routes) {
+            return `:${routes.map(route => route.route).join(':')}`;
+        }
+
+        /**
+         * Navigate to the given url. Function attempts to find the router by the url and
+         * if found the navigation hook of the router is invoked with the url.
+         * @param {string} url 
+         */
+        static navigateTo(url) {
+            RouterContext.instance.get(RMERouterUtils.getUrlPath(url))(url);
+        }
+
+        /**
+         * Set the route array and the router navigate hook into the RouterContext store
+         * @param {array} routes the router routes
+         * @param {Function} navigateHook the router navigation hook
+         */
+        static setRouter(routes, navigateHook) {
+            RouterContext.instance.set(RouterContext.createContextKey(routes), { routes, navigateHook });
+        }
+
+        static get instance() {
+            if (!this.ins) {
+                this.ins = new RouterContext();
+            }
+            return this.ins;
+        }
+    }
+
+    return RouterContext;
+
+}());
+
+
+
+const RMERouterUtils = (function() {
+
+    /**
+     * Cut the protocol and the domain off from the url if exist.
+     * For example https://www.example.com/example -> /example
+     * @param {string} url 
+     * @returns The path of the url.
+     */
+    const getUrlPath = (url) => {
+        return url.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
+    }
+
+    /**
+     * Function checks if the given URLs match and returns true if they match otherwise false is returned.
+     * @param {string} oldUrl 
+     * @param {string} newUrl 
+     * @returns True or false
+     */
+    const urlMatch = (oldUrl, newUrl) => {
+        oldUrl = Util.isString(oldUrl) ? oldUrl.replace(/\*/g, '.*').replace(/\/{2,}/g, '/') : oldUrl;
+        const path = getUrlPath(newUrl);
+        let found = path.match(oldUrl);
+        if (Util.notEmpty(found)) {
+            found = found.join();
+        }
+
+        return found === path && new RegExp(oldUrl).test(newUrl);
+    }
+
+    /**
+     * Function checks if the given URLs match and returns true if they match otherwise false is returned.
+     * @param {string} oldUrl 
+     * @param {string} newUrl 
+     * @returns True or false
+     */
+    const hashMatch = (oldUrl, newUrl) => {
+        if (Util.isString(oldUrl)) {
+            oldUrl = oldUrl.replace(/\*/g, '.*');
+            if (oldUrl.charAt(0) !== '#') {
+                oldUrl = `#${oldUrl}`;
+            }
+        }
+
+        const hash = newUrl.match(/\#{1}.*/).join();
+        let found = hash.match(oldUrl);
+        found = Util.notEmpty(found) ? found.join() : null;
+
+        return found === hash && new RegExp(oldUrl).test(newUrl);
+    }
+
+    /**
+     * Function will search for the route by the given url parameter. A route will be returned if found otherwise
+     * undefined is returned.
+     * @param {string} url to match
+     * @param {array} routes routes array
+     * @param {Function} matcherHook matcher function
+     * @see urlMatch - match by pathname
+     * @see hashMatch - match by hash
+     * @returns Found route object or undefined if not found
+     */
+    const findRoute = (url, routes, matcherHook) => {
+        return url && routes.find((route) => matcherHook(route.route, url));
+    }
+
+    /**
+     * Resolves the given element into a Template object
+     * @param {string|Function|Elem} elem 
+     * @param {object} props 
+     * @returns Template object
+     */
+    const resolveRouteElem = (elem, props) => {
+        if (Util.isFunction(elem) && RMEComponentManagerV2.hasComponent(elem.valueOf().name)) {
+            return  { [elem.valueOf().name]: props };
+        } else if (Util.isString(elem) && RMEComponentManagerV2.hasComponent(elem)) {
+            return { [elem]: props };
+        } else {
+            return { _: elem.toTemplate() };
+        }
+    }
+
+    return {
+        getUrlPath,
+        findRoute,
+        urlMatch,
+        hashMatch,
+        resolveRouteElem
+    }
+}());
+
+
+
+const RMEUrlRouter = (props, { updateState, asyncTask }) => {
+    const { routes, url, prevUrl, prevRoute, skipPush, init, globalScrollTop } = props;
+
+    if (!routes) {
+        return null;
+    }
+
+    if (!init) {
+        const updateUrl = (url, skipPush) => {
+            updateState({
+                init: true,
+                url: url ?? location.pathname,
+                skipPush
+            });
+        }
+        RMERouterContext.setRouter(routes, (url) => updateUrl(url));
+        asyncTask(() => {
+            window.addEventListener('popstate', () => updateUrl(undefined, true));
+            updateUrl(undefined, true);
+        });
+    }
+
+    let route;
+
+    if (url !== prevUrl) {
+        route = RMERouterUtils.findRoute(url, routes, RMERouterUtils.urlMatch);
+        asyncTask(() => {
+            updateState({
+                prevUrl: url,
+                prevRoute: route
+            }, false);
+        });
+    } else {
+        route = prevRoute;
+    }
+
+    if (Util.notEmpty(route)) {
+        if (Util.isFunction(route.onBefore)) {
+            route.onBefore(route);
+        }
+        if (Util.isFunction(route.onAfter)) {
+            asyncTask(() => route.onAfter(route));
+        }
+        if (!route.hide && url !== prevUrl && !skipPush) {
+            history.pushState(null, null, url);
+        }
+        if (window.scrollY > 0 && ((route.scrolltop === true) || (route.scrolltop === undefined && globalScrollTop))) {
+            scrollTo(0, 0);
+        }
+    }
+
+    return {
+        _: !!route ? RMERouterUtils.resolveRouteElem(route.elem, route.props) : null
+    }
+};
+
 
 
 /**
@@ -5053,7 +4880,7 @@ const RMETemplateFragmentHelper = (function() {
 
 
 
-let Template = (function() {
+const Template = (function() {
     /**
      * Template class reads a JSON format notation and creates an element tree from it.
      * The Template class has only one public method resolve that takes the template as parameter and returns 
@@ -5157,7 +4984,7 @@ let Template = (function() {
         resolve(template, parent, round, parentContext) {
             const [attrs, listeners, children] = this.resolveTemplateProperties(template, parent);
 
-            attrs.forEach(attr => this.resolveAttributes(parent, attr.key, this.resolveFunctionValue(attr.val)));
+            attrs.forEach(attr => this.resolveAttributes(parent, attr.key, this.resolveFunctionValue(attr.val, parent)));
 
             listeners.forEach(listener => this.bindEventToElement(parent, listener.func, listener.parentProp));
 
@@ -5226,7 +5053,7 @@ let Template = (function() {
          * @param {string} parentContext 
          */
         resolveNextParent(obj, parent, round, parentContext = '') {
-            const arr = Array.of(this.resolveFunctionValue(obj)).flat();
+            const arr = Array.of(this.resolveFunctionValue(obj, parent)).flat();
             const parentTag = Util.isEmpty(parent) ? parentContext : parentContext + parent.getTagName().toLowerCase();
             arr.forEach((item, i) => this.resolve(item, parent, round, `${this.context}${parentTag}[${i}]`));
         }
@@ -5245,11 +5072,12 @@ let Template = (function() {
          * Method resolves function based attribute values. If the given attribute value
          * is type function then the function is invoked and its return value will be returned otherwise
          * the given attribute value is returned.
-         * @param {*} value 
+         * @param {*} value
+         * @param {Elem} parent
          * @returns Resolved attribute value.
          */
-        resolveFunctionValue(value) {
-            return Util.isFunction(value) ? value.call() : value;
+        resolveFunctionValue(value, parent) {
+            return Util.isFunction(value) ? value.call(parent, parent) : value;
         }
 
         /**
@@ -5862,9 +5690,7 @@ class Tree {
     static getHead() {
         try {
             return Elem.wrap(document.head);
-        } catch (e) {
-            console.log(e);
-        }
+        } catch (e) {}
     }
 
     /**
