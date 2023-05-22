@@ -4,7 +4,7 @@ import Util from '../util';
 import RMEComponentManagerV2 from '../component/manager';
 import RMETemplateFragmentHelper from './fragment';
 
-let Template = (function() {
+const Template = (function() {
     /**
      * Template class reads a JSON format notation and creates an element tree from it.
      * The Template class has only one public method resolve that takes the template as parameter and returns 
