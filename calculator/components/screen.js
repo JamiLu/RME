@@ -1,4 +1,3 @@
-
 import { actions } from './keypad';
 
 const [getOperation] = actions;

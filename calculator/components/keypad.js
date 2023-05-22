@@ -1,4 +1,3 @@
-
 export const actions = useValue({result: '', statement: ''});
 
 const [getOperation, setOperation] = actions;
