@@ -53,14 +53,10 @@ const RMEAppBuilder = (function() {
         constructor(name, root, object) {
             this.rawStage = object;
             this.name = name;
-            this.root; 
-            this.state = {};
+            this.root;
             this.renderer;
             this.oldStage = "";
-            this.router;
             this.ready = false;
-            this.refresh = this.refreshApp.bind(this);
-            this.afterRefreshCallQueue = [];
             this.refreshQueue;
             this.bindReadyListener(root);
         }
@@ -79,59 +75,24 @@ const RMEAppBuilder = (function() {
             this.root = Util.isEmpty(root) ? Tree.getBody() : Tree.getFirst(root);
             this.renderer = new RMEElemRenderer(this.root);
             this.ready = true;
-            this.refreshApp();
+            this.refresh();
         }
     
-        refreshApp() {
+        refresh() {
             if (this.ready) {
-                if (this.refreshQueue)
+                if (this.refreshQueue) {
                     Util.clearTimeout(this.refreshQueue);
-
+                }
                 this.refreshQueue = Util.setTimeout(() => {
                     const freshStage = Template.resolve({[this.root.toLiteralString()]: { ...this.rawStage }}, null, this.name);
-    
-                    if (Util.notEmpty(this.router)) {
-                        let state = this.router.getCurrentState();
-                        if (Util.notEmpty(state.current)) {
-                            let selector = state.root;
-                            let element = state.current;
-                            if (RMETemplateFragmentHelper.isFragment(element)) {
-                                const fragment = {};
-                                fragment[state.rootElem.toLiteralString()] = {
-                                    ...RMETemplateFragmentHelper.resolveFragmentValue(element, fragment)
-                                };
-                                freshStage.getFirst(selector).replace(Template.resolve(fragment));
-                            } else {
-                                freshStage.getFirst(selector).append(element);
-                            }
-                            if (Util.notEmpty(state.onAfter)) this.afterRefreshCallQueue.push(state.onAfter);
-                        }
-                    }
 
                     if (this.oldStage.toString() !== freshStage.toString()) {
                         this.oldStage = this.renderer.merge(freshStage);
                     }
-                    this.refreshAppDone();
                     Util.clearTimeout(this.refreshQueue);
                 });
             }
         }
-
-        refreshAppDone() {
-            this.afterRefreshCallQueue.forEach(callback => callback());
-            this.afterRefreshCallQueue = [];
-        }
-
-        addAfterRefreshCallback(callback) {
-            if(Util.isFunction(callback)) {
-                this.afterRefreshCallQueue.push(callback)
-            }
-        }
-    
-        setRouter(router) {
-            this.router = router;
-        }
-    
     }
 
     return {

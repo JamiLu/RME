@@ -1,3 +1,3 @@
-import Router from './router';
+import { useHashRouter, useUrlRouter, useAutoUrlRouter, useRouter } from './functions';
 
-export default Router;
+export { useHashRouter, useUrlRouter, useAutoUrlRouter, useRouter }
