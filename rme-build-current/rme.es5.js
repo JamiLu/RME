@@ -476,8 +476,8 @@ var RMEAppBuilder = function () {
           this.refreshQueue = Browser.setTimeout(function () {
             var freshStage = Template.resolve(_defineProperty({}, _this3.root.toLiteralString(), _objectSpread({}, _this3.rawStage)), null, _this3.name);
 
-            if (_this3.oldStage.toString() !== freshStage.toString()) {
-              _this3.oldStage = _this3.renderer.merge(freshStage);
+            if (_this3.oldStage !== freshStage.toString()) {
+              _this3.oldStage = _this3.renderer.merge(freshStage).toString();
             }
 
             Browser.clearTimeout(_this3.refreshQueue);
