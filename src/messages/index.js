@@ -1,5 +1,5 @@
 import Messages from './messages';
-import { useMessages } from './functions';
+import { useMessage, useMessages } from './functions';
 
 export default Messages;
-export { useMessages }
+export { useMessage, useMessages }

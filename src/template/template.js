@@ -67,7 +67,7 @@ const Template = (function() {
             const children = [];
 
             if (Util.isString(template) || Util.isNumber(template)) {
-                if (Util.isString(template) && this.isMessage(template)) {
+                if (Util.isString(template) && Template.isMessage(template)) {
                     attrs.push({key: 'message', val: template});
                 } else {
                     attrs.push({key: 'text', val: template});
@@ -82,7 +82,7 @@ const Template = (function() {
                 Object.keys(template).forEach((key, i) => {
                     if (Template.isAttr(key, parent)) {
                         attrs.push({key, val: template[key]});
-                    } else if (this.isEventKeyVal(key, template[key])) {
+                    } else if (Template.isEventKeyVal(key, template[key])) {
                         listeners.push({parentProp: parent[key], func: template[key]});
                     } else if (Template.isTag(Template.getElementName(key))) {
                         children.push({key, val: template[key]});
@@ -105,10 +105,10 @@ const Template = (function() {
          * @param {number} round
          * @param {number} invoked
          */
-        resolve(template, parent, round, parentContext) {
+        resolveTemplate(template, parent, round, parentContext) {
             const [attrs, listeners, children] = this.resolveTemplateProperties(template, parent);
 
-            attrs.forEach(attr => this.resolveAttributes(parent, attr.key, this.resolveFunctionValue(attr.val, parent)));
+            attrs.forEach(attr => Template.resolveAttributes(parent, attr.key, this.resolveFunctionValue(attr.val, parent)));
 
             listeners.forEach(listener => this.bindEventToElement(parent, listener.func, listener.parentProp));
 
@@ -149,7 +149,7 @@ const Template = (function() {
                 }
                 return component;
             } else {
-                return this.resolveStringNumber(this.resolveElement(key, val), val);
+                return Template.resolveStringNumber(this.resolveElement(key, val), val);
             }
         }
 
@@ -160,7 +160,7 @@ const Template = (function() {
          * @returns Resolved properties object or the given value if the value was not a string nor a number.
          */
         resolveComponentLiteralVal(val) {
-            if (Util.isString(val) && this.isMessage(val)) {
+            if (Util.isString(val) && Template.isMessage(val)) {
                 return { message: val };
             } else if (Util.isString(val) || Util.isNumber(val)) {
                 return { text: val };
@@ -179,7 +179,7 @@ const Template = (function() {
         resolveNextParent(obj, parent, round, parentContext = '') {
             const arr = Array.of(this.resolveFunctionValue(obj, parent)).flat();
             const parentTag = Util.isEmpty(parent) ? parentContext : parentContext + parent.getTagName().toLowerCase();
-            arr.forEach((item, i) => this.resolve(item, parent, round, `${this.context}${parentTag}[${i}]`));
+            arr.forEach((item, i) => this.resolveTemplate(item, parent, round, `${this.context}${parentTag}[${i}]`));
         }
 
         /**
@@ -209,9 +209,9 @@ const Template = (function() {
          * @param {object} elem 
          * @param {*} value 
          */
-        resolveStringNumber(elem, value) {
-            if (Util.isString(value) && this.isMessage(value)) {
-                this.resolveMessage(elem, value);
+        static resolveStringNumber(elem, value) {
+            if (Util.isString(value) && Template.isMessage(value)) {
+                Template.resolveMessage(elem, value);
             } else if (Util.isString(value) || Util.isNumber(value)) {
                 elem.setText(value);
             }
@@ -224,8 +224,8 @@ const Template = (function() {
          * @param {string} message 
          * @returns True if the given message is actually a message otherwise returns false.
          */
-        isMessage(message) {
-            message = this.normalizeMessageString(message);
+        static isMessage(message) {
+            message = Template.normalizeMessageString(message);
             return Util.notEmpty(Messages.message(message)) && Messages.message(message) != message;
         }
 
@@ -256,7 +256,7 @@ const Template = (function() {
 
             match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_\/\.&%@!?£$+¤|;\\<\\>\\{}"]+\]/g); //find attributes
             if (!Util.isEmpty(match))
-                resolved = this.addAttributes(resolved, match);
+                resolved = Template.addAttributes(resolved, match);
 
             return resolved;
         }
@@ -277,7 +277,7 @@ const Template = (function() {
          * @param {array} elem
          * @returns The given elem instance.
          */
-        addAttributes(elem, attrArray) {
+        static addAttributes(elem, attrArray) {
             let i = 0;
             let start = "[";
             let eq = "=";
@@ -286,7 +286,7 @@ const Template = (function() {
                 var attr = attrArray[i];
                 let key = attr.substring(attr.indexOf(start) +1, attr.indexOf(eq));
                 let val = attr.substring(attr.indexOf(eq) +1, attr.indexOf(end));
-                this.resolveAttributes(elem, key, val);
+                Template.resolveAttributes(elem, key, val);
                 i++;
             }
             return elem;
@@ -298,25 +298,25 @@ const Template = (function() {
          * @param {string} key
          * @param {string} val
          */
-        resolveAttributes(elem, key, val) {
+        static resolveAttributes(elem, key, val) {
             switch (key) {
                 case 'id':
                     elem.setId(val);
                     break;
                 case 'class':
-                    elem.addClasses(val || '');
+                    elem.addClasses(val || '');
                     break;
                 case 'text':
-                    elem.setText(val || '');
+                    elem.setText(val || '');
                     break;
                 case 'message':
-                    this.resolveMessage(elem, val);
+                    Template.resolveMessage(elem, val);
                     break;
                 case 'placeholder':
-                    this.resolvePlaceholder(elem, key, val);
+                    Template.resolvePlaceholder(elem, key, val);
                     break;
                 case 'content':
-                    this.resolveContent(elem, key, val);
+                    Template.resolveContent(elem, key, val);
                     break;
                 case 'tabIndex':
                     elem.setTabIndex(val);
@@ -358,7 +358,7 @@ const Template = (function() {
                     elem.setMinLength(val);
                     break;
                 default: 
-                    this.resolveDefault(elem, key, val);
+                    Template.resolveDefault(elem, key, val);
             }
         }
 
@@ -368,10 +368,10 @@ const Template = (function() {
          * @param {string} key 
          * @param {*} val 
          */
-        resolvePlaceholder(elem, key, val) {
-            const params = this.getMessageParams(val);
-            const message = this.normalizeMessageString(val);
-            elem.setAttribute(key, this.isMessage(val) ? Messages.message(message, params) : val);
+        static resolvePlaceholder(elem, key, val) {
+            const params = Template.getMessageParams(val);
+            const message = Template.normalizeMessageString(val);
+            elem.setAttribute(key, Template.isMessage(val) ? Messages.message(message, params) : val);
         }
 
         /**
@@ -381,7 +381,7 @@ const Template = (function() {
          * @param {string} key 
          * @param {*} val 
          */
-        resolveDefault(elem, key, val) {
+        static resolveDefault(elem, key, val) {
             if(key.indexOf("data") === 0 && key.length > "data".length)
                 elem.setData(key.replace(/[A-Z]/, key.charAt(4).toLowerCase()).replace("data", ""), val);
             else
@@ -394,7 +394,7 @@ const Template = (function() {
          * @param {string} key 
          * @param {string} val 
          */
-        resolveContent(elem, key, val) {
+        static resolveContent(elem, key, val) {
             if(elem.getTagName().toLowerCase() === "meta")
                 elem.setAttribute(key, val);
             else
@@ -407,11 +407,11 @@ const Template = (function() {
          * @param {object} elem 
          * @param {string} message 
          */
-        resolveMessage(elem, message) {
+        static resolveMessage(elem, message) {
             if(Util.isEmpty(message))
                 throw "message must not be empty";
 
-            elem.message(this.normalizeMessageString(message), this.getMessageParams(message));
+            elem.message(Template.normalizeMessageString(message), Template.getMessageParams(message));
         }
 
         /**
@@ -419,8 +419,8 @@ const Template = (function() {
          * @param {string} message 
          * @returns Message params in the array or null if no params found.
          */
-        getMessageParams(message) {
-            let match = this.getMessageParameterString(message);
+        static getMessageParams(message) {
+            let match = Template.getMessageParameterString(message);
             match = match && match.join().replace(/({|}|:|;)/g, match.join()).split(match.join());
             return match && match.filter(Util.notEmpty);
         }
@@ -430,7 +430,7 @@ const Template = (function() {
          * @param {string} message 
          * @returns The match array or null.
          */
-        getMessageParameterString(message) {
+        static getMessageParameterString(message) {
             return message.match(/\:?(\{.*\}\;?)/g);
         }
 
@@ -439,8 +439,8 @@ const Template = (function() {
          * @param {string} message 
          * @returns The normalized message string.
          */
-        normalizeMessageString(message) {
-            const params = this.getMessageParameterString(message);
+        static normalizeMessageString(message) {
+            const params = Template.getMessageParameterString(message);
             return Util.notEmpty(params) ? message.replace(params.join(), '') : message;
         }
 
@@ -450,7 +450,7 @@ const Template = (function() {
          * @param {function} val
          * @returns True if the given key val is event listener key val.
          */
-        isEventKeyVal(key, val) {
+        static isEventKeyVal(key, val) {
             return key.indexOf("on") === 0 && Util.isFunction(val);
         }
 
@@ -482,7 +482,7 @@ const Template = (function() {
          * @param {string} appName - App instance name (optional)
          * @returns Element tree of Elem instance objects.
          */
-        static resolveTemplate(template, parent, appName, context) {
+        static resolve(template, parent, appName, context) {
             return Template.create().setTemplateAndResolve(template, parent, appName, context);
         }
 
@@ -493,38 +493,32 @@ const Template = (function() {
          * @param {object} oldProps
          */
         static updateElemProps(elem, props, oldProps) {
-            let mashed = Template.mashElemProps(props, oldProps);
-            const templater = Template.create();
-            for (let p in mashed) {
-                if (mashed.hasOwnProperty(p)) {
-                    if (templater.isEventKeyVal(p, mashed[p])) {
-                        elem[p].call(elem, mashed[p]); //element event attribute -> elem, event function
-                    } else if (p === 'class') {
-                        elem.updateClasses(mashed[p] || '');
-                    } else if (p === 'value') {
-                        elem.setAttribute(p, mashed[p]);
-                        elem.setValue(mashed[p]);
-                    } else {
-                        templater.resolveAttributes(elem, p, mashed[p]);
-                    }
+            const combined = Template.combineProps(props, oldProps);
+            Object.keys(combined).forEach((prop) => {
+                if (Template.isEventKeyVal(prop, combined[prop])) {
+                    elem[prop].call(elem, combined[prop]); // element event attribute -> elem, event function
+                } else if (prop === 'class') {
+                    elem.updateClasses(combined[prop] || '');
+                } else if (prop === 'value') {
+                    elem.setAttribute(prop, combined[prop]);
+                    elem.setValue(combined[prop]);
+                } else {
+                    Template.resolveAttributes(elem, prop, combined[prop]);
                 }
-            }
+            });
         }
 
-        static mashElemProps(newProps, oldProps) {
-            let props = {};
-            for (let p in oldProps) {
-                if (oldProps.hasOwnProperty(p)) {
-                    if (!newProps[p] && oldProps[p]) {
-                        props[p] = p === 'style' ? '' : undefined
-                    }
+        static combineProps(newProps, oldProps) {
+            Object.keys(oldProps).forEach(prop => {
+                if (oldProps[prop] && !newProps[prop]) { // if no new prop but old exist
+                    oldProps[prop] = prop === 'style' ? '' : undefined;
                 }
-            }
-            props = {
-                ...props,
+            });
+
+            return {
+                ...oldProps,
                 ...newProps
             }
-            return props;
         }
 
         static create() {
@@ -713,12 +707,8 @@ const Template = (function() {
 
     }
 
-    return {
-        resolve: Template.resolveTemplate,
-        isTemplate: Template.isTemplate,
-        isTag: Template.isTag,
-        updateElemProps: Template.updateElemProps
-    }
+    return Template;
+
 }());
 
 export default Template;

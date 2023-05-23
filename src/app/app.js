@@ -1,4 +1,5 @@
 import Util from '../util';
+import Browser from '../browser';
 import RMEElemRenderer from './renderer';
 import Template from '../template';
 import Tree from '../tree';
@@ -81,15 +82,15 @@ const RMEAppBuilder = (function() {
         refresh() {
             if (this.ready) {
                 if (this.refreshQueue) {
-                    Util.clearTimeout(this.refreshQueue);
+                    Browser.clearTimeout(this.refreshQueue);
                 }
-                this.refreshQueue = Util.setTimeout(() => {
+                this.refreshQueue = Browser.setTimeout(() => {
                     const freshStage = Template.resolve({[this.root.toLiteralString()]: { ...this.rawStage }}, null, this.name);
 
                     if (this.oldStage.toString() !== freshStage.toString()) {
                         this.oldStage = this.renderer.merge(freshStage);
                     }
-                    Util.clearTimeout(this.refreshQueue);
+                    Browser.clearTimeout(this.refreshQueue);
                 });
             }
         }

@@ -9,8 +9,8 @@ class Util {
      */
     static isEmpty(value) {
         return (value === null || value === undefined)
-            || (Util.isObject(value) && Object.keys(value).length === 0)
             || (Util.isString(value) && value === "")
+            || (Util.isObject(value) && Object.keys(value).length === 0)
             || (Util.isArray(value) && value.length === 0);
     }
 
@@ -103,73 +103,6 @@ class Util {
      */
     static isArray(array) {
         return Array.isArray(array);
-    }
-
-    /**
-     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The timeout object.
-     */
-    static setTimeout(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setTimeout(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes a timeout that was created by setTimeout method.
-     * @param {object} timeoutObject
-     */
-    static clearTimeout(timeoutObject) {
-        window.clearTimeout(timeoutObject);
-    }
-
-    /**
-     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The interval object.
-     */
-    static setInterval(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setInterval(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes an interval that was created by setInterval method.
-     */
-    static clearInterval(intervalObject) {
-        window.clearInterval(intervalObject);
-    }
-
-    /**
-     * Encodes a string to Base64.
-     * @param {string} string
-     * @returns The base64 encoded string.
-     */
-    static encodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.btoa(string);
-    }
-
-    /**
-     * Decodes a base 64 encoded string.
-     * @param {string} string
-     * @returns The base64 decoded string.
-     */
-    static decodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.atob(string);
     }
 }
 

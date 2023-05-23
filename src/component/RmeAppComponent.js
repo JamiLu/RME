@@ -1,5 +1,6 @@
 import { useValue } from '../app';
 import Template from '../template';
+import Browser from '../browser';
 import Util from '../util';
 
 class RMEAppComponent {
@@ -56,7 +57,7 @@ class RMEAppComponent {
         this.prevProps = nextProps;
 
         if (this.afterRenderTasks.length > 0) {
-            Util.setTimeout(async () => {
+            Browser.setTimeout(async () => {
                 this.afterRenderTasks.forEach(async hook => hook());
                 this.afterRenderTasks.length = 0;
             });

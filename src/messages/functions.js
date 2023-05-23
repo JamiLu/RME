@@ -24,4 +24,18 @@ const useMessages = (function() {
     }
 }());
 
-export { useMessages }
+const useMessage = (function (){
+
+    /**
+     * UseMessage function takes a message key and possible message parameters and attempts to resolve them to a
+     * translated message. If the given key could not be resolved then it will be returned.
+     * @param {string} key message key
+     * @param {array} params message params
+     * @returns Resolved message
+     */
+    return (key, ...params) => {
+        return Messages.message(key, ...params);
+    }
+}());
+
+export { useMessages, useMessage }

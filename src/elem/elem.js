@@ -1,3 +1,4 @@
+import Browser from '../browser';
 import Template from '../template';
 import RMEElemTemplater from './templater';
 import Messages from '../messages';
@@ -123,10 +124,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         append(elem) {
-            if (Util.notEmpty(elem)) {
-                this.html.appendChild(Template.isTemplate(elem) ? Template.resolve(elem).dom() : elem.dom());
-            }
-            
+            elem && this.html.appendChild(elem.dom());
             return this;
         }
 
@@ -842,7 +840,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         click() {
-            Util.setTimeout(() => this.html.click());
+            Browser.setTimeout(() => this.html.click());
             return this;
         }
 
@@ -851,7 +849,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         focus() {
-            Util.setTimeout(() => this.html.focus());
+            Browser.setTimeout(() => this.html.focus());
             return this;
         }
 
@@ -860,7 +858,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         blur() {
-            Util.setTimeout(() => this.html.blur());
+            Browser.setTimeout(() => this.html.blur());
             return this;
         }
 
