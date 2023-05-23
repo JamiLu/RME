@@ -10,8 +10,8 @@ class Util {
      */
     static isEmpty(value) {
         return (value === null || value === undefined)
-            || (Util.isObject(value) && Object.keys(value).length === 0)
             || (Util.isString(value) && value === "")
+            || (Util.isObject(value) && Object.keys(value).length === 0)
             || (Util.isArray(value) && value.length === 0);
     }
 
@@ -105,74 +105,8 @@ class Util {
     static isArray(array) {
         return Array.isArray(array);
     }
-
-    /**
-     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The timeout object.
-     */
-    static setTimeout(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setTimeout(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes a timeout that was created by setTimeout method.
-     * @param {object} timeoutObject
-     */
-    static clearTimeout(timeoutObject) {
-        window.clearTimeout(timeoutObject);
-    }
-
-    /**
-     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The interval object.
-     */
-    static setInterval(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setInterval(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes an interval that was created by setInterval method.
-     */
-    static clearInterval(intervalObject) {
-        window.clearInterval(intervalObject);
-    }
-
-    /**
-     * Encodes a string to Base64.
-     * @param {string} string
-     * @returns The base64 encoded string.
-     */
-    static encodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.btoa(string);
-    }
-
-    /**
-     * Decodes a base 64 encoded string.
-     * @param {string} string
-     * @returns The base64 decoded string.
-     */
-    static decodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.atob(string);
-    }
 }
+
 
 
 /**
@@ -423,15 +357,15 @@ const RMEAppBuilder = (function() {
         refresh() {
             if (this.ready) {
                 if (this.refreshQueue) {
-                    Util.clearTimeout(this.refreshQueue);
+                    Browser.clearTimeout(this.refreshQueue);
                 }
-                this.refreshQueue = Util.setTimeout(() => {
+                this.refreshQueue = Browser.setTimeout(() => {
                     const freshStage = Template.resolve({[this.root.toLiteralString()]: { ...this.rawStage }}, null, this.name);
 
                     if (this.oldStage.toString() !== freshStage.toString()) {
                         this.oldStage = this.renderer.merge(freshStage);
                     }
-                    Util.clearTimeout(this.refreshQueue);
+                    Browser.clearTimeout(this.refreshQueue);
                 });
             }
         }
@@ -442,7 +376,6 @@ const RMEAppBuilder = (function() {
         create: Builder.create
     }
 }());
-
 
 
 
@@ -622,6 +555,62 @@ class RMEElemRenderer {
  * Browser class contains all the rest utility functions which JavaScript has to offer from Window, Navigator, Screen, History, Location objects.
  */
 class Browser {
+
+    /**
+     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The timeout object.
+     */
+    static setTimeout(callback, milliseconds, ...params) {
+        return window.setTimeout(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes a timeout that was created by setTimeout method.
+     * @param {object} timeoutObject
+     */
+    static clearTimeout(timeoutObject) {
+        window.clearTimeout(timeoutObject);
+    }
+
+    /**
+     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The interval object.
+     */
+    static setInterval(callback, milliseconds, ...params) {
+        return window.setInterval(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes an interval that was created by setInterval method.
+     */
+    static clearInterval(intervalObject) {
+        window.clearInterval(intervalObject);
+    }
+
+    /**
+     * Encodes a string to Base64.
+     * @param {string} string
+     * @returns The base64 encoded string.
+     */
+    static toBase64(string) {
+        return window.btoa(string);
+    }
+
+    /**
+     * Decodes a base 64 encoded string.
+     * @param {string} string
+     * @returns The base64 decoded string.
+     */
+    static fromBase64(string) {
+        return window.atob(string);
+    }
+
     /**
      * Scroll once to a given location (xPos, yPos)
      * @param {number} xPos
@@ -1111,7 +1100,7 @@ class RMEAppComponent {
         this.prevProps = nextProps;
 
         if (this.afterRenderTasks.length > 0) {
-            Util.setTimeout(async () => {
+            Browser.setTimeout(async () => {
                 this.afterRenderTasks.forEach(async hook => hook());
                 this.afterRenderTasks.length = 0;
             });
@@ -1190,119 +1179,6 @@ const RMEComponentManagerV2 = (function() {
 
 
 
-let Cookie = (function() {
-    /**
-     * Cookie interface offers an easy way to get, set or remove cookies in application logic.
-     * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
-     * 
-     * {
-     *    name: "name",
-     *    value: "value",
-     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-     *    cookiePath: "cookiePath absolute dir",
-     *    cookieDomain: "cookieDomain e.g example.com",
-     *    setSecureBoolean: true|false
-     * }
-     * 
-     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-     */
-    class Cookie {
-        /**
-         * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
-         * 
-         * @param {String} name 
-         * @returns cookie object
-         */
-        static get(name) {
-            if(navigator.cookieEnabled) {
-                var retCookie = null;
-                var cookies = document.cookie.split(";");
-                var i = 0;
-                while(i < cookies.length) {
-                    var cookie = cookies[i];
-                    var eq = cookie.search("=");
-                    var cn = cookie.substr(0, eq).trim();
-                    var cv = cookie.substr(eq + 1, cookie.length).trim();
-                    if(cn === name) {
-                        retCookie = new CookieInstance(cn, cv);
-                        break;
-                    }
-                    i++;
-                }
-                return retCookie;
-            }
-        }
-        /**
-         * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
-         * 
-         * @param {string} name
-         * @param {string} value
-         * @param {string} expiresDate
-         * @param {string} cookiePath
-         * @param {string} cookieDomain
-         * @param {boolean} setSecureBoolean
-         */
-        static set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-            if(navigator.cookieEnabled) {
-                document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
-            }
-        }
-        /**
-         * Remove a cookie by name. Method will set the cookie expired and then remove it.
-         * @param {string} name
-         */
-        static remove(name) {
-            var co = Cookie.get(name);
-            if(!Util.isEmpty(co)) {
-                co.setExpired();
-                document.cookie = co.toString();
-            }
-        }
-    }
-
-    /**
-     * Cookie object may hold following values:
-     *
-     * {
-     *    name: "name",
-     *    value: "value",
-     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-     *    cookiePath: "cookiePath absolute dir",
-     *    cookieDomain: "cookieDomain e.g example.com",
-     *    setSecureBoolean: true|false
-     * }
-     * 
-     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-     */
-    class CookieInstance {
-        constructor(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-            this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
-            this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
-            this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
-            this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
-            this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
-            this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
-        }
-
-        setExpired() {
-            this.cookieExpires = new Date(1970,0,1).toString();
-        }
-
-        toString() {
-            return this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity;
-        }
-        static create(name, value, expires, cpath, cdomain, setSecure) {
-                return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
-        }
-    }
-
-    return Cookie;
-}());
-
-
-
 
 /**
  * A CSS function will either create a new style element containing given css and other parameters 
@@ -1345,12 +1221,12 @@ const CSS = (function() {
 
     return (content, config) => {
         if (!hasStyles(config)) {
-            Tree.getHead().append({
+            Tree.getHead().append(Template.resolve({
                 style: {
                     content,
                     ...config
                 }
-            });
+            }));
         } else if (!hasContent(content, config)) {
             const style = getStyles(config);
             if (!Util.isEmpty(style)) {
@@ -1483,10 +1359,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         append(elem) {
-            if (Util.notEmpty(elem)) {
-                this.html.appendChild(Template.isTemplate(elem) ? Template.resolve(elem).dom() : elem.dom());
-            }
-            
+            elem && this.html.appendChild(elem.dom());
             return this;
         }
 
@@ -2202,7 +2075,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         click() {
-            Util.setTimeout(() => this.html.click());
+            Browser.setTimeout(() => this.html.click());
             return this;
         }
 
@@ -2211,7 +2084,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         focus() {
-            Util.setTimeout(() => this.html.focus());
+            Browser.setTimeout(() => this.html.focus());
             return this;
         }
 
@@ -2220,7 +2093,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         blur() {
-            Util.setTimeout(() => this.html.blur());
+            Browser.setTimeout(() => this.html.blur());
             return this;
         }
 
@@ -3434,81 +3307,6 @@ class RMEElemTemplater {
 }
 
 
-
-const EventPipe = (function() {
-
-    /**
-     * EventPipe class can be used to multicast and send custom events to registered listeners.
-     * Each event in an event queue will be sent to each registerd listener.
-     */
-    class EventPipe {
-        constructor() {
-            this.eventsQueue = [];
-            this.callQueue = [];
-            this.loopTimeout;
-        }
-
-        containsEvent() {
-            return this.eventsQueue.find(ev => ev.type === event.type);
-        }
-
-        /**
-         * Function sends an event object though the EventPipe. The event must have a type attribute
-         * defined otherwise an error is thrown. 
-         * Example defintion of the event object. 
-         * { 
-         *   type: 'some event',
-         *   ...payload
-         * }
-         * If an event listener is defined the sent event will be received on the event listener.
-         * @param {object} event 
-         */
-        send(event) {
-            if (Util.isEmpty(event.type))
-                throw new Error('Event must have type attribute.');
-            
-            if (!this.containsEvent())
-                this.eventsQueue.push(event);
-
-            this.loopEvents();
-        }
-
-        loopEvents() {
-            if (this.loopTimeout)
-                Util.clearTimeout(this.loopTimeout);
-
-            this.loopTimeout = Util.setTimeout(() => {
-                this.callQueue.forEach(eventCallback => 
-                    this.eventsQueue.forEach(ev => eventCallback(ev)));
-
-                this.eventsQueue = [];
-                this.callQueue = [];
-            });
-        }
-
-        /**
-         * Function registers an event listener function that receives an event sent through the
-         * EventPipe. Each listener will receive each event that are in an event queue. The listener
-         * function receives the event as a parameter.
-         * @param {function} eventCallback 
-         */
-        receive(eventCallback) {
-            this.callQueue.push(eventCallback);
-        }
-
-    }
-
-    const eventPipe = new EventPipe();
-
-    return {
-        send: eventPipe.send.bind(eventPipe),
-        receive: eventPipe.receive.bind(eventPipe)
-    }
-
-})();
-
-
-
 const Fetch = (function() {
     /**
      * Before using this class you should also be familiar on how to use fetch since usage of this class
@@ -3879,6 +3677,7 @@ const Http = (function() {
 
 
 
+
 /**
  * Key class does not have any methods as it only contains key mappings for keyevent. For example:
  * 
@@ -4068,6 +3867,20 @@ const useMessages = (function() {
             Messages.lang(locale);
         }
         return Messages.locale();
+    }
+}());
+
+const useMessage = (function (){
+
+    /**
+     * UseMessage function takes a message key and possible message parameters and attempts to resolve them to a
+     * translated message. If the given key could not be resolved then it will be returned.
+     * @param {string} key message key
+     * @param {array} params message params
+     * @returns Resolved message
+     */
+    return (key, ...params) => {
+        return Messages.message(key, ...params);
     }
 }());
 
@@ -4353,6 +4166,11 @@ const ready = (function() {
 
 const useHashRouter = (function() {
 
+    /**
+     * The useHashRouter function creates and returns the hash based router component.
+     * The router is suitable for single page applications.
+     * @param {array} routes router routes
+     */
     return (routes, globalScrollTop = true) => {
         Component(RMEHashRouter);
 
@@ -4367,6 +4185,11 @@ const useHashRouter = (function() {
 
 const useAutoUrlRouter = (function() {
 
+    /**
+     * The useAutoUrlRouter function creates and returns the url based router component.
+     * The router is suitable for web pages that only load one route once one the page load.
+     * @param {array} routes router routes
+     */
     return (routes) => {
         Component(RMEOnLoadUrlRouter);
 
@@ -4378,6 +4201,11 @@ const useAutoUrlRouter = (function() {
     }
 }());
 
+/**
+ * The useUrlRouter function creates and returns the url based router component.
+ * The router is suitable for single page applications.
+ * @param {array} routes router routes
+ */
 const useUrlRouter = (function() {
     
     return (routes, globalScrollTop = true) => {
@@ -4395,6 +4223,12 @@ const useUrlRouter = (function() {
 
 const useRouter = (function() {
 
+    /**
+     * The useRouter function handles the navigation of the last matched router in the RouterContext.
+     * This function is needed to handle the navigation when using the single page page application url router.
+     * The parameter url can either be a string or an event. If the url is an event then the target url is read from the event.target.href attribute.
+     * @param {string|Event} url the url to navigate to
+     */
     return (url) => {
         if (Util.isString(url)) {
             RMERouterContext.navigateTo(url);
@@ -4407,6 +4241,10 @@ const useRouter = (function() {
 
 
 
+/**
+ * The hash based router implementation. The router is used via invoking the useHashRouter function.
+ * This router is ment for the single page applications.
+ */
 const RMEHashRouter = (props, { asyncTask, updateState }) => {
     const { routes, url = location.hash, prevUrl, prevRoute, globalScrollTop, init } = props;
 
@@ -4468,6 +4306,10 @@ const RMEHashRouter = (props, { asyncTask, updateState }) => {
 
 
 
+/**
+ * Simple router implementation ment to be only used in cases where the route is navigated only once after the page load.
+ * The router is used via invoking the useAutoUrlRouter function. This router is not ment for the single page applications.
+ */
 const RMEOnLoadUrlRouter  = (props, { asyncTask }) => {
     const { routes } = props;
 
@@ -4694,6 +4536,10 @@ const RMERouterUtils = (function() {
 
 
 
+/**
+ * The URL based router implementation. The router is used via invoking the useUrlRouter function.
+ * This router is ideal for the single page applications. Router navigation is handled by the useRouter function.
+ */
 const RMEUrlRouter = (props, { updateState, asyncTask }) => {
     const { routes, url, prevUrl, prevRoute, skipPush, init, globalScrollTop } = props;
 
@@ -4750,76 +4596,6 @@ const RMEUrlRouter = (props, { updateState, asyncTask }) => {
     }
 };
 
-
-
-/**
- * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
- */
-class Session {
-    /**
-     * Save data into the Session.
-     * @param {string} key
-     * @param {*} value
-     */
-    static set(key, value) {
-        sessionStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the Session.
-     * @param {string} key
-     */
-    static get(key) {
-        return sessionStorage.getItem(key);
-    }
-    /**
-     * Remove data from the Session.
-     * @param {string} key
-     */
-    static remove(key) {
-        sessionStorage.removeItem(key);
-    }
-    /**
-     * Clears the Session.
-     */
-    static clear() {
-        sessionStorage.clear();
-    }
-}
-
-
-/**
- * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
- */
-class Storage {
-    /**
-     * Save data into the local storage. 
-     * @param {string} key
-     * @param {*} value
-     */
-    static set(key, value) {
-        localStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the local storage.
-     * @param {string} key
-     */
-    static get(key) {
-        return localStorage.getItem(key);
-    }
-    /**
-     * Remove data from the local storage.
-     * @param {string} key
-     */
-    static remove(key) {
-        localStorage.removeItem(key);
-    }
-    /**
-     * Clears the local storage.
-     */
-    static clear() {
-        localStorage.clear();
-    }
-}
 
 
 const RMETemplateFragmentHelper = (function() {
@@ -4943,7 +4719,7 @@ const Template = (function() {
             const children = [];
 
             if (Util.isString(template) || Util.isNumber(template)) {
-                if (Util.isString(template) && this.isMessage(template)) {
+                if (Util.isString(template) && Template.isMessage(template)) {
                     attrs.push({key: 'message', val: template});
                 } else {
                     attrs.push({key: 'text', val: template});
@@ -4958,7 +4734,7 @@ const Template = (function() {
                 Object.keys(template).forEach((key, i) => {
                     if (Template.isAttr(key, parent)) {
                         attrs.push({key, val: template[key]});
-                    } else if (this.isEventKeyVal(key, template[key])) {
+                    } else if (Template.isEventKeyVal(key, template[key])) {
                         listeners.push({parentProp: parent[key], func: template[key]});
                     } else if (Template.isTag(Template.getElementName(key))) {
                         children.push({key, val: template[key]});
@@ -4981,10 +4757,10 @@ const Template = (function() {
          * @param {number} round
          * @param {number} invoked
          */
-        resolve(template, parent, round, parentContext) {
+        resolveTemplate(template, parent, round, parentContext) {
             const [attrs, listeners, children] = this.resolveTemplateProperties(template, parent);
 
-            attrs.forEach(attr => this.resolveAttributes(parent, attr.key, this.resolveFunctionValue(attr.val, parent)));
+            attrs.forEach(attr => Template.resolveAttributes(parent, attr.key, this.resolveFunctionValue(attr.val, parent)));
 
             listeners.forEach(listener => this.bindEventToElement(parent, listener.func, listener.parentProp));
 
@@ -5025,7 +4801,7 @@ const Template = (function() {
                 }
                 return component;
             } else {
-                return this.resolveStringNumber(this.resolveElement(key, val), val);
+                return Template.resolveStringNumber(this.resolveElement(key, val), val);
             }
         }
 
@@ -5036,7 +4812,7 @@ const Template = (function() {
          * @returns Resolved properties object or the given value if the value was not a string nor a number.
          */
         resolveComponentLiteralVal(val) {
-            if (Util.isString(val) && this.isMessage(val)) {
+            if (Util.isString(val) && Template.isMessage(val)) {
                 return { message: val };
             } else if (Util.isString(val) || Util.isNumber(val)) {
                 return { text: val };
@@ -5055,7 +4831,7 @@ const Template = (function() {
         resolveNextParent(obj, parent, round, parentContext = '') {
             const arr = Array.of(this.resolveFunctionValue(obj, parent)).flat();
             const parentTag = Util.isEmpty(parent) ? parentContext : parentContext + parent.getTagName().toLowerCase();
-            arr.forEach((item, i) => this.resolve(item, parent, round, `${this.context}${parentTag}[${i}]`));
+            arr.forEach((item, i) => this.resolveTemplate(item, parent, round, `${this.context}${parentTag}[${i}]`));
         }
 
         /**
@@ -5085,9 +4861,9 @@ const Template = (function() {
          * @param {object} elem 
          * @param {*} value 
          */
-        resolveStringNumber(elem, value) {
-            if (Util.isString(value) && this.isMessage(value)) {
-                this.resolveMessage(elem, value);
+        static resolveStringNumber(elem, value) {
+            if (Util.isString(value) && Template.isMessage(value)) {
+                Template.resolveMessage(elem, value);
             } else if (Util.isString(value) || Util.isNumber(value)) {
                 elem.setText(value);
             }
@@ -5100,8 +4876,8 @@ const Template = (function() {
          * @param {string} message 
          * @returns True if the given message is actually a message otherwise returns false.
          */
-        isMessage(message) {
-            message = this.normalizeMessageString(message);
+        static isMessage(message) {
+            message = Template.normalizeMessageString(message);
             return Util.notEmpty(Messages.message(message)) && Messages.message(message) != message;
         }
 
@@ -5132,7 +4908,7 @@ const Template = (function() {
 
             match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_\/\.&%@!?£$+¤|;\\<\\>\\{}"]+\]/g); //find attributes
             if (!Util.isEmpty(match))
-                resolved = this.addAttributes(resolved, match);
+                resolved = Template.addAttributes(resolved, match);
 
             return resolved;
         }
@@ -5153,7 +4929,7 @@ const Template = (function() {
          * @param {array} elem
          * @returns The given elem instance.
          */
-        addAttributes(elem, attrArray) {
+        static addAttributes(elem, attrArray) {
             let i = 0;
             let start = "[";
             let eq = "=";
@@ -5162,7 +4938,7 @@ const Template = (function() {
                 var attr = attrArray[i];
                 let key = attr.substring(attr.indexOf(start) +1, attr.indexOf(eq));
                 let val = attr.substring(attr.indexOf(eq) +1, attr.indexOf(end));
-                this.resolveAttributes(elem, key, val);
+                Template.resolveAttributes(elem, key, val);
                 i++;
             }
             return elem;
@@ -5174,25 +4950,25 @@ const Template = (function() {
          * @param {string} key
          * @param {string} val
          */
-        resolveAttributes(elem, key, val) {
+        static resolveAttributes(elem, key, val) {
             switch (key) {
                 case 'id':
                     elem.setId(val);
                     break;
                 case 'class':
-                    elem.addClasses(val || '');
+                    elem.addClasses(val || '');
                     break;
                 case 'text':
-                    elem.setText(val || '');
+                    elem.setText(val || '');
                     break;
                 case 'message':
-                    this.resolveMessage(elem, val);
+                    Template.resolveMessage(elem, val);
                     break;
                 case 'placeholder':
-                    this.resolvePlaceholder(elem, key, val);
+                    Template.resolvePlaceholder(elem, key, val);
                     break;
                 case 'content':
-                    this.resolveContent(elem, key, val);
+                    Template.resolveContent(elem, key, val);
                     break;
                 case 'tabIndex':
                     elem.setTabIndex(val);
@@ -5234,7 +5010,7 @@ const Template = (function() {
                     elem.setMinLength(val);
                     break;
                 default: 
-                    this.resolveDefault(elem, key, val);
+                    Template.resolveDefault(elem, key, val);
             }
         }
 
@@ -5244,10 +5020,10 @@ const Template = (function() {
          * @param {string} key 
          * @param {*} val 
          */
-        resolvePlaceholder(elem, key, val) {
-            const params = this.getMessageParams(val);
-            const message = this.normalizeMessageString(val);
-            elem.setAttribute(key, this.isMessage(val) ? Messages.message(message, params) : val);
+        static resolvePlaceholder(elem, key, val) {
+            const params = Template.getMessageParams(val);
+            const message = Template.normalizeMessageString(val);
+            elem.setAttribute(key, Template.isMessage(val) ? Messages.message(message, params) : val);
         }
 
         /**
@@ -5257,7 +5033,7 @@ const Template = (function() {
          * @param {string} key 
          * @param {*} val 
          */
-        resolveDefault(elem, key, val) {
+        static resolveDefault(elem, key, val) {
             if(key.indexOf("data") === 0 && key.length > "data".length)
                 elem.setData(key.replace(/[A-Z]/, key.charAt(4).toLowerCase()).replace("data", ""), val);
             else
@@ -5270,7 +5046,7 @@ const Template = (function() {
          * @param {string} key 
          * @param {string} val 
          */
-        resolveContent(elem, key, val) {
+        static resolveContent(elem, key, val) {
             if(elem.getTagName().toLowerCase() === "meta")
                 elem.setAttribute(key, val);
             else
@@ -5283,11 +5059,11 @@ const Template = (function() {
          * @param {object} elem 
          * @param {string} message 
          */
-        resolveMessage(elem, message) {
+        static resolveMessage(elem, message) {
             if(Util.isEmpty(message))
                 throw "message must not be empty";
 
-            elem.message(this.normalizeMessageString(message), this.getMessageParams(message));
+            elem.message(Template.normalizeMessageString(message), Template.getMessageParams(message));
         }
 
         /**
@@ -5295,8 +5071,8 @@ const Template = (function() {
          * @param {string} message 
          * @returns Message params in the array or null if no params found.
          */
-        getMessageParams(message) {
-            let match = this.getMessageParameterString(message);
+        static getMessageParams(message) {
+            let match = Template.getMessageParameterString(message);
             match = match && match.join().replace(/({|}|:|;)/g, match.join()).split(match.join());
             return match && match.filter(Util.notEmpty);
         }
@@ -5306,7 +5082,7 @@ const Template = (function() {
          * @param {string} message 
          * @returns The match array or null.
          */
-        getMessageParameterString(message) {
+        static getMessageParameterString(message) {
             return message.match(/\:?(\{.*\}\;?)/g);
         }
 
@@ -5315,8 +5091,8 @@ const Template = (function() {
          * @param {string} message 
          * @returns The normalized message string.
          */
-        normalizeMessageString(message) {
-            const params = this.getMessageParameterString(message);
+        static normalizeMessageString(message) {
+            const params = Template.getMessageParameterString(message);
             return Util.notEmpty(params) ? message.replace(params.join(), '') : message;
         }
 
@@ -5326,7 +5102,7 @@ const Template = (function() {
          * @param {function} val
          * @returns True if the given key val is event listener key val.
          */
-        isEventKeyVal(key, val) {
+        static isEventKeyVal(key, val) {
             return key.indexOf("on") === 0 && Util.isFunction(val);
         }
 
@@ -5358,7 +5134,7 @@ const Template = (function() {
          * @param {string} appName - App instance name (optional)
          * @returns Element tree of Elem instance objects.
          */
-        static resolveTemplate(template, parent, appName, context) {
+        static resolve(template, parent, appName, context) {
             return Template.create().setTemplateAndResolve(template, parent, appName, context);
         }
 
@@ -5369,38 +5145,32 @@ const Template = (function() {
          * @param {object} oldProps
          */
         static updateElemProps(elem, props, oldProps) {
-            let mashed = Template.mashElemProps(props, oldProps);
-            const templater = Template.create();
-            for (let p in mashed) {
-                if (mashed.hasOwnProperty(p)) {
-                    if (templater.isEventKeyVal(p, mashed[p])) {
-                        elem[p].call(elem, mashed[p]); //element event attribute -> elem, event function
-                    } else if (p === 'class') {
-                        elem.updateClasses(mashed[p] || '');
-                    } else if (p === 'value') {
-                        elem.setAttribute(p, mashed[p]);
-                        elem.setValue(mashed[p]);
-                    } else {
-                        templater.resolveAttributes(elem, p, mashed[p]);
-                    }
+            const combined = Template.combineProps(props, oldProps);
+            Object.keys(combined).forEach((prop) => {
+                if (Template.isEventKeyVal(prop, combined[prop])) {
+                    elem[prop].call(elem, combined[prop]); // element event attribute -> elem, event function
+                } else if (prop === 'class') {
+                    elem.updateClasses(combined[prop] || '');
+                } else if (prop === 'value') {
+                    elem.setAttribute(prop, combined[prop]);
+                    elem.setValue(combined[prop]);
+                } else {
+                    Template.resolveAttributes(elem, prop, combined[prop]);
                 }
-            }
+            });
         }
 
-        static mashElemProps(newProps, oldProps) {
-            let props = {};
-            for (let p in oldProps) {
-                if (oldProps.hasOwnProperty(p)) {
-                    if (!newProps[p] && oldProps[p]) {
-                        props[p] = p === 'style' ? '' : undefined
-                    }
+        static combineProps(newProps, oldProps) {
+            Object.keys(oldProps).forEach(prop => {
+                if (oldProps[prop] && !newProps[prop]) { // if no new prop but old exist
+                    oldProps[prop] = prop === 'style' ? '' : undefined;
                 }
-            }
-            props = {
-                ...props,
+            });
+
+            return {
+                ...oldProps,
                 ...newProps
             }
-            return props;
         }
 
         static create() {
@@ -5589,13 +5359,10 @@ const Template = (function() {
 
     }
 
-    return {
-        resolve: Template.resolveTemplate,
-        isTemplate: Template.isTemplate,
-        isTag: Template.isTag,
-        updateElemProps: Template.updateElemProps
-    }
+    return Template;
+
 }());
+
 
 
 
