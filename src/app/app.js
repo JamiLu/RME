@@ -87,8 +87,8 @@ const RMEAppBuilder = (function() {
                 this.refreshQueue = Browser.setTimeout(() => {
                     const freshStage = Template.resolve({[this.root.toLiteralString()]: { ...this.rawStage }}, null, this.name);
 
-                    if (this.oldStage.toString() !== freshStage.toString()) {
-                        this.oldStage = this.renderer.merge(freshStage);
+                    if (this.oldStage !== freshStage.toString()) {
+                        this.oldStage = this.renderer.merge(freshStage).toString();
                     }
                     Browser.clearTimeout(this.refreshQueue);
                 });
