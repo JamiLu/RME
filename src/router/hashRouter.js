@@ -2,6 +2,10 @@ import RMERouterUtils from './routerUtils';
 import RMERouterContext from './routerContext';
 import Util from '../util';
 
+/**
+ * The hash based router implementation. The router is used via invoking the useHashRouter function.
+ * This router is ment for the single page applications.
+ */
 const RMEHashRouter = (props, { asyncTask, updateState }) => {
     const { routes, url = location.hash, prevUrl, prevRoute, globalScrollTop, init } = props;
 

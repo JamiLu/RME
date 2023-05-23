@@ -1,6 +1,10 @@
 import RMERouterUtils from './routerUtils';
 import Util from '../util';
 
+/**
+ * Simple router implementation ment to be only used in cases where the route is navigated only once after the page load.
+ * The router is used via invoking the useAutoUrlRouter function. This router is not ment for the single page applications.
+ */
 const RMEOnLoadUrlRouter  = (props, { asyncTask }) => {
     const { routes } = props;
 

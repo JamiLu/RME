@@ -2,6 +2,10 @@ import RMERouterContext from './routerContext';
 import RMERouterUtils from './routerUtils';
 import Util from '../util';
 
+/**
+ * The URL based router implementation. The router is used via invoking the useUrlRouter function.
+ * This router is ideal for the single page applications. Router navigation is handled by the useRouter function.
+ */
 const RMEUrlRouter = (props, { updateState, asyncTask }) => {
     const { routes, url, prevUrl, prevRoute, skipPush, init, globalScrollTop } = props;
 
