@@ -253,8 +253,8 @@ Classes & Functions
   - useValue(initialValue) **Create a shareable value that can be used between any component**
   - useMessage(key, ...params) **Resolves a given message key**
   - useMessages(locale, loader) **Initialize messages and change locale**
-  - useHashRouter(routes, globalScrollTop) **Initialize and create SPA hash based router component**
-  - useUrlRouter(routes, globalScrollTop) **Initialize and create SPA suitable url based router compoment**
+  - useHashRouter(routes, settings) **Initialize and create SPA hash based router component**
+  - useUrlRouter(routes, settings) **Initialize and create SPA suitable url based router compoment**
   - useOnLoadUrlRouter(routes) **Initialize and create onload rendered url based router**
   - useRouter(url) **Navigate the router to render the matching component**
   - Component(...components) **Component function receives a comma separate list of component functions.**
