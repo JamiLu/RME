@@ -5634,9 +5634,13 @@ var useHashRouter = function () {
    * The useHashRouter function creates and returns the hash based router component.
    * The router is suitable for single page applications.
    * @param {array} routes router routes
+   * @param {object} settings router settings
    */
   return function (routes) {
-    var globalScrollTop = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+    var _ref9 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+        _ref9$globalScrollTop = _ref9.globalScrollTop,
+        globalScrollTop = _ref9$globalScrollTop === void 0 ? true : _ref9$globalScrollTop;
+
     Component(RMEHashRouter);
     return {
       RMEHashRouter: {
@@ -5666,16 +5670,19 @@ var useOnLoadUrlRouter = function () {
  * The useUrlRouter function creates and returns the url based router component.
  * The router is suitable for single page applications.
  * @param {array} routes router routes
+ * @param {object} settings router settings
  */
 
 
 var useUrlRouter = function () {
   return function (routes) {
-    var globalScrollTop = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+    var _ref10 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+        _ref10$globalScrollTo = _ref10.globalScrollTop,
+        globalScrollTop = _ref10$globalScrollTo === void 0 ? true : _ref10$globalScrollTo;
+
     Component(RMEUrlRouter);
     return {
       RMEUrlRouter: {
-        listenLoad: false,
         routes: routes,
         globalScrollTop: globalScrollTop
       }
