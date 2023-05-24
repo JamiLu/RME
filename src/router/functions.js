@@ -12,8 +12,9 @@ const useHashRouter = (function() {
      * The useHashRouter function creates and returns the hash based router component.
      * The router is suitable for single page applications.
      * @param {array} routes router routes
+     * @param {object} settings router settings
      */
-    return (routes, globalScrollTop = true) => {
+    return (routes, { globalScrollTop = true } = {}) => {
         Component(RMEHashRouter);
 
         return {
@@ -47,15 +48,15 @@ const useOnLoadUrlRouter = (function() {
  * The useUrlRouter function creates and returns the url based router component.
  * The router is suitable for single page applications.
  * @param {array} routes router routes
+ * @param {object} settings router settings
  */
 const useUrlRouter = (function() {
     
-    return (routes, globalScrollTop = true) => {
+    return (routes, { globalScrollTop = true } = {}) => {
         Component(RMEUrlRouter);
 
         return {
             RMEUrlRouter: {
-                listenLoad: false,
                 routes,
                 globalScrollTop,
             }
