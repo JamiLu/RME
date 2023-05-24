@@ -3,7 +3,7 @@ import Elem from '../elem';
 import Util from '../util';
 import { ready } from '../rme';
 
-const Messages = (function() {
+const RMEMessagesResolver = (function() {
     /**
      * Messages class handles internationalization. The class offers public methods that enable easy 
      * using of translated content.
@@ -209,4 +209,4 @@ const Messages = (function() {
     };
 }());
 
-export default Messages;
+export default RMEMessagesResolver;

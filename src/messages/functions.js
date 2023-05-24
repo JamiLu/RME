@@ -1,4 +1,4 @@
-import Messages from './messages';
+import RMEMessagesResolver from './messages';
 import Util from '../util';
 
 const useMessages = (function() {
@@ -15,12 +15,12 @@ const useMessages = (function() {
      */
     return (locale, loader) => {
         if (Util.isFunction(loader)) {
-            Messages.load((locale, setMessages) => setMessages(loader(locale)));
+            RMEMessagesResolver.load((locale, setMessages) => setMessages(loader(locale)));
         }
         if (Util.isString(locale) || locale instanceof Event) {
-            Messages.lang(locale);
+            RMEMessagesResolver.lang(locale);
         }
-        return Messages.locale();
+        return RMEMessagesResolver.locale();
     }
 }());
 
@@ -34,7 +34,7 @@ const useMessage = (function (){
      * @returns Resolved message
      */
     return (key, ...params) => {
-        return Messages.message(key, ...params);
+        return RMEMessagesResolver.message(key, ...params);
     }
 }());
 

@@ -1,7 +1,7 @@
 import Browser from '../browser';
 import RMETemplateResolver from '../template';
 import RMEElemTemplater from './templater';
-import Messages from '../messages';
+import RMEMessagesResolver from '../messages';
 import Util from '../util';
 
 let Elem = (function() {
@@ -831,7 +831,7 @@ let Elem = (function() {
                     paramArray.push(params[i]);
                 i++;
             }
-            this.setText(Messages.message(message, paramArray));
+            this.setText(RMEMessagesResolver.message(message, paramArray));
             return this;
         }
 

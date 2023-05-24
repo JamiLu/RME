@@ -1,5 +1,5 @@
 import Elem from '../elem';
-import Messages from '../messages';
+import RMEMessagesResolver from '../messages';
 import Util from '../util';
 import RMEComponentManagerV2 from '../component/manager';
 import RMETemplateFragmentHelper from './fragment';
@@ -226,7 +226,7 @@ const RMETemplateResolver = (function() {
          */
         static isMessage(message) {
             message = Template.normalizeMessageString(message);
-            return Util.notEmpty(Messages.message(message)) && Messages.message(message) != message;
+            return Util.notEmpty(RMEMessagesResolver.message(message)) && RMEMessagesResolver.message(message) != message;
         }
 
         /**
@@ -371,7 +371,7 @@ const RMETemplateResolver = (function() {
         static resolvePlaceholder(elem, key, val) {
             const params = Template.getMessageParams(val);
             const message = Template.normalizeMessageString(val);
-            elem.setAttribute(key, Template.isMessage(val) ? Messages.message(message, params) : val);
+            elem.setAttribute(key, Template.isMessage(val) ? RMEMessagesResolver.message(message, params) : val);
         }
 
         /**
