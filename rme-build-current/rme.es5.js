@@ -413,7 +413,7 @@ var RMEAppBuilder = function () {
     }, {
       key: "create",
       value: function create(object) {
-        if (!(Template.isTemplate(object) || RMETemplateFragmentHelper.isFragment(object))) {
+        if (!(RMETemplateResolver.isTemplate(object) || RMETemplateFragmentHelper.isFragment(object))) {
           throw new Error('App template must start with a valid html tag or a fragment key');
         }
 
@@ -474,7 +474,7 @@ var RMEAppBuilder = function () {
           }
 
           this.refreshQueue = Browser.setTimeout(function () {
-            var freshStage = Template.resolve(_defineProperty({}, _this3.root.toLiteralString(), _objectSpread({}, _this3.rawStage)), null, _this3.name);
+            var freshStage = RMETemplateResolver.resolve(_defineProperty({}, _this3.root.toLiteralString(), _objectSpread({}, _this3.rawStage)), null, _this3.name);
 
             if (_this3.oldStage !== freshStage.toString()) {
               _this3.oldStage = _this3.renderer.merge(freshStage).toString();
@@ -1360,7 +1360,7 @@ var RMEAppComponent = /*#__PURE__*/function () {
 
       if (this.shouldUpdate) {
         result = this.renderHook(nextProps, ops);
-        result = Template.isTemplate(result) ? Template.resolve(result, null, this.appName, this.parentContext) : result;
+        result = RMETemplateResolver.isTemplate(result) ? RMETemplateResolver.resolve(result, null, this.appName, this.parentContext) : result;
       } else {
         result = this.prevResult;
       }
@@ -1533,7 +1533,7 @@ var CSS = function () {
 
   return function (content, config) {
     if (!hasStyles(config)) {
-      Tree.getHead().append(Template.resolve({
+      Tree.getHead().append(RMETemplateResolver.resolve({
         style: _objectSpread({
           content: content
         }, config)
@@ -1791,7 +1791,7 @@ var Elem = function () {
     }, {
       key: "setProps",
       value: function setProps(props) {
-        Template.updateElemProps(this, props, this.getProps());
+        RMETemplateResolver.updateElemProps(this, props, this.getProps());
         return this;
       }
       /**
@@ -2515,7 +2515,7 @@ var Elem = function () {
           i++;
         }
 
-        this.setText(Messages.message(_message, paramArray));
+        this.setText(RMEMessagesResolver.message(_message, paramArray));
         return this;
       }
       /**
@@ -2591,7 +2591,7 @@ var Elem = function () {
     }, {
       key: "duplicate",
       value: function duplicate() {
-        return Template.resolve(this.toTemplate());
+        return RMETemplateResolver.resolve(this.toTemplate());
       }
       /**
        * @returns height of this element.
@@ -4854,16 +4854,16 @@ var useMessages = function () {
    */
   return function (locale, loader) {
     if (Util.isFunction(loader)) {
-      Messages.load(function (locale, setMessages) {
+      RMEMessagesResolver.load(function (locale, setMessages) {
         return setMessages(loader(locale));
       });
     }
 
     if (Util.isString(locale) || locale instanceof Event) {
-      Messages.lang(locale);
+      RMEMessagesResolver.lang(locale);
     }
 
-    return Messages.locale();
+    return RMEMessagesResolver.locale();
   };
 }();
 
@@ -4880,11 +4880,11 @@ var useMessage = function () {
       params[_key6 - 1] = arguments[_key6];
     }
 
-    return Messages.message.apply(Messages, [key].concat(params));
+    return RMEMessagesResolver.message.apply(RMEMessagesResolver, [key].concat(params));
   };
 }();
 
-var Messages = function () {
+var RMEMessagesResolver = function () {
   /**
    * Messages class handles internationalization. The class offers public methods that enable easy 
    * using of translated content.
@@ -5177,7 +5177,7 @@ var script = function () {
 
   return function (source, options) {
     if (Util.notEmpty(source)) {
-      addScript(Template.resolve({
+      addScript(RMETemplateResolver.resolve({
         script: _objectSpread({
           src: source
         }, options)
@@ -5204,77 +5204,6 @@ var ready = function () {
   });
   return function (callback) {
     callbacks.push(callback);
-  };
-}();
-
-var useHashRouter = function () {
-  /**
-   * The useHashRouter function creates and returns the hash based router component.
-   * The router is suitable for single page applications.
-   * @param {array} routes router routes
-   */
-  return function (routes) {
-    var globalScrollTop = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
-    Component(RMEHashRouter);
-    return {
-      RMEHashRouter: {
-        routes: routes,
-        globalScrollTop: globalScrollTop
-      }
-    };
-  };
-}();
-
-var useAutoUrlRouter = function () {
-  /**
-   * The useAutoUrlRouter function creates and returns the url based router component.
-   * The router is suitable for web pages that only load one route once one the page load.
-   * @param {array} routes router routes
-   */
-  return function (routes) {
-    Component(RMEOnLoadUrlRouter);
-    return {
-      RMEOnLoadUrlRouter: {
-        routes: routes
-      }
-    };
-  };
-}();
-/**
- * The useUrlRouter function creates and returns the url based router component.
- * The router is suitable for single page applications.
- * @param {array} routes router routes
- */
-
-
-var useUrlRouter = function () {
-  return function (routes) {
-    var globalScrollTop = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
-    Component(RMEUrlRouter);
-    return {
-      RMEUrlRouter: {
-        listenLoad: false,
-        routes: routes,
-        globalScrollTop: globalScrollTop
-      }
-    };
-  };
-}();
-
-var useRouter = function () {
-  /**
-   * The useRouter function handles the navigation of the last matched router in the RouterContext.
-   * This function is needed to handle the navigation when using the single page page application url router.
-   * The parameter url can either be a string or an event. If the url is an event then the target url is read from the event.target.href attribute.
-   * @param {string|Event} url the url to navigate to
-   */
-  return function (url) {
-    if (Util.isString(url)) {
-      RMERouterContext.navigateTo(url);
-    } else if (url instanceof Event) {
-      url.preventDefault();
-      RMERouterContext.navigateTo(url.target.href);
-    }
   };
 }();
 /**
@@ -5377,6 +5306,85 @@ var RMEOnLoadUrlRouter = function RMEOnLoadUrlRouter(props, _ref5) {
       asyncTask(function () {
         return route.onAfter(route);
       });
+    }
+  }
+
+  return {
+    _: !!route ? RMERouterUtils.resolveRouteElem(route.elem, route.props) : null
+  };
+};
+/**
+ * The URL based router implementation. The router is used via invoking the useUrlRouter function.
+ * This router is ideal for the single page applications. Router navigation is handled by the useRouter function.
+ */
+
+
+var RMEUrlRouter = function RMEUrlRouter(props, _ref6) {
+  var updateState = _ref6.updateState,
+      asyncTask = _ref6.asyncTask;
+  var routes = props.routes,
+      url = props.url,
+      prevUrl = props.prevUrl,
+      prevRoute = props.prevRoute,
+      skipPush = props.skipPush,
+      init = props.init,
+      globalScrollTop = props.globalScrollTop;
+
+  if (!routes) {
+    return null;
+  }
+
+  if (!init) {
+    var updateUrl = function updateUrl(url, skipPush) {
+      updateState({
+        init: true,
+        url: url !== null && url !== void 0 ? url : location.pathname,
+        skipPush: skipPush
+      });
+    };
+
+    RMERouterContext.setRouter(routes, function (url) {
+      return updateUrl(url);
+    });
+    asyncTask(function () {
+      window.addEventListener('popstate', function () {
+        return updateUrl(undefined, true);
+      });
+      updateUrl(undefined, true);
+    });
+  }
+
+  var route;
+
+  if (url !== prevUrl) {
+    route = RMERouterUtils.findRoute(url, routes, RMERouterUtils.urlMatch);
+    asyncTask(function () {
+      updateState({
+        prevUrl: url,
+        prevRoute: route
+      }, false);
+    });
+  } else {
+    route = prevRoute;
+  }
+
+  if (Util.notEmpty(route)) {
+    if (Util.isFunction(route.onBefore)) {
+      route.onBefore(route);
+    }
+
+    if (Util.isFunction(route.onAfter)) {
+      asyncTask(function () {
+        return route.onAfter(route);
+      });
+    }
+
+    if (!route.hide && url !== prevUrl && !skipPush) {
+      history.pushState(null, null, url);
+    }
+
+    if (window.scrollY > 0 && (route.scrolltop === true || route.scrolltop === undefined && globalScrollTop)) {
+      scrollTo(0, 0);
     }
   }
 
@@ -5620,85 +5628,77 @@ var RMERouterUtils = function () {
     resolveRouteElem: resolveRouteElem
   };
 }();
+
+var useHashRouter = function () {
+  /**
+   * The useHashRouter function creates and returns the hash based router component.
+   * The router is suitable for single page applications.
+   * @param {array} routes router routes
+   */
+  return function (routes) {
+    var globalScrollTop = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+    Component(RMEHashRouter);
+    return {
+      RMEHashRouter: {
+        routes: routes,
+        globalScrollTop: globalScrollTop
+      }
+    };
+  };
+}();
+
+var useAutoUrlRouter = function () {
+  /**
+   * The useAutoUrlRouter function creates and returns the url based router component.
+   * The router is suitable for web pages that only load one route once one the page load.
+   * @param {array} routes router routes
+   */
+  return function (routes) {
+    Component(RMEOnLoadUrlRouter);
+    return {
+      RMEOnLoadUrlRouter: {
+        routes: routes
+      }
+    };
+  };
+}();
 /**
- * The URL based router implementation. The router is used via invoking the useUrlRouter function.
- * This router is ideal for the single page applications. Router navigation is handled by the useRouter function.
+ * The useUrlRouter function creates and returns the url based router component.
+ * The router is suitable for single page applications.
+ * @param {array} routes router routes
  */
 
 
-var RMEUrlRouter = function RMEUrlRouter(props, _ref8) {
-  var updateState = _ref8.updateState,
-      asyncTask = _ref8.asyncTask;
-  var routes = props.routes,
-      url = props.url,
-      prevUrl = props.prevUrl,
-      prevRoute = props.prevRoute,
-      skipPush = props.skipPush,
-      init = props.init,
-      globalScrollTop = props.globalScrollTop;
-
-  if (!routes) {
-    return null;
-  }
-
-  if (!init) {
-    var updateUrl = function updateUrl(url, skipPush) {
-      updateState({
-        init: true,
-        url: url !== null && url !== void 0 ? url : location.pathname,
-        skipPush: skipPush
-      });
+var useUrlRouter = function () {
+  return function (routes) {
+    var globalScrollTop = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+    Component(RMEUrlRouter);
+    return {
+      RMEUrlRouter: {
+        listenLoad: false,
+        routes: routes,
+        globalScrollTop: globalScrollTop
+      }
     };
-
-    RMERouterContext.setRouter(routes, function (url) {
-      return updateUrl(url);
-    });
-    asyncTask(function () {
-      window.addEventListener('popstate', function () {
-        return updateUrl(undefined, true);
-      });
-      updateUrl(undefined, true);
-    });
-  }
-
-  var route;
-
-  if (url !== prevUrl) {
-    route = RMERouterUtils.findRoute(url, routes, RMERouterUtils.urlMatch);
-    asyncTask(function () {
-      updateState({
-        prevUrl: url,
-        prevRoute: route
-      }, false);
-    });
-  } else {
-    route = prevRoute;
-  }
-
-  if (Util.notEmpty(route)) {
-    if (Util.isFunction(route.onBefore)) {
-      route.onBefore(route);
-    }
-
-    if (Util.isFunction(route.onAfter)) {
-      asyncTask(function () {
-        return route.onAfter(route);
-      });
-    }
-
-    if (!route.hide && url !== prevUrl && !skipPush) {
-      history.pushState(null, null, url);
-    }
-
-    if (window.scrollY > 0 && (route.scrolltop === true || route.scrolltop === undefined && globalScrollTop)) {
-      scrollTo(0, 0);
-    }
-  }
-
-  return {
-    _: !!route ? RMERouterUtils.resolveRouteElem(route.elem, route.props) : null
   };
-};
+}();
+
+var useRouter = function () {
+  /**
+   * The useRouter function handles the navigation of the last matched router in the RouterContext.
+   * This function is needed to handle the navigation when using the single page page application url router.
+   * The parameter url can either be a string or an event. If the url is an event then the target url is read from the event.target.href attribute.
+   * @param {string|Event} url the url to navigate to
+   */
+  return function (url) {
+    if (Util.isString(url)) {
+      RMERouterContext.navigateTo(url);
+    } else if (url instanceof Event) {
+      url.preventDefault();
+      RMERouterContext.navigateTo(url.target.href);
+    }
+  };
+}();
 
 var RMETemplateFragmentHelper = function () {
   // Fragment key can be any number of underscores (_).
@@ -5768,7 +5768,7 @@ var RMETemplateFragmentHelper = function () {
   return new RMETemplateFragmentHelper();
 }();
 
-var Template = function () {
+var RMETemplateResolver = function () {
   /**
    * Template class reads a JSON format notation and creates an element tree from it.
    * The Template class has only one public method resolve that takes the template as parameter and returns 
@@ -6115,7 +6115,7 @@ var Template = function () {
       key: "isMessage",
       value: function isMessage(message) {
         message = Template.normalizeMessageString(message);
-        return Util.notEmpty(Messages.message(message)) && Messages.message(message) != message;
+        return Util.notEmpty(RMEMessagesResolver.message(message)) && RMEMessagesResolver.message(message) != message;
       }
     }, {
       key: "addAttributes",
@@ -6238,7 +6238,7 @@ var Template = function () {
       value: function resolvePlaceholder(elem, key, val) {
         var params = Template.getMessageParams(val);
         var message = Template.normalizeMessageString(val);
-        elem.setAttribute(key, Template.isMessage(val) ? Messages.message(message, params) : val);
+        elem.setAttribute(key, Template.isMessage(val) ? RMEMessagesResolver.message(message, params) : val);
       }
       /**
        * Resolves the attribute that did not match on cases. Usually nothing needs to be done except when handling html dom data-* attributes. In such case
