@@ -5637,15 +5637,12 @@ var useHashRouter = function () {
    * @param {object} settings router settings
    */
   return function (routes) {
-    var _ref9 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-        _ref9$globalScrollTop = _ref9.globalScrollTop,
-        globalScrollTop = _ref9$globalScrollTop === void 0 ? true : _ref9$globalScrollTop;
-
+    var scrollTop = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
     Component(RMEHashRouter);
     return {
       RMEHashRouter: {
         routes: routes,
-        globalScrollTop: globalScrollTop
+        globalScrollTop: scrollTop
       }
     };
   };
@@ -5676,15 +5673,12 @@ var useOnLoadUrlRouter = function () {
 
 var useUrlRouter = function () {
   return function (routes) {
-    var _ref10 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-        _ref10$globalScrollTo = _ref10.globalScrollTop,
-        globalScrollTop = _ref10$globalScrollTo === void 0 ? true : _ref10$globalScrollTo;
-
+    var scrollTop = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
     Component(RMEUrlRouter);
     return {
       RMEUrlRouter: {
         routes: routes,
-        globalScrollTop: globalScrollTop
+        globalScrollTop: scrollTop
       }
     };
   };
