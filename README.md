@@ -27,15 +27,15 @@ import {
     createApp,
     useValue,
     Component,
-    CSS,
-    script,
-    ready,
     useMessage,
     useMessages,
     useHashRouter,
     useUrlRouter,
-    useAutoUrlRouter,
+    useOnLoadUrlRouter,
     useRouter,
+    CSS,
+    script,
+    ready,
     Elem,
     Tree,
     Http,
@@ -249,13 +249,13 @@ Classes & Functions
 >Not comprehensive. Just to name few.
 
 * Global functions
-  - createApp() **Create a new App and insert it into the given locator**
+  - createApp(initAppTemplateObject) **Create a new App and insert it into the given locator**
   - useValue(initialValue) **Create a shareable value that can be used between any component**
   - useMessage(key, ...params) **Resolves a given message key**
   - useMessages(locale, loader) **Initialize messages and change locale**
   - useHashRouter(routes, globalScrollTop) **Initialize and create SPA hash based router component**
   - useUrlRouter(routes, globalScrollTop) **Initialize and create SPA suitable url based router compoment**
-  - useAutoUrlRouter(routes) **Initialize and create onload rendered url base router**
+  - useOnLoadUrlRouter(routes) **Initialize and create onload rendered url based router**
   - useRouter(url) **Navigate the router to render the matching component**
   - Component(...components) **Component function receives a comma separate list of component functions.**
   - CSS(content, properties) **Creates a dynamic style component with content and optional properties if given.**
