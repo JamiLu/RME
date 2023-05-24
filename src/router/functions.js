@@ -14,13 +14,13 @@ const useHashRouter = (function() {
      * @param {array} routes router routes
      * @param {object} settings router settings
      */
-    return (routes, { globalScrollTop = true } = {}) => {
+    return (routes, scrollTop = true) => {
         Component(RMEHashRouter);
 
         return {
             RMEHashRouter: {
                 routes,
-                globalScrollTop
+                globalScrollTop: scrollTop
             }
         };
     }
@@ -52,13 +52,13 @@ const useOnLoadUrlRouter = (function() {
  */
 const useUrlRouter = (function() {
     
-    return (routes, { globalScrollTop = true } = {}) => {
+    return (routes, scrollTop = true) => {
         Component(RMEUrlRouter);
 
         return {
             RMEUrlRouter: {
                 routes,
-                globalScrollTop,
+                globalScrollTop: scrollTop,
             }
         }
     }
