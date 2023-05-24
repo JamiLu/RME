@@ -1,4 +1,4 @@
-import RMERouterUtils from './routerUtils';
+import RMERouterUtils from './RouterUtils';
 
 const RMERouterContext = (function() {
 

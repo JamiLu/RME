@@ -1,5 +1,5 @@
 import Util from '../util';
-import Template from '../template';
+import RMETemplateResolver from '../template';
 import Tree from '../tree';
 
 /**
@@ -32,7 +32,7 @@ const script = (function() {
 
     return (source, options) => {
         if (Util.notEmpty(source)) {
-            addScript(Template.resolve({
+            addScript(RMETemplateResolver.resolve({
                 script: {
                     src: source,
                     ...options

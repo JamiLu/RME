@@ -1,4 +1,4 @@
-import RMERouterUtils from './routerUtils';
+import RMERouterUtils from './RouterUtils';
 import Util from '../util';
 
 /**

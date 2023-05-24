@@ -1,3 +1,3 @@
-import Template from './template';
+import RMETemplateResolver from './template';
 
-export default Template;
+export default RMETemplateResolver;

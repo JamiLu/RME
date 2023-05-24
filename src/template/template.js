@@ -4,7 +4,7 @@ import Util from '../util';
 import RMEComponentManagerV2 from '../component/manager';
 import RMETemplateFragmentHelper from './fragment';
 
-const Template = (function() {
+const RMETemplateResolver = (function() {
     /**
      * Template class reads a JSON format notation and creates an element tree from it.
      * The Template class has only one public method resolve that takes the template as parameter and returns 
@@ -711,4 +711,4 @@ const Template = (function() {
 
 }());
 
-export default Template;
+export default RMETemplateResolver;

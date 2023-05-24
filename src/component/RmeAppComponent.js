@@ -1,5 +1,5 @@
 import { useValue } from '../app';
-import Template from '../template';
+import RMETemplateResolver from '../template';
 import Browser from '../browser';
 import Util from '../util';
 
@@ -48,7 +48,7 @@ class RMEAppComponent {
 
         if (this.shouldUpdate) {
             result = this.renderHook(nextProps, ops);
-            result = Template.isTemplate(result) ? Template.resolve(result, null, this.appName, this.parentContext) : result;
+            result = RMETemplateResolver.isTemplate(result) ? RMETemplateResolver.resolve(result, null, this.appName, this.parentContext) : result;
         } else {
             result = this.prevResult;
         }

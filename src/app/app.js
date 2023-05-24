@@ -1,7 +1,7 @@
 import Util from '../util';
 import Browser from '../browser';
 import RMEElemRenderer from './renderer';
-import Template from '../template';
+import RMETemplateResolver from '../template';
 import Tree from '../tree';
 import RMEAppManager from './manager';
 import RMETemplateFragmentHelper from '../template/fragment';
@@ -40,7 +40,7 @@ const RMEAppBuilder = (function() {
          * @returns AppInstance
          */
         static create(object) {
-            if (!(Template.isTemplate(object) || RMETemplateFragmentHelper.isFragment(object))) {
+            if (!(RMETemplateResolver.isTemplate(object) || RMETemplateFragmentHelper.isFragment(object))) {
                 throw new Error('App template must start with a valid html tag or a fragment key');
             }
             const app = new AppInstance(RMEAppManager.createName(), holder.appRoot, object);
@@ -85,7 +85,7 @@ const RMEAppBuilder = (function() {
                     Browser.clearTimeout(this.refreshQueue);
                 }
                 this.refreshQueue = Browser.setTimeout(() => {
-                    const freshStage = Template.resolve({[this.root.toLiteralString()]: { ...this.rawStage }}, null, this.name);
+                    const freshStage = RMETemplateResolver.resolve({[this.root.toLiteralString()]: { ...this.rawStage }}, null, this.name);
 
                     if (this.oldStage !== freshStage.toString()) {
                         this.oldStage = this.renderer.merge(freshStage).toString();

@@ -1,5 +1,5 @@
 import Browser from '../browser';
-import Template from '../template';
+import RMETemplateResolver from '../template';
 import RMEElemTemplater from './templater';
 import Messages from '../messages';
 import Util from '../util';
@@ -214,7 +214,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setProps(props) {
-            Template.updateElemProps(this, props, this.getProps());
+            RMETemplateResolver.updateElemProps(this, props, this.getProps());
             return this;
         }
 
@@ -883,7 +883,7 @@ let Elem = (function() {
          * @returns A duplicated Elem object
          */
         duplicate() {
-            return Template.resolve(this.toTemplate());
+            return RMETemplateResolver.resolve(this.toTemplate());
         }
 
         /**

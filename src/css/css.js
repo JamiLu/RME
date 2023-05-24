@@ -1,5 +1,5 @@
 import Tree from '../tree';
-import Template from '../template';
+import RMETemplateResolver from '../template';
 import Util from '../util';
 
 
@@ -44,7 +44,7 @@ const CSS = (function() {
 
     return (content, config) => {
         if (!hasStyles(config)) {
-            Tree.getHead().append(Template.resolve({
+            Tree.getHead().append(RMETemplateResolver.resolve({
                 style: {
                     content,
                     ...config
