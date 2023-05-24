@@ -5647,7 +5647,7 @@ var useHashRouter = function () {
   };
 }();
 
-var useAutoUrlRouter = function () {
+var useOnLoadUrlRouter = function () {
   /**
    * The useAutoUrlRouter function creates and returns the url based router component.
    * The router is suitable for web pages that only load one route once one the page load.

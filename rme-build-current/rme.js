@@ -4539,7 +4539,7 @@ const useHashRouter = (function() {
     }
 }());
 
-const useAutoUrlRouter = (function() {
+const useOnLoadUrlRouter = (function() {
 
     /**
      * The useAutoUrlRouter function creates and returns the url based router component.
