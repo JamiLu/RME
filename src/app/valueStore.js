@@ -1,5 +1,5 @@
-import Util from '../util'
-import App from './app';
+import Util from '../util';
+import RMEAppManager from './manager';
 
 /**
  * Manages between component shareable values.
@@ -8,7 +8,7 @@ const ValueStore = (function() {
 
     class ValueStore {
         constructor() {
-            this.values = {};
+            this.values = new Map();
             this.valueRefGenerator = new RefGenerator('val');
         }
     
@@ -23,18 +23,18 @@ const ValueStore = (function() {
                 value = value(value);
             }
             const ref = this.valueRefGenerator.next();
-            this.values[ref] = value;
+            this.values.set(ref, value);
     
-            const getter = () => this.values[ref];
+            const getter = () => this.values.get(ref);
             const setter = (next, update) => {
                 if (Util.isFunction(next)) {
                     next = next(getter());
                 }
     
-                this.values[ref] = next;
+                this.values.set(ref, next);
                 
-                if (update !== false) {
-                    App.get(appName).refresh();
+                if (update !== false) {
+                    RMEAppManager.getOrDefault(appName).refresh();
                 }
             }
             return [getter, setter];
@@ -43,7 +43,7 @@ const ValueStore = (function() {
     
     class RefGenerator {
         constructor(feed) {
-            this.feed = feed || "";
+            this.feed = feed || "";
             this.seq = 0;
         }
     

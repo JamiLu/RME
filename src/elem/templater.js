@@ -6,14 +6,15 @@ import Util from '../util';
 class RMEElemTemplater {
     constructor() {
         this.instance;
-        this.template = {};
+        this.template;
         this.deep = true;
     }
 
     toTemplate(elem, deep) {
-        if(!Util.isEmpty(deep))
+        if (Util.notEmpty(deep))
             this.deep = deep;
-        this.resolve(elem, this.template);
+
+        this.resolve(elem, {});
         return this.template;
     }
 
@@ -24,26 +25,26 @@ class RMEElemTemplater {
      */
     resolve(elem, parent) {
         let resolved = this.resolveElem(elem, this.resolveProps(elem));
-        for(let p in parent) {
-            if(parent.hasOwnProperty(p)) {
-                if(Util.isArray(parent[p]._rme_type_))
-                    parent[p]._rme_type_.push(resolved);
-                else
-                    this.extendMap(parent[p], resolved);
+        Object.keys(parent).forEach(key => {
+            if (Util.isArray(parent[key]._)) {
+                parent[key]._.push(resolved);
+            } else {
+                this.extendMap(parent[key], resolved);
             }
-        }
+        });
 
-        let i = 0;
-        let children = Util.isArray(elem.getChildren()) ? elem.getChildren() : [elem.getChildren()];
-        if(children && this.deep) {
-            while(i < children.length) {
-                this.resolve(children[i], resolved);
-                i++;
-            }
+        const children = Array.of(elem.getChildren()).flat();
+        if (children.length > 0 && this.deep) {
+            children.forEach(child => this.resolve(child, resolved));
         }
         this.template = resolved;
     }
 
+    /**
+     * Copies values from the next map into the first map
+     * @param {object} map first map
+     * @param {object} next next map
+     */
     extendMap(map, next) {
         for(let v in next) {
             if(next.hasOwnProperty(v)) {
@@ -59,16 +60,16 @@ class RMEElemTemplater {
      * @returns The resolved elem with attached properties.
      */
     resolveElem(elem, props) {
-        let el = {};
-        let children = elem.getChildren();
-        if(Util.isArray(children) && children.length > 1) {
+        const el = {};
+        const children = elem.getChildren();
+        if (Util.isArray(children) && children.length > 1) {
             let elTag = elem.getTagName().toLowerCase();
             let elName = this.resolveId(elTag, props);
             elName = this.resolveClass(elName, props);
             elName = this.resolveAttrs(elName, props);
             el[elName] = {
-                _rme_type_: [],
-                _rme_props_: props
+                ...props,
+                _: [],
             };
         } else {
             el[elem.getTagName().toLowerCase()] = props

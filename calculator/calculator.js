@@ -1,9 +1,9 @@
 import 'animate.css'
 import './calculator.css'
-import './components/calculator';
+import { Calculator } from './components/calculator';
 
-App.root('#app').create({
-    div: {
-        Calculator: {}
+createApp({
+    '#app': {
+        Calculator
     }
 });

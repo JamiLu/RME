@@ -2,6 +2,62 @@
  * Browser class contains all the rest utility functions which JavaScript has to offer from Window, Navigator, Screen, History, Location objects.
  */
 class Browser {
+
+    /**
+     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The timeout object.
+     */
+    static setTimeout(callback, milliseconds, ...params) {
+        return window.setTimeout(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes a timeout that was created by setTimeout method.
+     * @param {object} timeoutObject
+     */
+    static clearTimeout(timeoutObject) {
+        window.clearTimeout(timeoutObject);
+    }
+
+    /**
+     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The interval object.
+     */
+    static setInterval(callback, milliseconds, ...params) {
+        return window.setInterval(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes an interval that was created by setInterval method.
+     */
+    static clearInterval(intervalObject) {
+        window.clearInterval(intervalObject);
+    }
+
+    /**
+     * Encodes a string to Base64.
+     * @param {string} string
+     * @returns The base64 encoded string.
+     */
+    static toBase64(string) {
+        return window.btoa(string);
+    }
+
+    /**
+     * Decodes a base 64 encoded string.
+     * @param {string} string
+     * @returns The base64 decoded string.
+     */
+    static fromBase64(string) {
+        return window.atob(string);
+    }
+
     /**
      * Scroll once to a given location (xPos, yPos)
      * @param {number} xPos

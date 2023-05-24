@@ -1,6 +1,7 @@
-import Template from '../template';
+import Browser from '../browser';
+import RMETemplateResolver from '../template';
 import RMEElemTemplater from './templater';
-import Messages from '../messages';
+import RMEMessagesResolver from '../messages';
 import Util from '../util';
 
 let Elem = (function() {
@@ -19,10 +20,10 @@ let Elem = (function() {
         constructor(type) {
             if(Util.isString(type)) {
                 this.html = document.createElement(type);
-            } else if(type.nodeType !== undefined && type.ownerDocument !== undefined && type.nodeType >= 1 && type.ownerDocument instanceof HTMLDocument) {
+            } else if(type.nodeType !== undefined && type.ownerDocument !== undefined && type.nodeType >= 1 && type.ownerDocument instanceof Document) {
                 this.html = type;
             } else {
-                throw "type must be a string or a HTMLDocument";
+                throw "type must be a string or a Document";
             }
         }
 
@@ -123,10 +124,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         append(elem) {
-            if (Util.notEmpty(elem)) {
-                this.html.appendChild(Template.isTemplate(elem) ? Template.resolve(elem).dom() : elem.dom());
-            }
-            
+            elem && this.html.appendChild(elem.dom());
             return this;
         }
 
@@ -216,7 +214,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setProps(props) {
-            Template.updateElemProps(this, props, this.getProps());
+            RMETemplateResolver.updateElemProps(this, props, this.getProps());
             return this;
         }
 
@@ -833,8 +831,7 @@ let Elem = (function() {
                     paramArray.push(params[i]);
                 i++;
             }
-            paramArray.push(this);
-            this.setText(Messages.message(message, paramArray));
+            this.setText(RMEMessagesResolver.message(message, paramArray));
             return this;
         }
 
@@ -843,7 +840,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         click() {
-            Util.setTimeout(() => this.html.click());
+            Browser.setTimeout(() => this.html.click());
             return this;
         }
 
@@ -852,7 +849,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         focus() {
-            Util.setTimeout(() => this.html.focus());
+            Browser.setTimeout(() => this.html.focus());
             return this;
         }
 
@@ -861,7 +858,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         blur() {
-            Util.setTimeout(() => this.html.blur());
+            Browser.setTimeout(() => this.html.blur());
             return this;
         }
 
@@ -886,7 +883,7 @@ let Elem = (function() {
          * @returns A duplicated Elem object
          */
         duplicate() {
-            return Template.resolve(this.toTemplate());
+            return RMETemplateResolver.resolve(this.toTemplate());
         }
 
         /**
@@ -1658,10 +1655,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         static wrap(html) {
-            if(!Util.isEmpty(html))
-                return new Elem(html);
-            else 
-                throw "Could not wrap a html element - html: " + html;
+            return new Elem(html);
         }
 
         /**
@@ -1673,13 +1667,8 @@ let Elem = (function() {
          * @returns An array of the Elem objects or a single Elem object. 
          */
         static wrapElems(htmlDoc) {
-            var eArr = [];
-            var i = 0;
-            while(i < htmlDoc.length) {
-                    eArr.push(Elem.wrap(htmlDoc[i]));
-                i++;
-            }
-            return eArr.length === 1 ? eArr[0] : eArr;
+            const wrapped = Array.from(htmlDoc).map(Elem.wrap);
+            return wrapped.length === 1 ? wrapped[0] : wrapped;
         }
     }
 

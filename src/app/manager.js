@@ -1,26 +1,66 @@
+import Util from '../util';
+import { useValue } from './functions';
+
 /**
- * Keeps app instances in memory
+ * Keeps RME App instances in memory
  */
-const AppManager = (function() {
+const RMEAppManager = (function() {
 
-    class AppManager {
-        constructor() {
-            this.apps = {};
-        }
+    let seq = 0;
+    const prefix = 'app';
+    const [getFrom, setTo] = useValue({});
 
-        set(name, value) {
-            this.apps[name] = value;
-        }
+    /**
+     * Set application instance in to the manager
+     * @param {string} name 
+     * @param {*} value 
+     */
+    const set = (name, value) => 
+        setTo(store => ({
+            ...store,
+            [name]: value
+        }), false);
 
-        get(name) {
-            return this.apps[name];
+    /**
+     * Get application instance from the store by name
+     * @param {string} name 
+     * @returns Application instance
+     */
+    const get = (name) => getFrom()[name];
+
+    /**
+     * Get application instance by name or return default application instance.
+     * The default application instance is returned if the given name parameter is empty.
+     * @param {string} name 
+     * @returns Application instance
+     */
+    const getOrDefault = (name) => Util.notEmpty(name) ? get(name) : get(`${prefix}0`);
+
+    /**
+     * Returns an array containing all application instances.
+     * @returns Array
+     */
+    const getAll = () => Object.values(getFrom());
+
+    /**
+     * Creates a next available application name.
+     * @returns Application name
+     */
+    const createName = () => {
+        while (Util.notEmpty(get(prefix + seq))) {
+            seq++;
         }
+        return prefix + seq;
     }
 
-    const manager = new AppManager();
-
-    return manager;
+    return {
+        set,
+        get,
+        getAll,
+        createName,
+        getOrDefault
+    }
 
 })();
 
-export default AppManager;
+export default RMEAppManager;

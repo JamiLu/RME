@@ -1,3 +1,5 @@
-import Messages from './messages';
+import RMEMessagesResolver from './messages';
+import { useMessage, useMessages } from './functions';
 
-export default Messages;
+export default RMEMessagesResolver;
+export { useMessage, useMessages }

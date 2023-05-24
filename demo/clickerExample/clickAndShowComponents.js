@@ -1,4 +1,4 @@
-import { Component, useValue, bindGetters, CSS } from '../../src/index';
+import { Component, useValue, CSS } from '../../src/index';
 
 CSS(`
 div .clicker-number {
@@ -8,12 +8,12 @@ div .clicker-number {
 
 const [getValue, setValue] = useValue(0);
 
-const ClickAndShowExample = () => ({
-    fragment: {
+export const ClickAndShowExample = () => ({
+    _: {
         h2: 'Click and Show Example',
         'div.w3-bar': {
-            Clicker: {},
-            ShowValue: {}
+            Clicker,
+            ShowValue
         }
     }
 });
@@ -27,11 +27,8 @@ const Clicker = () => ({
     }
 });
 
-const ShowValue = (props) => ({
-    'div.clicker-number': props.value
+const ShowValue = () => ({
+    'div.clicker-number': `${getValue()}`
 });
 
-Component(ClickAndShowExample, Clicker);
-Component(bindGetters(ShowValue, {
-    value: getValue
-}));
+Component(ClickAndShowExample, Clicker, ShowValue);

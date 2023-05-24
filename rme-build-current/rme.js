@@ -1,439 +1,173 @@
 /** RME BUILD FILE **/
+/**
+ * General Utility methods.
+ */
+class Util {
+    /**
+     * Checks is a given value empty.
+     * @param {*} value
+     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
+     */
+    static isEmpty(value) {
+        return (value === null || value === undefined)
+            || (Util.isString(value) && value === "")
+            || (Util.isObject(value) && Object.keys(value).length === 0)
+            || (Util.isArray(value) && value.length === 0);
+    }
+
+    /**
+     * Checks is the given value not empty. This function is a negation to the Util.isEmpty function.
+     * @param {*} value 
+     * @returns True if the value is not empty otherwise false.
+     */
+    static notEmpty(value) {
+        return !Util.isEmpty(value)
+    }
+
+    /**
+     * Get the type of the given value.
+     * @param {*} value
+     * @returns The type of the given value.
+     */
+    static getType(value) {
+        return typeof value;
+    }
+
+    /**
+     * Checks is a given value is a given type.
+     * @param {*} value
+     * @param {string} type
+     * @returns True if the given value is the given type otherwise false.
+     */
+    static isType(value, type) {
+        return (Util.getType(value) === type);
+    }
+
+    /**
+     * Checks is a given parameter a function.
+     * @param {*} func 
+     * @returns True if the given parameter is fuction otherwise false.
+     */
+    static isFunction(func) {
+        return Util.isType(func, "function");
+    }
+
+    /**
+     * Checks is a given parameter a boolean.
+     * @param {*} boolean
+     * @returns True if the given parameter is boolean otherwise false.
+     */
+    static isBoolean(boolean) {
+        return Util.isType(boolean, "boolean");
+    }
+
+    /**
+     * Checks is a given parameter a string.
+     * @param {*} string
+     * @returns True if the given parameter is string otherwise false.
+     */
+    static isString(string) {
+        return Util.isType(string, "string");
+    }
+
+    /**
+     * Checks is a given parameter a number.
+     * @param {*} number
+     * @returns True if the given parameter is number otherwise false.
+     */
+    static isNumber(number) {
+        return Util.isType(number, "number");
+    }
+
+    /**
+     * Checks is a given parameter a symbol.
+     * @param {*} symbol
+     * @returns True if the given parameter is symbol otherwise false.
+     */
+    static isSymbol(symbol) {
+        return Util.isType(symbol, "symbol");
+    }
+
+    /**
+     * Checks is a given parameter a object.
+     * @param {*} object
+     * @returns True if the given parameter is object otherwise false.
+     */
+    static isObject(object) {
+        return Util.isType(object, "object");
+    }
+
+    /**
+     * Checks is a given parameter an array.
+     * @param {*} array
+     * @returns True if the given parameter is array otherwise false.
+     */
+    static isArray(array) {
+        return Array.isArray(array);
+    }
+}
 
 
-let App = (function() {
 
-    class App {
+/**
+ * Manages between component shareable values.
+ */
+const ValueStore = (function() {
+
+    class ValueStore {
         constructor() {
-            this.self;
-            this.seq = 0;
-            this.prefix = "app";
-            this.name;
-            this.root;
+            this.values = new Map();
+            this.valueRefGenerator = new RefGenerator('val');
         }
-
+    
         /**
-         * Function will set a name for an application. If the name is not set then a default name is used.
-         * @param {string} name 
-         * @returns App.
-         */
-        static name(name) {
-            App.init().name = App.checkName(name);
-            return App;
-        }
-
-        /**
-         * Function will set a root for an application. If the root is not set then body is used by default.
-         * @param {string} root 
-         * @returns App.
-         */
-        static root(root) {
-            if (!Util.isEmpty(root) && Util.isString(root)) 
-                App.init().root = root;
-
-            return App;
-        }
-
-        /**
-         * Function will check if a given name is empty or not. If the name is empty then a next available default name is returned.
-         * @param {string} name 
-         * @returns Checked name.
-         */
-        static checkName(name) {
-            if (!Util.isEmpty(name)) {
-                return App.init().prefix+name;
-            } else {
-                while(Util.isEmpty(App.init().name)) {
-                    name = App.init().prefix + App.init().seq;
-                    name = AppManager.get(name);
-                    if(Util.isEmpty(name)) {
-                        App.init().name = App.init().prefix+App.init().seq;
-                        break;
-                    } else {
-                        App.init().seq++;
-                    }
-                }
-                return App.init().name;
-            }
-        }
-
-        /**
-         * Resets settings that are used to create an application.
-         */
-        static reset() {
-            App.init().name = undefined;
-            App.init().root = undefined;
-            App.init().seq = 0;
-        }
-
-        /**
-         * Function creates an application. The given parameter can either be a Template object or an Elem object. 
-         * @param {object} object 
-         * @returns Created application instance.
-         */
-        static create(object) {
-            let name = Util.notEmpty(App.init().name) ? App.init().name : App.checkName();
-            let root = Util.notEmpty(App.init().root) ? App.init().root : undefined;
-            let app = new AppInstance(name, root, object);
-            AppManager.set(name, app);
-            App.reset();
-            return app;
-        }
-        
-        /**
-         * Gets Application instance by name. If the name is empty then default application instance is retrieved.
-         * @param {string} name 
-         * @returns Application instance.
-         */
-        static get(name) {
-            if (Util.isEmpty(name))
-               return App.name(0).getInstance();
-            else {
-                const app = App.name(name).getInstance();
-                if (Util.isEmpty(app))
-                    throw "Could not find app with name: "+name;
-                else
-                    return app;
-            }
-        }
-
-        /**
-         * Function takes three parameters that enable setting state for components.
-         * If only one parameter is given then the parameter must be an object or a function. 
-         * The object should define a component name and its values as follows. ({refName: {key: val, key: val}}) and
-         * the function should return a object describing the component respectively.
-         * If two parameters are given then the first parameter is a component name
-         * and the value parameter should describe the component state object as follows. (refName, {key: val, key: val}).
-         * The value parameter may also be a function that returns the component state object respectively.
-         * The last parameter update is a boolean value that only if explicitly set to false then the app is not updated
-         * after setting the state has occured.
-         * This function will store the state into the default application state. 
-         * @param {*} refName 
+         * The function will set the given value to the app instance and return a getter and a setter function
+         * for the given value. Values can be shared and used in between any component.
          * @param {*} value 
-         * @param {boolean} update
+         * @returns An array containing the getter and the setter functions for the given value.
          */
-        static setState(refName, value, update) {
-            return App.get().setState(refName, value, update);
-        }
-
-        /**
-         * Function takes one optional parameter. If refName is given then only a state of a component referred by the refName is given. 
-         * Otherwise whole default application state is given.
-         * @param {string} refName 
-         */
-        static getState(refName) {
-            return App.get().getState(refName);
-        }
-
-        /**
-         * Function takes one optional parameter. If refName is given then only a state of a component referred by the refName is checked.
-         * Otherwised default application state is checked.
-         * @param {string} refName 
-         * @returns True if state empty otherwise false.
-         */
-        static isStateEmpty(refName) {
-            return App.get().isStateEmpty(refName);
-        }
-
-        /**
-         * Function takes two optional parameters. If refName is given then only a state of the component with the refName is cleared otherwise 
-         * whole default application state is cleared. If update is given then after clearing the state the application is refreshed.
-         * @param {string} refName 
-         * @param {boolean} update 
-         */
-        static clearState(refName, update) {
-            return App.get().clearState(refName, update);
-        }
-
-        /**
-         * Function takes three parameters. If the first parameter is string then the second parameter must be an object or a function.
-         * The first parameter refName is a component name and the second parameter is the state of the component as follows: (compName, {key: val, key: val})
-         * or if the second parameter is a function then the function should return the changed state of the component in an object respectively.
-         * If the first parameter is an object or a function then the second parameter is omitted. 
-         * In this case the object must contain a component name and the changed state of the component as follows: ({compName: {val: key, val: key}}).
-         * If the first parameter is a function then the function should return the changed state of the component in an object respectively.
-         * The state is stored into the default application state.
-         * @param {string} refName 
-         * @param {object} value 
-         */
-        static mergeState(key, value, update) {
-            return App.get().mergeState(key, value, update);
-        }
-
-        static getInstance() {
-            if (Util.isEmpty(App.init().name))
-                throw "No App instance selected, invoke a function name() first";
-            const app = AppManager.get(App.init().name);
-            App.reset();
-            return app;
-        }
-
-        static init() {
-            if (Util.isEmpty(this.self))
-                this.self = new App();
-            return this.self;
-        }
-
-    }
-
-    class AppInstance {
-        constructor(name, root, object) {
-            this.rawStage = object;
-            this.name = name;
-            this.root; 
-            this.state = {};
-            this.renderer;
-            this.oldStage = "";
-            this.router;
-            this.ready = false;
-            this.setState = this.setState.bind(this);
-            this.getState = this.getState.bind(this);
-            this.refresh = this.refreshApp.bind(this);
-            this.afterRefreshCallQueue = [];
-            this.refreshQueue;
-            this.bindReadyListener(root);
-        }
-    
-        bindReadyListener(root) {
-            if(document.readyState === "loading" || document.readyState === "interactive") { // DOMContentLoaded
-                document.addEventListener("readystatechange", () => {
-                    if(document.readyState === "complete")
-                        this.init(root);
-                });
-            } else {
-                this.init(root);
+        useValue(value, appName) {
+            if (Util.isFunction(value)) {
+                value = value(value);
             }
-        }
+            const ref = this.valueRefGenerator.next();
+            this.values.set(ref, value);
     
-        /**
-         * Initialize the Application
-         * @param {string} root 
-         */
-        init(root) {
-            this.root = Util.isEmpty(root) ? Tree.getBody() : Tree.getFirst(root);
-            this.renderer = new RMEElemRenderer(this.root);
-            this.ready = true;
-            this.refreshApp();
-        }
+            const getter = () => this.values.get(ref);
+            const setter = (next, update) => {
+                if (Util.isFunction(next)) {
+                    next = next(getter());
+                }
     
-        refreshApp() {
-            if (this.ready) {
-                if (this.refreshQueue)
-                    Util.clearTimeout(this.refreshQueue);
-
-                this.refreshQueue = Util.setTimeout(() => {
-                    let freshStage = Template.isTemplate(this.rawStage) ? Template.resolve(this.rawStage) : this.rawStage.duplicate();
-    
-                    if (Util.notEmpty(this.router)) {
-                        let state = this.router.getCurrentState();
-                        if (Util.notEmpty(state.current)) {
-                            let selector = state.root;
-                            let element = state.current;
-                            if (RMETemplateFragmentHelper.isFragment(element)) {
-                                const fragment = {};
-                                fragment[state.rootElem.toLiteralString()] = {
-                                    ...RMETemplateFragmentHelper.resolveFragmentValue(element, fragment)
-                                };
-                                freshStage.getFirst(selector).replace(Template.resolve(fragment));
-                            } else {
-                                freshStage.getFirst(selector).append(element);
-                            }
-                            if (Util.notEmpty(state.onAfter)) this.afterRefreshCallQueue.push(state.onAfter);
-                        }
-                    }
-
-                    if (this.oldStage.toString() !== freshStage.toString()) {
-                        this.oldStage = this.renderer.merge(this.oldStage, freshStage);
-                    }
-                    this.refreshAppDone();
-                    Util.clearTimeout(this.refreshQueue);
-                });
-            }
-        }
-
-        refreshAppDone() {
-            this.afterRefreshCallQueue.forEach(callback => callback());
-            this.afterRefreshCallQueue = [];
-        }
-
-        addAfterRefreshCallback(callback) {
-            if(Util.isFunction(callback)) {
-                this.afterRefreshCallQueue.push(callback)
-            }
-        }
-
-        /**
-         * Function takes three parameters that enable setting state for components.
-         * If only one parameter is given then the parameter must be an object or a function. 
-         * The object should define a component name and its values as follows. ({refName: {key: val, key: val}}) and
-         * the function should return a object describing the component respectively.
-         * 
-         * If two parameters are given then the first parameter is a component name
-         * and the value parameter should describe the component state object as follows. (refName, {key: val, key: val}).
-         * The value parameter may also be a function that returns the component state object respectively.
-         * 
-         * The last parameter update is a boolean value that only if explicitly set to false then the app is not updated
-         * after setting the state has occured.
-         * 
-         * This function will store the state into this application instance state. 
-         * @param {*} refName stateRef.
-         * @param {*} value new state to set.
-         * @param {boolean} update if set to false rerender wont happen after set state.
-         */
-        setState(refName, value, update) {
-            if (Util.isString(refName) && Util.isFunction(value)) {
-                this.state[refName] = value(this.state[refName]);
-            } else if (Util.isString(refName) && Util.isObject(value)) {
-                this.state[refName] = value;
-            } else {
-                let state = {};
-                if (Util.isFunction(refName))
-                    state = refName(this.state);
-                else if (Util.isObject(refName))
-                    state = refName;
-
-                    for (let p in state) {
-                        if (state.hasOwnProperty(p))
-                            this.state[p] = state[p];
-                    }
-            }
-
-            if (update !== false)
-                this.refreshApp();
-        }
-    
-        /**
-         * Function takes one optional parameter. If refName is given then only a state of a component referred by the refName is given. 
-         * Otherwise whole application state of this application instance is given.
-         * @param {string} refName 
-         */
-        getState(refName) {
-            if(Util.isString(refName)) {
-                return !Util.isEmpty(this.state[refName]) ? this.state[refName] : {};
-            } else if(Util.isEmpty(refName)) {
-                return this.state;
-            }
-        }
-    
-        /**
-         * Function takes one optional parameter. If refName is given then only a state of a component referred by the refName is checked.
-         * Otherwise whole application state of this application instance is checked.
-         * @param {*} refName String or props object
-         * @returns True if state empty otherwise false.
-         */
-        isStateEmpty(refName) {
-            refName = Util.isString(refName) ? refName : refName.stateRef;
-            return this.recursiveCheckMapIsEmpty(Util.isEmpty(refName) ? this.state : this.state[refName]);
-        }
-
-        recursiveCheckMapIsEmpty(map) {
-            for (let key in map) {
-                if (map.hasOwnProperty(key)) {
-                    if (Util.notEmpty(map[key]))
-                        return false;
-                    if (Util.isObject(map[key]))
-                        this.recursiveCheckMapIsEmpty(map[key]);
+                this.values.set(ref, next);
+                
+                if (update !== false) {
+                    RMEAppManager.getOrDefault(appName).refresh();
                 }
             }
-            return true;
+            return [getter, setter];
         }
-    
-        /**
-         * Function takes two optional parameters. If refName is given then only a state of the component with the refName is cleared otherwise 
-         * whole application state of this application instance is cleared. The application is updated unless the update parameter is 
-         * explicitly set false.
-         * @param {*} refName String or props object 
-         * @param {boolean} update 
-         */
-        clearState(refName, update) {
-            refName = Util.isString(refName) ? refName : refName.stateRef;
-            this.recursiveClearMap(this.state[refName] || this.state);
-    
-            if(update !== false) {
-                this.refreshApp();
-            }
-        }
-    
-        recursiveClearMap(map) {
-            Object.keys(map).forEach(key => {
-                if (Util.isArray(map[key]))
-                    map[key] = [];
-                else if (Util.isObject(map[key]))
-                    this.recursiveClearMap(map[key])
-                else
-                    map[key] = '';
-            });
-        }
-    
-        /**
-         * Function takes three parameters. If the first parameter is string then the second parameter must be an object or a function.
-         * The first parameter refName is a component name and the second parameter is the state of the component as follows: (compName, {key: val, key: val})
-         * or if the second parameter is a function then the function should return the changed state of the component in an object respectively.
-         * If the first parameter is an object or a function then the second parameter is omitted. 
-         * In this case the object must contain a component name and the changed state of the component as follows: ({compName: {val: key, val: key}}).
-         * If the first parameter is a function then the function should return the changed state of the component in an object respectively.
-         * The state is stored into this application instance state.
-         * @param {string} refName 
-         * @param {object} value 
-         * @param {boolean} update
-         */
-        mergeState(refName, value, update) {
-            let newState = {};
-            if (Util.isString(refName) && Util.isFunction(value)) {
-                newState[refName] = value(this.state[refName]);
-            } else if (Util.isString(refName) && Util.isObject(value)) {
-                newState[refName] = value;
-            } else {
-                let state = {};
-                if (Util.isFunction(refName))
-                    state = refName(this.state);
-                else if (Util.isObject(refName))
-                    state = refName;
-
-                for (let p in state) {
-                    if (state.hasOwnProperty(p))
-                        newState[p] = state[p]
-                }
-            }
-            this.recursiveMergeState(this.state, newState);
-            if (update !== false)
-                this.refreshApp();
-        }
-    
-        recursiveMergeState(oldMap, newMap) {
-            for(let key in newMap) {
-                if(newMap.hasOwnProperty(key)) {
-                    if(Util.isArray(oldMap[key]) && !Util.isArray(newMap[key]))
-                        oldMap[key].push(newMap[key]);
-                    else if(Util.isArray(oldMap[key]) && Util.isArray(newMap[key]))
-                        oldMap[key] = oldMap[key].concat(newMap[key]);
-                    else if(Util.isObject(oldMap[key]) && Util.isObject(newMap[key]))
-                        this.recursiveMergeState(oldMap[key], newMap[key]);
-                    else
-                        oldMap[key] = newMap[key];
-                }
-            }
-        }
-    
-        setRouter(router) {
-            this.router = router;
-        }
-    
     }
-
-    return {
-        name: App.name,
-        root: App.root,
-        create: App.create,
-        get: App.get,
-        component: App.component,
-        setState: App.setState,
-        getState: App.getState,
-        clearState: App.clearState,
-        isStateEmpty: App.isStateEmpty,
-        mergeState: App.mergeState,
+    
+    class RefGenerator {
+        constructor(feed) {
+            this.feed = feed || "";
+            this.seq = 0;
+        }
+    
+        next() {
+            const ref = this.feed+this.seq;
+            this.seq++
+            return ref;
+        }
     }
-}());
+    
+    const valueStore = new ValueStore();
+
+    return valueStore;
+
+})();
+
 
 
 
@@ -446,36 +180,24 @@ let App = (function() {
  */
 const createApp = (function() {
 
-    return (selector, component, appName) => {
-        if (component.valueOf().name.length === 0) {
-            throw new Error('The app function must be a named function.');
+    const matchSelector = (key) => {
+        let match = key.match(/#[a-zA-Z-0-9\-]+/); // id
+        if (!match) {
+            match = key.match(/\.[a-zA-Z-0-9\-]+/); // class
         }
-        if (Util.isFunction(component) && !RMEComponentManager.hasComponent(component.valueOf().name))
-            Component(component);
-
-        return App.name(appName).root(selector).create({[component.valueOf().name]: {}});
+        return match ? match.join() : undefined;
     }
 
-})();
+    return (template) => {
+        if (!Util.isObject(template)) {
+            throw new Error('The app creation template must be an object.');
+        }
+        const selector = matchSelector(Object.keys(template).shift());
+        if (Util.isEmpty(selector)) {
+            throw new Error('The root selector could not be parsed from the template. Selector should be type an #id or a .class');
+        }
 
-
-/**
- * The useState function is a srhotcut function to set application component state.
- * @param {*} refName string, orbject or function. String is the stateRef. Object is the new state object.
- * Function receives a previous state as parameter and returns a new state object.
- * @param {*} value function or object. Object is the new state. Function receives a previous state as 
- * parameter and returns a new state object.
- * @param {*} update optional string or boolean. If string then works as appName otherwise works as normal.
- * @param {string} appName optional if not set default app is used .
- * @returns the new state
- */
-const useState = (function() {
-
-    return (refName, value, update, appName) => {
-        const name = Util.isString(update) ? update : appName;
-        const stateRef = Util.isString(refName) ? refName : refName.stateRef;
-        App.get(name).setState(stateRef, value, update);
-        return App.get(name).getState(stateRef);
+        return RMEAppBuilder.root(selector).create(Object.values(template).shift());
     }
 
 })();
@@ -497,29 +219,166 @@ const useValue = (function() {
 
 
 /**
- * Keeps app instances in memory
+ * Keeps RME App instances in memory
  */
-const AppManager = (function() {
+const RMEAppManager = (function() {
 
-    class AppManager {
-        constructor() {
-            this.apps = {};
+    let seq = 0;
+    const prefix = 'app';
+    const [getFrom, setTo] = useValue({});
+
+    /**
+     * Set application instance in to the manager
+     * @param {string} name 
+     * @param {*} value 
+     */
+    const set = (name, value) => 
+        setTo(store => ({
+            ...store,
+            [name]: value
+        }), false);
+
+    /**
+     * Get application instance from the store by name
+     * @param {string} name 
+     * @returns Application instance
+     */
+    const get = (name) => getFrom()[name];
+
+    /**
+     * Get application instance by name or return default application instance.
+     * The default application instance is returned if the given name parameter is empty.
+     * @param {string} name 
+     * @returns Application instance
+     */
+    const getOrDefault = (name) => Util.notEmpty(name) ? get(name) : get(`${prefix}0`);
+
+    /**
+     * Returns an array containing all application instances.
+     * @returns Array
+     */
+    const getAll = () => Object.values(getFrom());
+
+    /**
+     * Creates a next available application name.
+     * @returns Application name
+     */
+    const createName = () => {
+        while (Util.notEmpty(get(prefix + seq))) {
+            seq++;
         }
+        return prefix + seq;
+    }
 
-        set(name, value) {
-            this.apps[name] = value;
+    return {
+        set,
+        get,
+        getAll,
+        createName,
+        getOrDefault
+    }
+
+})();
+
+
+
+const RMEAppBuilder = (function() {
+
+    const holder = {
+        appRoot: undefined
+    }
+
+    class Builder {
+
+        /**
+         * Function will set a root for an application. If the root is not set then body is used by default.
+         * @param {string} root 
+         * @returns Builder
+         */
+        static root(root) {
+            holder.appRoot = Util.isString(root) && root;
+            return Builder;
         }
-
-        get(name) {
-            return this.apps[name];
+    
+        /**
+         * Reset Builder settings
+         * @returns Builder
+         */
+        static reset() {
+            holder.appRoot = undefined;
+            return Builder;
+        }
+    
+        /**
+         * Function creates an application. The given parameter can either be a Template object or an Elem object.
+         * @param {*} object 
+         * @returns AppInstance
+         */
+        static create(object) {
+            if (!(RMETemplateResolver.isTemplate(object) || RMETemplateFragmentHelper.isFragment(object))) {
+                throw new Error('App template must start with a valid html tag or a fragment key');
+            }
+            const app = new AppInstance(RMEAppManager.createName(), holder.appRoot, object);
+            RMEAppManager.set(app.name, app);
+            Builder.reset();
+            return app;
         }
     }
 
-    const manager = new AppManager();
+    class AppInstance {
+        constructor(name, root, object) {
+            this.rawStage = object;
+            this.name = name;
+            this.root;
+            this.renderer;
+            this.oldStage = "";
+            this.ready = false;
+            this.refreshQueue;
+            this.bindReadyListener(root);
+        }
+    
+        bindReadyListener(root) {
+            ['loading','interactive'].includes(document.readyState) 
+                ? ready(() => this.init(root))
+                : this.init(root);
+        }
+    
+        /**
+         * Initialize the Application
+         * @param {string} root 
+         */
+        init(root) {
+            this.root = Util.isEmpty(root) ? Tree.getBody() : Tree.getFirst(root);
+            this.renderer = new RMEElemRenderer(this.root);
+            this.ready = true;
+            this.refresh();
+        }
+    
+        refresh() {
+            if (this.ready) {
+                if (this.refreshQueue) {
+                    Browser.clearTimeout(this.refreshQueue);
+                }
+                this.refreshQueue = Browser.setTimeout(() => {
+                    const freshStage = RMETemplateResolver.resolve({[this.root.toLiteralString()]: { ...this.rawStage }}, null, this.name);
 
-    return manager;
+                    if (this.oldStage !== freshStage.toString()) {
+                        this.oldStage = this.renderer.merge(freshStage).toString();
+                    }
+                    Browser.clearTimeout(this.refreshQueue);
+                });
+            }
+        }
+    }
 
-})();
+    return {
+        root: Builder.root,
+        create: Builder.create
+    }
+}());
+
+
+
 
 
 class RMEElemRenderer {
@@ -538,16 +397,37 @@ class RMEElemRenderer {
      * @param {object} newStage
      * @returns The merged stage.
      */
-    merge(oldStage, newStage) {
+    merge(newStage) {
+        this.updateEventListeners(this.root, newStage);
+
+        const [ oldChildren, newChildren ] = this.getChildren(this.root, newStage);
+
         if (Util.isEmpty(this.root.getChildren())) {
-            this.root.append(newStage);
-            this.mergedStage = newStage;
+            this.root.render(newChildren);
         } else {
-            this.render(this.root, oldStage, newStage, 0);
-            this.mergedStage = oldStage;
+            let i = 0;
+            while (i < newChildren.length || i < oldChildren.length) {
+                this.render(this.root, newStage, oldChildren[i], newChildren[i], i);
+                i++;
+            }
+            
             this.removeToBeRemoved();
         }
-        return this.mergedStage;
+
+        return this.root;
+    }
+
+    /**
+     * Get children of the oldNode and the newNode. Returns an array that contains two arrays where one is old children and another is new children
+     * @param {Elem} oldNode
+     * @param {Elem} newNode 
+     * @returns Array that contains two arrays
+     */
+    getChildren(oldNode, newNode) {
+        return [
+            Array.of(oldNode.getChildren()).flat(),
+            Array.of(newNode.getChildren()).flat()
+        ]
     }
 
     /**
@@ -557,13 +437,13 @@ class RMEElemRenderer {
      * @param {object} newNode 
      * @param {number} index 
      */
-    render(parent, oldNode, newNode, index) {
+    render(parent, newParent, oldNode, newNode, index) {
         if (!oldNode && newNode) {
             parent.append(newNode.duplicate());
         } else if (oldNode && !newNode) {
             this.tobeRemoved.push({parent: parent, child: this.wrap(parent.dom().children[index])});
         } else if (this.hasNodeChanged(oldNode, newNode)) {
-            if (oldNode.getTagName() !== newNode.getTagName() || (oldNode.dom().children.length > 0 || newNode.dom().children.length > 0)) {
+            if (oldNode.getTagName() !== newNode.getTagName() || (oldNode.dom().children.length > 0 || newNode.dom().children.length > 0)) {
                 this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
             } else {
                 oldNode.setProps({
@@ -572,15 +452,23 @@ class RMEElemRenderer {
                 });
             }
         } else {
-            this.updateEventListeners(oldNode, newNode);
+            if (parent.dom().children.length > newParent.dom().children.length) {
+                let i = 0;
+                const [ oldChildren, newChildren ] = this.getChildren(parent, newParent);
+                while (i < newChildren.length) {
+                    this.updateEventListeners(oldChildren[i], newChildren[i]);
+                    i++;
+                }
+            }
             
             let i = 0;
             let oldLength = oldNode ? oldNode.dom().children.length : 0;
             let newLength = newNode ? newNode.dom().children.length : 0;
             
-            while(i < newLength || i < oldLength) {
+            while (i < newLength || i < oldLength) {
                 this.render(
                     this.wrap(parent.dom().children[index]),
+                    this.wrap(newParent.dom().children[index]),
                     oldNode ? this.wrap(oldNode.dom().children[i]) : null,
                     newNode ? this.wrap(newNode.dom().children[i]) : null,
                     i);
@@ -648,7 +536,7 @@ class RMEElemRenderer {
      * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
      */
     hasNodeChanged(oldNode, newNode) {
-        return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && oldNode.getProps(true) !== newNode.getProps(true);
+        return !!oldNode && !!newNode && oldNode.getProps(true) !== newNode.getProps(true);
     }
 
     /**
@@ -657,76 +545,72 @@ class RMEElemRenderer {
      * @returns the Wrapped Elem object.
      */
     wrap(node) {
-        if (!Util.isEmpty(node))
-            return Elem.wrap(node);
+        if (node) return Elem.wrap(node);
     }
 
 }
 
 
 /**
- * Manages between component shareable values.
- */
-const ValueStore = (function() {
-
-    class ValueStore {
-        constructor() {
-            this.values = {};
-            this.valueRefGenerator = new RefGenerator('val');
-        }
-    
-        /**
-         * The function will set the given value to the app instance and return a getter and a setter function
-         * for the given value. Values can be shared and used in between any component.
-         * @param {*} value 
-         * @returns An array containing the getter and the setter functions for the given value.
-         */
-        useValue(value, appName) {
-            if (Util.isFunction(value)) {
-                value = value(value);
-            }
-            const ref = this.valueRefGenerator.next();
-            this.values[ref] = value;
-    
-            const getter = () => this.values[ref];
-            const setter = (next, update) => {
-                if (Util.isFunction(next)) {
-                    next = next(getter());
-                }
-    
-                this.values[ref] = next;
-                
-                if (update !== false) {
-                    App.get(appName).refresh();
-                }
-            }
-            return [getter, setter];
-        }
-    }
-    
-    class RefGenerator {
-        constructor(feed) {
-            this.feed = feed || "";
-            this.seq = 0;
-        }
-    
-        next() {
-            const ref = this.feed+this.seq;
-            this.seq++
-            return ref;
-        }
-    }
-    
-    const valueStore = new ValueStore();
-
-    return valueStore;
-
-})();
-
-/**
  * Browser class contains all the rest utility functions which JavaScript has to offer from Window, Navigator, Screen, History, Location objects.
  */
 class Browser {
+
+    /**
+     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The timeout object.
+     */
+    static setTimeout(callback, milliseconds, ...params) {
+        return window.setTimeout(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes a timeout that was created by setTimeout method.
+     * @param {object} timeoutObject
+     */
+    static clearTimeout(timeoutObject) {
+        window.clearTimeout(timeoutObject);
+    }
+
+    /**
+     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
+     * @param {function} callback
+     * @param {number} milliseconds
+     * @param {*} params
+     * @returns The interval object.
+     */
+    static setInterval(callback, milliseconds, ...params) {
+        return window.setInterval(callback, milliseconds, params);
+    }
+
+    /**
+     * Removes an interval that was created by setInterval method.
+     */
+    static clearInterval(intervalObject) {
+        window.clearInterval(intervalObject);
+    }
+
+    /**
+     * Encodes a string to Base64.
+     * @param {string} string
+     * @returns The base64 encoded string.
+     */
+    static toBase64(string) {
+        return window.btoa(string);
+    }
+
+    /**
+     * Decodes a base 64 encoded string.
+     * @param {string} string
+     * @returns The base64 decoded string.
+     */
+    static fromBase64(string) {
+        return window.atob(string);
+    }
+
     /**
      * Scroll once to a given location (xPos, yPos)
      * @param {number} xPos
@@ -1162,59 +1046,73 @@ class Browser {
 
 
 
-
-/**
- * AppSetInitialStateJob is used internally to set a state for components in a queue. An application
- * instance might have not been created at the time when components are created so the queue will wait 
- * until the application instance is created and then sets the state for the components in the queue.
- */
-const AppSetInitialStateJob = (function () {
-    
-    class InitStateJob {
-        constructor() {
-            this.updateJob;
-            this.updateJobMap = {};
-            this.appNameList = [];
-        }
-
-        resolveUpdateJobs() {
-            if (!this.updateJob)
-                this.updateJob = Util.setInterval(() => {
-                    const appName = this.getAppNameIfPresent();
-                    if (!Util.isEmpty(appName)) {
-                        this.updateJobMap[appName].forEach(job => job());
-                        this.updateJobMap[appName] = [];
-                        this.appNameList = this.appNameList.filter(app => app !== appName);
-
-                        if (this.appNameList.length === 0) {
-                            Util.clearInterval(this.updateJob);
-                            this.updateJob = undefined;
-                        }
-                    }
-                });
-        }
-
-        getAppNameIfPresent() {
-            return this.appNameList.find(appName => App.get(appName === "undefined" ? undefined : appName));
-        }
-
-        addToQueue(appName, job) {
-            let updateQueue = this.updateJobMap[appName] || [];
-            updateQueue.push(job);
-            this.updateJobMap[appName] = updateQueue;
-            this.appNameList = Object.keys(this.updateJobMap);
-            this.resolveUpdateJobs();
-        }
+class RMEAppComponent {
+    constructor(renderHook, appName, parentContext) {
+        this.store = useValue({}, appName);
+        this.appName = appName;
+        this.parentContext = parentContext;
+        this.shouldUpdate = true;
+        this.renderHook = renderHook;
+        this.afterRenderTasks = [];
+        this.prevProps = {}
+        this.prevResult;
     }
 
-    const initStateJob = new InitStateJob();
+    render(props) {
+        const [getState, setState] = this.store;
 
-    return {
-        addToQueue: initStateJob.addToQueue.bind(initStateJob),
-        resolveUpdateJobs: initStateJob.resolveUpdateJobs.bind(initStateJob)
+        const nextProps = {
+            ...props,
+            ...getState()
+        }
+
+        const ops = {
+            setState,
+            updateState: (next, update) => {
+                setState(state => ({
+                    ...state,
+                    ...(Util.isFunction(next) ? next(getState()) : next)
+                }), update);
+            },
+            isStateEmpty: () => Object.keys(getState()).length === 0,
+            shouldComponentUpdate: (shouldUpdateHook) => {
+                if (Util.isFunction(shouldUpdateHook)) {
+                    this.shouldUpdate = shouldUpdateHook(nextProps, this.prevProps) !== false;
+                }
+            },
+            asyncTask: (asyncTaskHook) => {
+                if (Util.isFunction(asyncTaskHook)) {
+                    this.afterRenderTasks.push(asyncTaskHook)
+                }
+            }
+        };
+
+        let result;
+
+        if (this.shouldUpdate) {
+            result = this.renderHook(nextProps, ops);
+            result = RMETemplateResolver.isTemplate(result) ? RMETemplateResolver.resolve(result, null, this.appName, this.parentContext) : result;
+        } else {
+            result = this.prevResult;
+        }
+
+        this.prevResult = result;
+        this.prevProps = nextProps;
+
+        if (this.afterRenderTasks.length > 0) {
+            Browser.setTimeout(async () => {
+                this.afterRenderTasks.forEach(async hook => hook());
+                this.afterRenderTasks.length = 0;
+            });
+        }
+
+        return result;
     }
 
-})();
+
+}
+
+
 
 /**
  * Component resolves comma separated list of components that may be function or class.
@@ -1225,43 +1123,9 @@ const AppSetInitialStateJob = (function () {
  */
 const Component = (function() {
 
-    const resolveInitialState = (initialState, stateRef, appName) => {
-        if (!Util.isEmpty(App.get(appName))) {
-            App.get(appName).setState(stateRef, initialState, false);
-        } else {
-            AppSetInitialStateJob.addToQueue(appName, () => App.get(appName).setState(stateRef, initialState));
-        }
-    }
-
-    const bindGetState = (component, appName) => {
-        const stateGetter = Util.isEmpty(appName) ? () => (state) => App.getState(state) : (state) => App.get(appName).getState(state);
-        RMEComponentManager.addComponent(component, stateGetter);
-    }
-
     const resolveComponent = component => {
-        if (Util.isObject(component)) {
-            bindGetState({[component.name]: component.comp}, component.appName);
-            resolveInitialState(component.initialState, component.name+component.stateRef, component.appName);
-        } else if (Util.isFunction(component) && Util.isEmpty(component.prototype) || Util.isEmpty(component.prototype.render)) {
-            RMEComponentManager.addComponent({[component.valueOf().name]: component});
-        } else if (Util.isFunction(component) && !Util.isEmpty(component.prototype.render)) {
-            const comp = new component();
-            bindGetState({[component.valueOf().name]: comp.render}, comp.appName);
-            let state = {};
-            if (!Util.isEmpty(comp.onBeforeCreate))
-                state.onBeforeCreate = comp.onBeforeCreate;
-            if (!Util.isEmpty(comp.shouldComponentUpdate))
-                state.shouldComponentUpdate = comp.shouldComponentUpdate;
-            if (!Util.isEmpty(comp.onAfterCreate))
-                state.onAfterCreate = comp.onAfterCreate;
-            if (!Util.isEmpty(comp.onAfterRender))
-                state.onAfterRender = comp.onAfterRender;
-            state = {
-                ...state,
-                ...comp.initialState
-            }
-            const ref = comp.stateRef || state.stateRef || '';
-            resolveInitialState(state, component.name+ref, comp.appName);
+        if (Util.isFunction(component)) {
+            RMEComponentManagerV2.addComponent(component.valueOf().name, component);
         }
     }
 
@@ -1272,68 +1136,6 @@ const Component = (function() {
 
 })();
 
-/**
- * A bindState function transfers a function component to a stateful component just like it was created 
- * using class or App class itself. The function receives three parameters. The function component,
- * an optional state object and an optinal appName.
- * Invoking examples:
- * Component(bindState(StatefulComponent));
- * Component(bindState(OtherComponent, { initialValue: 'initialText' }));
- * @param {function} component
- * @param {object} state
- * @param {string} appName
- */
-const bindState = (function() {
-
-    const getStateRef = state => {
-        return state && state.stateRef ? state.stateRef : '';
-    }
-
-    const removeStateRef = state => {
-        let obj = {
-            ...state
-        }
-        delete obj.stateRef
-        return obj;
-    }
-
-    return (component, state, appName) => ({
-        comp: component,
-        name: component.valueOf().name,
-        appName: appName,
-        stateRef: getStateRef(state),
-        initialState: {
-            ...removeStateRef(state)
-        }
-    })
-
-})();
-
-/**
- * The function will bind an array of getter functions for the component. The getters are invoked
- * when the component is invoked. The values returend by the getters are set in the component properties.
- * @param {*} component
- * @param {Array} mapper Value mapper
- */
-const bindGetters = (function() {
-
-    return (component, mapper) => {
-        let name;
-        if (Util.isFunction(component))
-            name = component.valueOf().name;
-        else if (Util.isObject(component)) {
-            name = component.name;
-        }
-
-        RMEComponentManager.bindGetters(name, mapper);
-
-        return component;
-    }
-
-})();
-
-
-
 
 
 
@@ -1341,223 +1143,39 @@ const bindGetters = (function() {
 /**
  * Manages RME components
  */
-const RMEComponentManager = (function() {
+const RMEComponentManagerV2 = (function() {
 
     class RMEComponentManager {
         constructor() {
-            this.components = {};
-            this.componentGetters = {};
+            this.componentFunctionMap = {};
+            this.componentInstanceMap = {};
         }
 
-        addComponent(component, props) {
-            if (Util.isFunction(component)) {
-                component = component.call();
-            }
-
-            Object.keys(component).forEach((p) => {
-                this.components[p] = {
-                    component: component[p], 
-                    update: Util.isFunction(props) ? props : undefined
-                };
-            });
-        }
-
-        getComponent(name, props) {
-            let comp = this.components[name];
-            if (!comp) {
-                throw new Error(`Cannot find a component: "${name}"`);
-            }
-            if (Util.notEmpty(props) && Util.isFunction(comp.update)) {
-                let stateRef = props.stateRef;
-                if (Util.isEmpty(props.stateRef))
-                    stateRef = name;
-                else if (props.stateRef.search(name) === -1)
-                    stateRef = `${name}${props.stateRef}`;
-
-                props["stateRef"] = stateRef;
-                const newProps = comp.update.call()(stateRef);
-                const nextProps = {...props, ...newProps}; // nextProps is created for the sake of shouldComponentUpdate
-                if (!nextProps.shouldComponentUpdate || nextProps.shouldComponentUpdate(nextProps) !== false) {
-                    props = this.extendProps(props, newProps);
-                }
-            }
-            if (Util.isEmpty(props))
-                props = {};
-
-            this.inflateGetterValues(name, props);
-
-            if (Util.notEmpty(props.onBeforeCreate) && Util.isFunction(props.onBeforeCreate))
-                props.onBeforeCreate.call(props, props);
-            
-            let ret = comp.component.call(props, props);
-            
-            if (Template.isTemplate(ret))
-                ret = Template.resolve(ret);
-            
-            if (Util.notEmpty(props.onAfterCreate) && Util.isFunction(props.onAfterCreate))
-                props.onAfterCreate.call(props, ret, props);
-            
-            if (Util.notEmpty(this.defaultApp) && Util.notEmpty(props.onAfterRender) && Util.isFunction(props.onAfterRender))
-                this.defaultApp.addAfterRefreshCallback(props.onAfterRender.bind(ret, ret, props));
-
-            return ret;
-        }
-
-        inflateGetterValues(component, props) {
-            const mapper = this.getGetters(component);
-            if (Util.notEmpty(mapper)) {
-                const p = Object.keys(mapper)
-                .reduce((prev, curr) => {
-                    prev[curr] = Util.isFunction(mapper[curr]) ? mapper[curr]() : mapper[curr];
-                    return prev;
-                }, {});
-
-                this.extendProps(props, p);
-            }
-        }
-
-        extendProps(props, newProps) {
-            if (Util.notEmpty(newProps)) {
-                Object.keys(newProps).forEach(key => props[key] = newProps[key]);
-            }
-            return props;
-        }
-
-        /**
-         * Function checks if the given components exists or not
-         * @param {string} name 
-         * @returns True if the component exists.
-         */
         hasComponent(name) {
-            return Util.notEmpty(this.components[name.replace('component:', '')]);
+            return this.componentFunctionMap[name] !== undefined;
         }
 
-        bindGetters(component, getters) {
-            this.componentGetters[component] = getters;
+        addComponent(name, renderHook) {
+            if (!this.hasComponent(name)) {
+                this.componentFunctionMap[name] = renderHook;
+            }
         }
 
-        getGetters(component) {
-            return this.componentGetters[component];
+        getComponent(name, props, parentContext = '', appName = '') {
+            let component = this.componentInstanceMap[appName + name + parentContext];
+            if (!component) {
+                component = new RMEAppComponent(this.componentFunctionMap[name], appName, parentContext);
+                this.componentInstanceMap[appName + name + parentContext] = component;
+            }
+            
+            return component.render(props);
         }
+
     }
 
-    const manager = new RMEComponentManager();
-
-    return manager;
+    return new RMEComponentManager();
 
 })();
-
-
-let Cookie = (function() {
-    /**
-     * Cookie interface offers an easy way to get, set or remove cookies in application logic.
-     * The Cookie interface handles Cookie objects under the hood. The cookie object may hold following values:
-     * 
-     * {
-     *    name: "name",
-     *    value: "value",
-     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-     *    cookiePath: "cookiePath absolute dir",
-     *    cookieDomain: "cookieDomain e.g example.com",
-     *    setSecureBoolean: true|false
-     * }
-     * 
-     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-     */
-    class Cookie {
-        /**
-         * Get a cookie by name. If the cookie is found a cookie object is returned otherwise null.
-         * 
-         * @param {String} name 
-         * @returns cookie object
-         */
-        static get(name) {
-            if(navigator.cookieEnabled) {
-                var retCookie = null;
-                var cookies = document.cookie.split(";");
-                var i = 0;
-                while(i < cookies.length) {
-                    var cookie = cookies[i];
-                    var eq = cookie.search("=");
-                    var cn = cookie.substr(0, eq).trim();
-                    var cv = cookie.substr(eq + 1, cookie.length).trim();
-                    if(cn === name) {
-                        retCookie = new CookieInstance(cn, cv);
-                        break;
-                    }
-                    i++;
-                }
-                return retCookie;
-            }
-        }
-        /**
-         * Set a cookie. Name and value parameters are essential on saving the cookie and other parameters are optional.
-         * 
-         * @param {string} name
-         * @param {string} value
-         * @param {string} expiresDate
-         * @param {string} cookiePath
-         * @param {string} cookieDomain
-         * @param {boolean} setSecureBoolean
-         */
-        static set(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-            if(navigator.cookieEnabled) {
-                document.cookie = CookieInstance.create(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean).toString();
-            }
-        }
-        /**
-         * Remove a cookie by name. Method will set the cookie expired and then remove it.
-         * @param {string} name
-         */
-        static remove(name) {
-            var co = Cookie.get(name);
-            if(!Util.isEmpty(co)) {
-                co.setExpired();
-                document.cookie = co.toString();
-            }
-        }
-    }
-
-    /**
-     * Cookie object may hold following values:
-     *
-     * {
-     *    name: "name",
-     *    value: "value",
-     *    expiresDate: "expiresDate e.g. Date.toUTCString()",
-     *    cookiePath: "cookiePath absolute dir",
-     *    cookieDomain: "cookieDomain e.g example.com",
-     *    setSecureBoolean: true|false
-     * }
-     * 
-     * The cookie object also has methods toString() and setExpired(). Notice that setExpired() method wont delete the cookie but merely 
-     * sets it expired. To remove a cookie you should invoke remove(name) method of the Cookie interface.
-     */
-    class CookieInstance {
-        constructor(name, value, expiresDate, cookiePath, cookieDomain, setSecureBoolean) {
-            this.cookieName = !Util.isEmpty(name) && Util.isString(name) ? name.trim() : "";
-            this.cookieValue = !Util.isEmpty(value) && Util.isString(value) ? value.trim() : "";
-            this.cookieExpires = !Util.isEmpty(expiresDate) && Util.isString(expiresDate) ? expiresDate.trim() : "";
-            this.cookiePath = !Util.isEmpty(cookiePath) && Util.isString(cookiePath) ? cookiePath.trim() : "";
-            this.cookieDomain = !Util.isEmpty(cookieDomain) && Util.isString(cookieDomain) ? cookieDomain.trim() : "";
-            this.cookieSecurity = !Util.isEmpty(setSecureBoolean) && Util.isBoolean(setSecureBoolean) ? "secure=secure" : "";
-        }
-
-        setExpired() {
-            this.cookieExpires = new Date(1970,0,1).toString();
-        }
-
-        toString() {
-            return this.cookieName+"="+this.cookieValue+"; expires="+this.cookieExpires+"; path="+this.cookiePath+"; domain="+this.cookieDomain+"; "+this.cookieSecurity;
-        }
-        static create(name, value, expires, cpath, cdomain, setSecure) {
-                return new CookieInstance(name, value, expires, cpath, cdomain, setSecure);
-        }
-    }
-
-    return Cookie;
-}());
 
 
 
@@ -1603,12 +1221,12 @@ const CSS = (function() {
 
     return (content, config) => {
         if (!hasStyles(config)) {
-            Tree.getHead().append({
+            Tree.getHead().append(RMETemplateResolver.resolve({
                 style: {
                     content,
                     ...config
                 }
-            });
+            }));
         } else if (!hasContent(content, config)) {
             const style = getStyles(config);
             if (!Util.isEmpty(style)) {
@@ -1619,431 +1237,6 @@ const CSS = (function() {
     }
 })();
 
-
-
-
-/**
- * RMEElemTemplater class is able to create a Template out of an Elem object.
- */
-class RMEElemTemplater {
-    constructor() {
-        this.instance;
-        this.template = {};
-        this.deep = true;
-    }
-
-    toTemplate(elem, deep) {
-        if(!Util.isEmpty(deep))
-            this.deep = deep;
-        this.resolve(elem, this.template);
-        return this.template;
-    }
-
-    /**
-     * Function is called recursively and resolves an Elem object and its children in recursion
-     * @param {object} elem 
-     * @param {object} parent 
-     */
-    resolve(elem, parent) {
-        let resolved = this.resolveElem(elem, this.resolveProps(elem));
-        for(let p in parent) {
-            if(parent.hasOwnProperty(p)) {
-                if(Util.isArray(parent[p]._rme_type_))
-                    parent[p]._rme_type_.push(resolved);
-                else
-                    this.extendMap(parent[p], resolved);
-            }
-        }
-
-        let i = 0;
-        let children = Util.isArray(elem.getChildren()) ? elem.getChildren() : [elem.getChildren()];
-        if(children && this.deep) {
-            while(i < children.length) {
-                this.resolve(children[i], resolved);
-                i++;
-            }
-        }
-        this.template = resolved;
-    }
-
-    extendMap(map, next) {
-        for(let v in next) {
-            if(next.hasOwnProperty(v)) {
-                map[v] = next[v];
-            }
-        }
-    }
-
-    /**
-     * Function will attach given properties into a given Elem and returns the resolved Elem.
-     * @param {object} elem 
-     * @param {object} props 
-     * @returns The resolved elem with attached properties.
-     */
-    resolveElem(elem, props) {
-        let el = {};
-        let children = elem.getChildren();
-        if(Util.isArray(children) && children.length > 1) {
-            let elTag = elem.getTagName().toLowerCase();
-            let elName = this.resolveId(elTag, props);
-            elName = this.resolveClass(elName, props);
-            elName = this.resolveAttrs(elName, props);
-            el[elName] = {
-                _rme_type_: [],
-                _rme_props_: props
-            };
-        } else {
-            el[elem.getTagName().toLowerCase()] = props
-        }
-        return el;
-    }
-
-    /**
-     * Function will place an ID attribute into an element tag if the ID attribute is found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with the ID or without.
-     */
-    resolveId(tag, props) {
-        if(props.id)
-            return tag+"#"+props.id;
-        else
-            return tag;
-    }
-
-    /**
-     * Function will place a class attribute into an element tag if the class attribute is found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with the classes or without.
-     */
-    resolveClass(tag, props) {
-        if(props.class)
-            return tag+"."+props.class.replace(/ /g, ".");
-        else
-            return tag;
-    }
-
-    /**
-     * Function will resolve all other attributes and place them into an element tag if other attributes are found.
-     * @param {string} tag 
-     * @param {object} props 
-     * @returns The element tag with other attributes or without.
-     */
-    resolveAttrs(tag, props) {
-        let tagName = tag;
-        for (let p in props) {
-            if (props.hasOwnProperty(p) && p !== 'id' && p !== 'class' && p.indexOf('on') !== 0) {
-                tagName += `[${p}=${props[p]}]`
-            }
-        }
-        return tagName;
-    }
-
-    /**
-     * Resolves a given Elem object and returns its properties in an object.
-     * @param {object} elem 
-     * @returns The properties object of the given element.
-     */
-    resolveProps(elem) {
-        let props = {};
-        let attributes = elem.dom().attributes;
-        let a = 0;
-        if(attributes) {
-            while(a < attributes.length) {
-                props[this.resolveAttributeNames(attributes[a].name)] = attributes[a].value;
-                a++;
-            }
-        }
-
-        if(elem.dom().hasChildNodes() && elem.dom().childNodes[0].nodeType === 3) {
-            props["text"] = elem.getText();
-        }
-
-        for(let p in elem.dom()) {
-            if(p.indexOf("on") !== 0 || Util.isEmpty(elem.dom()[p]))
-                continue;
-            else
-                props[this.resolveListeners(p)] = elem.dom()[p];
-        }
-
-        return props;
-    }
-
-    /**
-     * Resolves a html data-* attributes by removing '-' and setting the next character to uppercase. 
-     * Resolves an aria* attirubtes by setting the next character to uppercase.
-     * If the attribute is not a data-* or an aria attribute then it is directly returned.
-     * @param {string} attrName 
-     * @returns Resolved attribute name.
-     */
-    resolveAttributeNames(attrName) {
-        if (attrName.indexOf('data') === 0 && attrName.length > 'data'.length) {
-            while(attrName.search('-') > -1) {
-                attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search('-') + 1).toUpperCase());
-            }
-            return attrName
-        } else if (attrName.indexOf('aria') === 0) {
-            return attrName.replace(attrName.charAt('aria'.length), attrName.charAt('aria'.length).toUpperCase());
-        } else {
-            return attrName;
-        }
-    }
-
-    resolveListeners(name) {
-        switch(name) {
-            case "onanimationstart":
-                return "onAnimationStart";
-            case "onanimationiteration":
-                return "onAnimationIteration";
-            case "onanimationend":
-                return "onAnimationEnd";
-            case "ontransitionend":
-                return "onTransitionEnd";
-            case "ondrag":
-                return "onDrag"
-            case "ondragend":
-                return "onDragEnd";
-            case "ondragenter":
-                return "onDragEnter";
-            case "ondragover":
-                return "onDragOver";
-            case "ondragstart":
-                return "onDragStart";
-            case "ondrop":
-                return "onDrop"; 
-            case "onclick":
-                return "onClick";
-            case "ondblclick":
-                return "onDoubleClick";
-            case "oncontextmenu":
-                return "onContextMenu";
-            case "onmousedown":
-                return "onMouseDown";
-            case "onmouseenter":
-                return "onMouseEnter";
-            case "onmouseleave":
-                return "onMouseLeave";
-            case "onmousemove":
-                return "onMouseMove";
-            case "onmouseover":
-                return "onMouseOver";
-            case "onmouseout":
-                return "onMouseOut";
-            case "onmouseup":
-                return "onMouseUp";
-            case "onwheel":
-                return "onWheel";
-            case "onscroll":
-                return "onScroll";
-            case "onresize":
-                return "onResize";
-            case "onerror":
-                return "onError";
-            case "onload":
-                return "onLoad";
-            case "onunload":
-                return "onUnload";
-            case "onbeforeunload":
-                return "onBeforeUnload";
-            case "onkeyup":
-                return "onKeyUp";
-            case "onkeydown":
-                return "onKeyDown";
-            case "onkeypress":
-                return "onKeyPress";
-            case "oninput":
-                return "onInput";
-            case "onchange":
-                return "onChange";
-            case "onsubmit":
-                return "onSubmit";
-            case "onselect":
-                return "onSelect";
-            case "onreset":
-                return "onReset"
-            case "onfocus":
-                return "onFocus";
-            case "onfocusin":
-                return "onFocusIn";
-            case "onfocusout":
-                return "onFocusOut";
-            case "onblur":
-                return "onBlur";
-            case "oncopy":
-                return "onCopy";
-            case "oncut":
-                return "onCut";
-            case "onpaste":
-                return "onPaste";
-            case "onabort":
-                return "onAbort";
-            case "onwaiting":
-                return "onWaiting";
-            case "onvolumechange":
-                return "onVolumeChange";
-            case "ontimeupdate":
-                return "onTimeUpdate";
-            case "onseeking":
-                return "onSeeking";
-            case "onseekend":
-                return "onSeekEnd";
-            case "onratechange":
-                return "onRateChange";
-            case "onprogress":
-                return "onProgress";
-            case "onloadmetadata":
-                return "onLoadMetadata";
-            case "onloadeddata":
-                return "onLoadedData";
-            case "onloadstart":
-                return "onLoadStart";
-            case "onplaying":
-                return "onPlaying";
-            case "onplay":
-                return "onPlay";
-            case "onpause":
-                return "onPause";
-            case "onended":
-                return "onEnded";
-            case "ondurationchange":
-                return "onDurationChange";
-            case "oncanplay":
-                return "onCanPlay";
-            case "oncanplaythrough":
-                return "onCanPlayThrough";
-            case "onstalled":
-                return "onStalled";
-            case "onsuspend":
-                return "onSuspend";
-            case "onpopstate":
-                return "onPopState";
-            case "onstorage":
-                return "onStorage";
-            case "onhashchange":
-                return "onHashChange";
-            case "onafterprint":
-                return "onAfterPrint";
-            case "onbeforeprint":
-                return "onBeforePrint";
-            case "onpagehide":
-                return "onPageHide";
-            case "onpageshow":
-                return "onPageShow";
-        }
-    }
-
-    toLiteralString(elem) {
-        const props = this.resolveProps(elem);
-        let string = this.resolveId(elem.getTagName().toLowerCase(), props);
-        string = this.resolveClass(string, props);
-        string = this.resolveAttrs(string, props);
-        return string;
-    }
-
-    /**
-     * Function by default resolves a given element and its' children and returns template representation of the element.
-     * @param {object} elem 
-     * @param {boolean} deep 
-     * @returns Template object representation of the Elem
-     */
-    static toTemplate(elem, deep) {
-        return RMEElemTemplater.getInstance().toTemplate(elem, deep);
-    }
-
-    /**
-     * Function resolves and returns properties of a given Elem object.
-     * @param {object} elem 
-     * @returns The properties object of the given Elem.
-     */
-    static getElementProps(elem) {
-        return RMEElemTemplater.getInstance().resolveProps(elem);
-    }
-
-    static toLiteralString(elem) {
-        return RMEElemTemplater.getInstance().toLiteralString(elem);
-    }
-
-    static getInstance() {
-        if(!this.instance)
-            this.instance = new RMEElemTemplater();
-        return this.instance;
-    }
-}
-
-
-
-const EventPipe = (function() {
-
-    /**
-     * EventPipe class can be used to multicast and send custom events to registered listeners.
-     * Each event in an event queue will be sent to each registerd listener.
-     */
-    class EventPipe {
-        constructor() {
-            this.eventsQueue = [];
-            this.callQueue = [];
-            this.loopTimeout;
-        }
-
-        containsEvent() {
-            return this.eventsQueue.find(ev => ev.type === event.type);
-        }
-
-        /**
-         * Function sends an event object though the EventPipe. The event must have a type attribute
-         * defined otherwise an error is thrown. 
-         * Example defintion of the event object. 
-         * { 
-         *   type: 'some event',
-         *   ...payload
-         * }
-         * If an event listener is defined the sent event will be received on the event listener.
-         * @param {object} event 
-         */
-        send(event) {
-            if (Util.isEmpty(event.type))
-                throw new Error('Event must have type attribute.');
-            
-            if (!this.containsEvent())
-                this.eventsQueue.push(event);
-
-            this.loopEvents();
-        }
-
-        loopEvents() {
-            if (this.loopTimeout)
-                Util.clearTimeout(this.loopTimeout);
-
-            this.loopTimeout = Util.setTimeout(() => {
-                this.callQueue.forEach(eventCallback => 
-                    this.eventsQueue.forEach(ev => eventCallback(ev)));
-
-                this.eventsQueue = [];
-                this.callQueue = [];
-            });
-        }
-
-        /**
-         * Function registers an event listener function that receives an event sent through the
-         * EventPipe. Each listener will receive each event that are in an event queue. The listener
-         * function receives the event as a parameter.
-         * @param {function} eventCallback 
-         */
-        receive(eventCallback) {
-            this.callQueue.push(eventCallback);
-        }
-
-    }
-
-    const eventPipe = new EventPipe();
-
-    return {
-        send: eventPipe.send.bind(eventPipe),
-        receive: eventPipe.receive.bind(eventPipe)
-    }
-
-})();
 
 
 let Elem = (function() {
@@ -2062,10 +1255,10 @@ let Elem = (function() {
         constructor(type) {
             if(Util.isString(type)) {
                 this.html = document.createElement(type);
-            } else if(type.nodeType !== undefined && type.ownerDocument !== undefined && type.nodeType >= 1 && type.ownerDocument instanceof HTMLDocument) {
+            } else if(type.nodeType !== undefined && type.ownerDocument !== undefined && type.nodeType >= 1 && type.ownerDocument instanceof Document) {
                 this.html = type;
             } else {
-                throw "type must be a string or a HTMLDocument";
+                throw "type must be a string or a Document";
             }
         }
 
@@ -2166,10 +1359,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         append(elem) {
-            if (Util.notEmpty(elem)) {
-                this.html.appendChild(Template.isTemplate(elem) ? Template.resolve(elem).dom() : elem.dom());
-            }
-            
+            elem && this.html.appendChild(elem.dom());
             return this;
         }
 
@@ -2259,7 +1449,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         setProps(props) {
-            Template.updateElemProps(this, props, this.getProps());
+            RMETemplateResolver.updateElemProps(this, props, this.getProps());
             return this;
         }
 
@@ -2876,8 +2066,7 @@ let Elem = (function() {
                     paramArray.push(params[i]);
                 i++;
             }
-            paramArray.push(this);
-            this.setText(Messages.message(message, paramArray));
+            this.setText(RMEMessagesResolver.message(message, paramArray));
             return this;
         }
 
@@ -2886,7 +2075,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         click() {
-            Util.setTimeout(() => this.html.click());
+            Browser.setTimeout(() => this.html.click());
             return this;
         }
 
@@ -2895,7 +2084,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         focus() {
-            Util.setTimeout(() => this.html.focus());
+            Browser.setTimeout(() => this.html.focus());
             return this;
         }
 
@@ -2904,7 +2093,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         blur() {
-            Util.setTimeout(() => this.html.blur());
+            Browser.setTimeout(() => this.html.blur());
             return this;
         }
 
@@ -2929,7 +2118,7 @@ let Elem = (function() {
          * @returns A duplicated Elem object
          */
         duplicate() {
-            return Template.resolve(this.toTemplate());
+            return RMETemplateResolver.resolve(this.toTemplate());
         }
 
         /**
@@ -3701,10 +2890,7 @@ let Elem = (function() {
          * @returns Elem instance.
          */
         static wrap(html) {
-            if(!Util.isEmpty(html))
-                return new Elem(html);
-            else 
-                throw "Could not wrap a html element - html: " + html;
+            return new Elem(html);
         }
 
         /**
@@ -3716,13 +2902,8 @@ let Elem = (function() {
          * @returns An array of the Elem objects or a single Elem object. 
          */
         static wrapElems(htmlDoc) {
-            var eArr = [];
-            var i = 0;
-            while(i < htmlDoc.length) {
-                    eArr.push(Elem.wrap(htmlDoc[i]));
-                i++;
-            }
-            return eArr.length === 1 ? eArr[0] : eArr;
+            const wrapped = Array.from(htmlDoc).map(Elem.wrap);
+            return wrapped.length === 1 ? wrapped[0] : wrapped;
         }
     }
 
@@ -3773,6 +2954,357 @@ let Elem = (function() {
     return Elem;
 }());
 
+
+
+/**
+ * RMEElemTemplater class is able to create a Template out of an Elem object.
+ */
+class RMEElemTemplater {
+    constructor() {
+        this.instance;
+        this.template;
+        this.deep = true;
+    }
+
+    toTemplate(elem, deep) {
+        if (Util.notEmpty(deep))
+            this.deep = deep;
+
+        this.resolve(elem, {});
+        return this.template;
+    }
+
+    /**
+     * Function is called recursively and resolves an Elem object and its children in recursion
+     * @param {object} elem 
+     * @param {object} parent 
+     */
+    resolve(elem, parent) {
+        let resolved = this.resolveElem(elem, this.resolveProps(elem));
+        Object.keys(parent).forEach(key => {
+            if (Util.isArray(parent[key]._)) {
+                parent[key]._.push(resolved);
+            } else {
+                this.extendMap(parent[key], resolved);
+            }
+        });
+
+        const children = Array.of(elem.getChildren()).flat();
+        if (children.length > 0 && this.deep) {
+            children.forEach(child => this.resolve(child, resolved));
+        }
+        this.template = resolved;
+    }
+
+    /**
+     * Copies values from the next map into the first map
+     * @param {object} map first map
+     * @param {object} next next map
+     */
+    extendMap(map, next) {
+        for(let v in next) {
+            if(next.hasOwnProperty(v)) {
+                map[v] = next[v];
+            }
+        }
+    }
+
+    /**
+     * Function will attach given properties into a given Elem and returns the resolved Elem.
+     * @param {object} elem 
+     * @param {object} props 
+     * @returns The resolved elem with attached properties.
+     */
+    resolveElem(elem, props) {
+        const el = {};
+        const children = elem.getChildren();
+        if (Util.isArray(children) && children.length > 1) {
+            let elTag = elem.getTagName().toLowerCase();
+            let elName = this.resolveId(elTag, props);
+            elName = this.resolveClass(elName, props);
+            elName = this.resolveAttrs(elName, props);
+            el[elName] = {
+                ...props,
+                _: [],
+            };
+        } else {
+            el[elem.getTagName().toLowerCase()] = props
+        }
+        return el;
+    }
+
+    /**
+     * Function will place an ID attribute into an element tag if the ID attribute is found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with the ID or without.
+     */
+    resolveId(tag, props) {
+        if(props.id)
+            return tag+"#"+props.id;
+        else
+            return tag;
+    }
+
+    /**
+     * Function will place a class attribute into an element tag if the class attribute is found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with the classes or without.
+     */
+    resolveClass(tag, props) {
+        if(props.class)
+            return tag+"."+props.class.replace(/ /g, ".");
+        else
+            return tag;
+    }
+
+    /**
+     * Function will resolve all other attributes and place them into an element tag if other attributes are found.
+     * @param {string} tag 
+     * @param {object} props 
+     * @returns The element tag with other attributes or without.
+     */
+    resolveAttrs(tag, props) {
+        let tagName = tag;
+        for (let p in props) {
+            if (props.hasOwnProperty(p) && p !== 'id' && p !== 'class' && p.indexOf('on') !== 0) {
+                tagName += `[${p}=${props[p]}]`
+            }
+        }
+        return tagName;
+    }
+
+    /**
+     * Resolves a given Elem object and returns its properties in an object.
+     * @param {object} elem 
+     * @returns The properties object of the given element.
+     */
+    resolveProps(elem) {
+        let props = {};
+        let attributes = elem.dom().attributes;
+        let a = 0;
+        if(attributes) {
+            while(a < attributes.length) {
+                props[this.resolveAttributeNames(attributes[a].name)] = attributes[a].value;
+                a++;
+            }
+        }
+
+        if(elem.dom().hasChildNodes() && elem.dom().childNodes[0].nodeType === 3) {
+            props["text"] = elem.getText();
+        }
+
+        for(let p in elem.dom()) {
+            if(p.indexOf("on") !== 0 || Util.isEmpty(elem.dom()[p]))
+                continue;
+            else
+                props[this.resolveListeners(p)] = elem.dom()[p];
+        }
+
+        return props;
+    }
+
+    /**
+     * Resolves a html data-* attributes by removing '-' and setting the next character to uppercase. 
+     * Resolves an aria* attirubtes by setting the next character to uppercase.
+     * If the attribute is not a data-* or an aria attribute then it is directly returned.
+     * @param {string} attrName 
+     * @returns Resolved attribute name.
+     */
+    resolveAttributeNames(attrName) {
+        if (attrName.indexOf('data') === 0 && attrName.length > 'data'.length) {
+            while(attrName.search('-') > -1) {
+                attrName = attrName.replace(/-\w/, attrName.charAt(attrName.search('-') + 1).toUpperCase());
+            }
+            return attrName
+        } else if (attrName.indexOf('aria') === 0) {
+            return attrName.replace(attrName.charAt('aria'.length), attrName.charAt('aria'.length).toUpperCase());
+        } else {
+            return attrName;
+        }
+    }
+
+    resolveListeners(name) {
+        switch(name) {
+            case "onanimationstart":
+                return "onAnimationStart";
+            case "onanimationiteration":
+                return "onAnimationIteration";
+            case "onanimationend":
+                return "onAnimationEnd";
+            case "ontransitionend":
+                return "onTransitionEnd";
+            case "ondrag":
+                return "onDrag"
+            case "ondragend":
+                return "onDragEnd";
+            case "ondragenter":
+                return "onDragEnter";
+            case "ondragover":
+                return "onDragOver";
+            case "ondragstart":
+                return "onDragStart";
+            case "ondrop":
+                return "onDrop"; 
+            case "onclick":
+                return "onClick";
+            case "ondblclick":
+                return "onDoubleClick";
+            case "oncontextmenu":
+                return "onContextMenu";
+            case "onmousedown":
+                return "onMouseDown";
+            case "onmouseenter":
+                return "onMouseEnter";
+            case "onmouseleave":
+                return "onMouseLeave";
+            case "onmousemove":
+                return "onMouseMove";
+            case "onmouseover":
+                return "onMouseOver";
+            case "onmouseout":
+                return "onMouseOut";
+            case "onmouseup":
+                return "onMouseUp";
+            case "onwheel":
+                return "onWheel";
+            case "onscroll":
+                return "onScroll";
+            case "onresize":
+                return "onResize";
+            case "onerror":
+                return "onError";
+            case "onload":
+                return "onLoad";
+            case "onunload":
+                return "onUnload";
+            case "onbeforeunload":
+                return "onBeforeUnload";
+            case "onkeyup":
+                return "onKeyUp";
+            case "onkeydown":
+                return "onKeyDown";
+            case "onkeypress":
+                return "onKeyPress";
+            case "oninput":
+                return "onInput";
+            case "onchange":
+                return "onChange";
+            case "onsubmit":
+                return "onSubmit";
+            case "onselect":
+                return "onSelect";
+            case "onreset":
+                return "onReset"
+            case "onfocus":
+                return "onFocus";
+            case "onfocusin":
+                return "onFocusIn";
+            case "onfocusout":
+                return "onFocusOut";
+            case "onblur":
+                return "onBlur";
+            case "oncopy":
+                return "onCopy";
+            case "oncut":
+                return "onCut";
+            case "onpaste":
+                return "onPaste";
+            case "onabort":
+                return "onAbort";
+            case "onwaiting":
+                return "onWaiting";
+            case "onvolumechange":
+                return "onVolumeChange";
+            case "ontimeupdate":
+                return "onTimeUpdate";
+            case "onseeking":
+                return "onSeeking";
+            case "onseekend":
+                return "onSeekEnd";
+            case "onratechange":
+                return "onRateChange";
+            case "onprogress":
+                return "onProgress";
+            case "onloadmetadata":
+                return "onLoadMetadata";
+            case "onloadeddata":
+                return "onLoadedData";
+            case "onloadstart":
+                return "onLoadStart";
+            case "onplaying":
+                return "onPlaying";
+            case "onplay":
+                return "onPlay";
+            case "onpause":
+                return "onPause";
+            case "onended":
+                return "onEnded";
+            case "ondurationchange":
+                return "onDurationChange";
+            case "oncanplay":
+                return "onCanPlay";
+            case "oncanplaythrough":
+                return "onCanPlayThrough";
+            case "onstalled":
+                return "onStalled";
+            case "onsuspend":
+                return "onSuspend";
+            case "onpopstate":
+                return "onPopState";
+            case "onstorage":
+                return "onStorage";
+            case "onhashchange":
+                return "onHashChange";
+            case "onafterprint":
+                return "onAfterPrint";
+            case "onbeforeprint":
+                return "onBeforePrint";
+            case "onpagehide":
+                return "onPageHide";
+            case "onpageshow":
+                return "onPageShow";
+        }
+    }
+
+    toLiteralString(elem) {
+        const props = this.resolveProps(elem);
+        let string = this.resolveId(elem.getTagName().toLowerCase(), props);
+        string = this.resolveClass(string, props);
+        string = this.resolveAttrs(string, props);
+        return string;
+    }
+
+    /**
+     * Function by default resolves a given element and its' children and returns template representation of the element.
+     * @param {object} elem 
+     * @param {boolean} deep 
+     * @returns Template object representation of the Elem
+     */
+    static toTemplate(elem, deep) {
+        return RMEElemTemplater.getInstance().toTemplate(elem, deep);
+    }
+
+    /**
+     * Function resolves and returns properties of a given Elem object.
+     * @param {object} elem 
+     * @returns The properties object of the given Elem.
+     */
+    static getElementProps(elem) {
+        return RMEElemTemplater.getInstance().resolveProps(elem);
+    }
+
+    static toLiteralString(elem) {
+        return RMEElemTemplater.getInstance().toLiteralString(elem);
+    }
+
+    static getInstance() {
+        if(!this.instance)
+            this.instance = new RMEElemTemplater();
+        return this.instance;
+    }
+}
 
 
 const Fetch = (function() {
@@ -4144,6 +3676,8 @@ const Http = (function() {
 
 
 
+
+
 /**
  * Key class does not have any methods as it only contains key mappings for keyevent. For example:
  * 
@@ -4313,43 +3847,79 @@ Key.COMMA = ",";
 Key.DOT = ".";
 
 
+const useMessages = (function() {
 
-let Messages = (function() {
+    /**
+     * UseMessages function has three functionalities. 1. Set a message loader function. 2. Change locale. 3. Return currenly used locale string.
+     * If the locale parameter is set then the locale is changed to the given locale. The locale parameter can be either a string or an Event.
+     * If the locale is an Event then the locale string is attempted to be parsed from the href, the value or the text of the Event.target.
+     * If the loader parameter is set then the existing message loader function will be replaced with the currently given.
+     * The useMessage function will return the currently used locale string as a return value.
+     * @param {string|Event} locale
+     * @param {Function} loader
+     * @returns Locale string
+     */
+    return (locale, loader) => {
+        if (Util.isFunction(loader)) {
+            RMEMessagesResolver.load((locale, setMessages) => setMessages(loader(locale)));
+        }
+        if (Util.isString(locale) || locale instanceof Event) {
+            RMEMessagesResolver.lang(locale);
+        }
+        return RMEMessagesResolver.locale();
+    }
+}());
+
+const useMessage = (function (){
+
+    /**
+     * UseMessage function takes a message key and possible message parameters and attempts to resolve them to a
+     * translated message. If the given key could not be resolved then it will be returned.
+     * @param {string} key message key
+     * @param {array} params message params
+     * @returns Resolved message
+     */
+    return (key, ...params) => {
+        return RMEMessagesResolver.message(key, ...params);
+    }
+}());
+
+
+
+
+
+
+const RMEMessagesResolver = (function() {
     /**
      * Messages class handles internationalization. The class offers public methods that enable easy 
      * using of translated content.
      */
     class Messages {
+        static ins;
         constructor() {
-            this.instance = this;
+            this.ins = this;
             this.messages = [];
-            this.locale = "";
+            this.locale = '';
             this.translated = [];
             this.load = function() {};
             this.messagesType;
-            this.app;
             this.ready = false;
-            this.registerMessages();
-        }
-
-        /**
-         * Initializes the Messages
-         */
-        registerMessages() {
-            document.addEventListener("readystatechange", () => {
-                if(document.readyState === "complete") {
-                    this.ready = true;
-                    this.runTranslated.call(this);
-                }
+            ready(() => {
+                this.ready = true;
+                this.runTranslated();
             });
         }
 
+        /**
+         * Loader function is used to load new messages.
+         * The loader function is called automatically when the locale used in the Messages changes.
+         * @param {function} loader
+         */
         setLoad(loader) {
+            if (!Util.isFunction(loader)) {
+                throw new Error('Message loader must be a function');
+            }
             this.load = loader;
-        }
-
-        setAppInstance(appInstance) {
-            this.app = appInstance;
         }
 
         setLocale(locale) {
@@ -4358,36 +3928,43 @@ let Messages = (function() {
         }
 
         setMessages(messages) {
-            if(Util.isArray(messages))
-                this.messagesType = "array";
-            else if(Util.isObject(messages))
-                this.messagesType = "map";
-            else
-                throw "messages must be type array or object";
+            if (Util.isArray(messages)) {
+                this.messagesType = 'array';
+            } else if (Util.isObject(messages)) {
+                this.messagesType = 'map';
+            } else {
+                throw new Error('Given messages must be an array or an object');
+            }
             this.messages = messages;
-            this.runTranslated.call(this);
+            this.runTranslated();
         }
 
+        /**
+         * GetMessage function is used to retrieve translated messages. The function also supports message parameters
+         * that can be given as a comma separeted list.
+         * @param {string} text
+         * @param {*} params
+         * @returns A resolved message or the given key if the message is not found.
+         */
         getMessage(text, ...params) {
-            if(Util.isEmpty(params[0][0])) {
+            if (Util.isEmpty(params.flat(2))) {
                 return this.resolveMessage(text);
             } else {
-                this.getTranslatedElemIfExist(text, params[0][0]);
                 let msg = this.resolveMessage(text);
-                return this.resolveParams(msg, params[0][0]);
+                return this.resolveParams(msg, params.flat(2));
             }
         }
 
         /**
          * Resolves translated message key and returns a resolved message if exist
          * otherwise returns the given key.
-         * @param {string} text 
+         * @param {string} text key
          * @returns A resolved message if exist otherwise the given key.
          */
         resolveMessage(text) {
-            if(this.messagesType === "array") {
+            if (this.messagesType === 'array') {
                 return this.resolveMessagesArray(text);
-            } else if(this.messagesType === "map") {
+            } else if (this.messagesType === 'map') {
                 return this.resolveMessagesMap(text);
             }
         }
@@ -4395,13 +3972,13 @@ let Messages = (function() {
         /**
          * Resolves a translated message key from the map. Returns a resolved message 
          * if found otherwise returns the key.
-         * @param {string} text 
+         * @param {string} text key
          * @returns A resolved message
          */
         resolveMessagesMap(text) {
             let msg = text;
-            for(let i in this.messages) {
-                if(i === text) {
+            for (let i in this.messages) {
+                if (i === text) {
                     msg = this.messages[i];
                     break;
                 }
@@ -4412,14 +3989,14 @@ let Messages = (function() {
         /**
          * Resolves a translated message key from the array. Returns a resolved message
          * if found otherwise returns the key.
-         * @param {string} text 
+         * @param {string} text key
          * @returns A resolved message
          */
         resolveMessagesArray(text) {
             let i = 0;
             let msg = text;
-            while(i < this.messages.length) {
-                if(!Util.isEmpty(this.messages[i][text])) {
+            while (i < this.messages.length) {
+                if (Util.notEmpty(this.messages[i][text])) {
                     msg = this.messages[i][text];
                     break;
                 }
@@ -4435,28 +4012,9 @@ let Messages = (function() {
          * @returns The message with resolved message parameteres if parameters exist.
          */
         resolveParams(msg, params) {
-            if(!Util.isEmpty(msg)) {
-                let i = 0;
-                while(i < params.length) {
-                    msg = msg.replace("{"+i+"}", params[i]);
-                    i++;
-                }
+            if (Util.notEmpty(msg)) {
+                params.forEach((param, i) => msg = msg.replace(`{${i}}`, param));
                 return msg;
-            }
-        }
-
-        /**
-         * Function gets a Elem object and inserts it into a translated object array if it exists.
-         * @param {string} key 
-         * @param {*} params 
-         */
-        getTranslatedElemIfExist(key, params) {
-            let last = params[params.length - 1];
-            if (Util.isObject(last) && last instanceof Elem) {
-                last = params.pop()
-                if (Util.isEmpty(this.app)) {
-                    this.translated.push({key: key, params: params, obj: last});
-                }
             }
         }
 
@@ -4464,25 +4022,17 @@ let Messages = (function() {
          * Function goes through the translated objects array and sets a translated message to the translated elements.
          */
         runTranslated() {
-            if(Util.isEmpty(this.app) && this.ready) {
-                Util.setTimeout(() => {
-                    let i = 0;
-                    while(i < this.translated.length) {
-                        this.translated[i].obj.setText.call(this.translated[i].obj, Messages.message(this.translated[i].key, this.translated[i].params));
-                        i++;
-                    }
-                });
-            } else if(this.ready) {
-                this.app.refresh();
+            if (this.ready) {
+                RMEAppManager.getAll().forEach(app => app.refresh());
             }
         }
 
         /**
-         * Function returns current locale of the Messages
-         * @returns Current locale
+         * Returns currently used locale string used by the Messages.
+         * @returns Locale string
          */
         static locale() {
-            return Messages.getInstance().locale;
+            return Messages.instance.locale;
         }
 
         /**
@@ -4492,61 +4042,48 @@ let Messages = (function() {
          * @param {object} locale Event
          */
         static lang(locale) {
-            let loc;
-            if(Util.isObject(locale) && locale instanceof Event) {
+            let nextLocale;
+            if (locale instanceof Event) {
                 locale.preventDefault();
-                let el = Elem.wrap(locale.target);
-                loc = el.getHref();
-                if(Util.isEmpty(loc))
-                    loc = el.getValue();
-                if(Util.isEmpty(loc))
-                    loc = el.getText();
-            } else if(Util.isString(locale))
-                loc = locale;
-            else
-                throw "Given parameter must be type string or instance of Event, given value: " + locale;
-            if(!Util.isEmpty(loc))
-                Messages.getInstance().setLocale(loc).load.call(null, 
-                    Messages.getInstance().locale, Messages.getInstance().setMessages.bind(Messages.getInstance()));
+                const el = Elem.wrap(locale.target);
+                nextLocale = el.getHref() || el.getValue() || el.getText();
+            } else if (Util.isString(locale)) {
+                nextLocale = locale;
+            } else {
+                throw new Error('The parameter locale must be an instance of the Event or a string');
+            }
+            if (Util.notEmpty(nextLocale)) {
+                Messages.instance.setLocale(nextLocale).load.call(Messages.instance, Messages.locale(),
+                    Messages.instance.setMessages.bind(Messages.instance));
+            }
         }
 
         /**
-         * Message function is used to retrieve translated messages. The function also supports message parameters
-         * that can be given as a comma separeted list. 
+         * Message function returns a message from the message bundle or a message key if the message was not found.
+         * The function also supports message parameters that can be given as a comma separeted list.
          * @param {string} text 
          * @param {*} params 
          * @returns A resolved message or the given key if the message is not found.
          */
         static message(text, ...params) {
-            return Messages.getInstance().getMessage(text, params);
+            return Messages.instance.getMessage(text, params);
         }
 
         /**
-         * Load function is used to load new messages or change already loaded messages.
          * Implementation of the function receives two parameters. The one of the parameters is the changed locale and 
          * the other is setMessages(messagesArrayOrObject) function that is used to change the translated messages.
-         * This function is called automatically when language is changed by calling the Messages.lang() function.
-         * @param {function} loader 
+         * Set a message loader function.
+         * The function receives two parameters a locale and a setMessages function. The locale is currently used locale
+         * and the setMessages function applies the given messages.
          */
         static load(loader) {
-            if(!Util.isFunction(loader))
-                throw "loader must be type function " + Util.getType(loader);
-            Messages.getInstance().setLoad(loader);
+            Messages.instance.setLoad(loader);
         }
 
-        /**
-         * Set the app instance to be invoked on the Messages update.
-         * @param {object} appInstance 
-         */
-        static setApp(appInstance) {
-            Messages.getInstance().setAppInstance(appInstance);
-            return Messages;
-        }
-
-        static getInstance() {
-            if(!this.instance)
-                this.instance = new Messages();
-            return this.instance;
+        static get instance() {
+            if(!this.ins)
+                this.ins = new Messages();
+            return this.ins;
         }
     }
 
@@ -4554,57 +4091,10 @@ let Messages = (function() {
         lang: Messages.lang,
         message: Messages.message,
         load: Messages.load,
-        locale: Messages.locale,
-        setApp: Messages.setApp
+        locale: Messages.locale
     };
 }());
 
-
-/**
- * The configure function will configure given Components. Advantage of this function is that the Compoments can be given in 
- * any order and they will be recognized automatically.
- * 
- * Example use case would be to invoke configure(App.get(), Router, Messages);
- * 
- * This function can be conbined with a createApp('#app', AppComponent) function as follows:
- * configure(createApp('#app', AppComponent), Router, Messages); This is probably the shortest way to 
- * create the RME application.
- * @param {*} params comma separated list of components
- */
-const configure = (function() {
-
-    return (...params) => {
-        let config = {};
-        params.forEach(param => {
-            if (param.routes) {
-                config = {
-                    ...config,
-                    router: param
-                }
-            } else if (param.load) {
-                config = {
-                    ...config,
-                    messages: param
-                }
-            } else if (param.name) {
-                config = {
-                    ...config,
-                    app: param
-                }
-            } 
-        });
-
-        if (Util.notEmpty(config.router))
-            config.router.setApp(config.app);
-
-        if (Util.notEmpty(config.messages))
-            config.messages.setApp(config.app);
-
-        if (Util.notEmpty(config.app))
-            config.app.setRouter(config.router);
-    }
-
-})();
 
 
 /**
@@ -4637,7 +4127,7 @@ const script = (function() {
 
     return (source, options) => {
         if (Util.notEmpty(source)) {
-            addScript(Template.resolve({
+            addScript(RMETemplateResolver.resolve({
                 script: {
                     src: source,
                     ...options
@@ -4674,535 +4164,439 @@ const ready = (function() {
 
 
 
+/**
+ * The hash based router implementation. The router is used via invoking the useHashRouter function.
+ * This router is ment for the single page applications.
+ */
+const RMEHashRouter = (props, { asyncTask, updateState }) => {
+    const { routes, url = location.hash, prevUrl, prevRoute, globalScrollTop, init } = props;
 
-let Router = (function() {
-    /**
-     * Router class handles and renders route elements that are given by Router.routes() method.
-     * The method takes an array of route objects that are defined as follows: {route: "url", elem: elemObject, hide: true|false|undefined}.
-     * The first element the array of route objects is by default the root route object in which all other route objects 
-     * are rendered into.
-     */
-    class Router {
-        constructor() {
-            this.instance = null;
-            this.root = null;
-            this.origRoot = null;
-            this.routes = [];
-            this.origRoutes = [];
-            this.currentRoute = {};
-            this.prevUrl = location.pathname;
-            this.loadCall = () => this.navigateUrl(location.pathname);
-            this.hashCall = () => this.navigateUrl(location.hash);
-            this.useHistory =  true;
-            this.autoListen = true;
-            this.useHash = false;
-            this.scrolltop = true;
-            this.app;
-            this.registerRouter();
-        }
+    if (!routes) {
+        return null;
+    }
 
-        /**
-         * Initializes the Router.
-         */
-        registerRouter() {
-            document.addEventListener("readystatechange", () => {
-                if(document.readyState === "complete") {
-                    let check = Util.setInterval(() => {
-                        let hasRoot = !Util.isEmpty(this.root.elem) ? document.querySelector(this.root.elem) : false;
-                        if(hasRoot) {
-                            Util.clearInterval(check);
-                            this.resolveRoutes();
-                        }
-                    }, 50)
-                }
+    if (!init) {
+        RMERouterContext.setRouter(routes, (url) => {
+            updateState({
+                url: url
             });
+        });
+        asyncTask(() => {
+            window.addEventListener('hashchange', () => {
+                updateState({
+                    init: true,
+                    url: location.hash
+                });
+            });
+        });
+    }
+
+    let route;
+
+    if (url !== prevUrl) {
+        route = RMERouterUtils.findRoute(url, routes, RMERouterUtils.hashMatch);
+        asyncTask(() => {
+            updateState({
+                prevUrl: url,
+                prevRoute: route
+            }, false);
+        });
+    } else {
+        route = prevRoute;
+    }
+
+    if (Util.notEmpty(route)) {
+        if (Util.isFunction(route.onBefore)) {
+            route.onBefore(route);
         }
-
-        /**
-         * Register listeners according to the useHistory and the autoListen state.
-         */
-        registerListeners() {
-            if(this.useHistory && this.autoListen)
-                window.addEventListener("load", this.loadCall);
-            else if(!this.useHistory && this.autoListen)
-                window.addEventListener("hashchange", this.hashCall);
-            
-            if(!this.autoListen)
-                window.addEventListener("popstate", this.onPopState.bind(this));
+        if (Util.isFunction(route.onAfter)) {
+            asyncTask(() => route.onAfter(route));
         }
-
-        /**
-         * Clear the registered listeners.
-         */
-        clearListeners() {
-            window.removeEventListener("load", this.loadCall);
-            window.removeEventListener("hashchange", this.hashCall);
-
-            if(!this.autoListen)
-                window.removeEventListener("popstate", this.onPopState);
+        if (route.hide) {
+            location.href = prevUrl;
         }
-
-        /**
-         * On popstate call is registered if the auto listen is false. It listens the browsers history change and renders accordingly.
-         */
-        onPopState() {
-            if (this.useHistory) {
-                this.renderRoute(location.pathname);
-                Browser.scrollTo(0, 0);
-            } else {
-                this.renderRoute(location.hash);
-            }
-        }
-
-        /**
-         * Set the router to use a history implementation or an anchor hash implementation.
-         * If true then the history implementation is used. Default is true.
-         * @param {boolean} use
-         */
-        setUseHistory(use) {
-            this.useHistory = use;
-        }
-
-        /**
-         * Set the Router to auto listen url change to true or false.
-         * @param {boolean} listen
-         */
-        setAutoListen(listen) {
-            this.autoListen = listen;
-        }
-
-        /**
-         * Set auto scroll up true or false.
-         * @param {boolean} auto 
-         */
-        setAutoScrollUp(auto) {
-            this.scrolltop = auto;
-        }
-
-        /**
-         * Set the app instance that the Router invokes on update.
-         * @param {object} appInstance 
-         */
-        setApp(appInstance) {
-            this.app = appInstance;
-        }
-
-        /**
-         * Resolves the root and the first page.
-         */
-        resolveRoutes() {
-            if(Util.isString(this.root.elem)) {
-                this.root.elem = this.resolveElem(this.root.elem);
-            } else if(Util.isEmpty(this.root)) {
-                this.root = this.routes.shift();
-                this.root.elem = this.resolveElem(this.root.elem);
-                this.origRoot = this.root.elem;
-            }
-            if(this.useHash) {
-                this.renderRoute(location.hash);
-            } else {
-                this.renderRoute(location.pathname);
-            }
-        }
-
-        /**
-         * Set the routes and if a root is not set then the first element will be the root route element.
-         * @param {array} routes
-         */
-        setRoutes(routes) {
-            this.routes = routes;
-        }
-
-        /**
-         * Add a route into the Router. {route: "url", elem: elemObject}
-         * @param {object} route
-         */
-        addRoute(route) {
-            this.routes.push(route);
-        }
-
-        /**
-         * Set a root route object into the Router. {route: "url", elem: elemObject}
-         * @param {object} route
-         */
-        setRoot(route) {
-            this.root = route;
-            this.origRoot = route.elem;
-        }
-
-        /**
-         * Method resolves element. If elem is string gets a component of the name if exist otherwise creates a new elemen of the name.
-         * If both does not apply then method assumes the elem to be an element and returns it.
-         * @param {*} elem 
-         */
-        resolveElem(elem, props) {
-            if (Util.isFunction(elem) && RMEComponentManager.hasComponent(elem.valueOf().name)) {
-                return RMEComponentManager.getComponent(elem.valueOf().name, props);
-            } else if (Util.isString(elem) && RMEComponentManager.hasComponent(elem)) {
-                return RMEComponentManager.getComponent(elem, props);
-            } else if (Util.isString(elem) && this.isSelector(elem)) {
-                return Tree.getFirst(elem);
-            } else if (elem instanceof Elem) {
-                return elem;
-            } else if (Util.isEmpty(elem)) {
-                return elem;
-            }
-            throw new Error(`Could not resolve a route elem: ${elem}`);
-        }
-
-        /**
-         * Function checks if a tag starts with a dot or hashtag or is a HTML tag.
-         * If described conditions are met then the tag is supposed to be a selector.
-         * @param {string} tag 
-         * @returns True if the tag is a selector otherwise false.
-         */
-        isSelector(tag) {
-            return tag.charAt(0) === '.'
-                || tag.charAt(0) === '#'
-                || Template.isTag(tag);
-        }
-
-        /**
-         * Method navigates to the url and renders a route element inside the root route element if found.
-         * @param {string} url
-         */
-        navigateUrl(url) {
-            var route = this.findRoute(url);
-            if (Util.notEmpty(route) && this.useHistory && !route.hide) {
-                history.pushState(null, null, url);
-            } else if (Util.notEmpty(route) && !route.hide) {
-                location.href = url;
-            }
-            if (Util.notEmpty(this.root) && Util.notEmpty(route)) {
-                if ((route.scrolltop === true) || (route.scrolltop === undefined && this.scrolltop)) {
-                    if (window.scrollY > 0)
-                        Browser.scrollTo(0, 0);
-                }
-                this.prevUrl = this.getUrlPath(url);
-                this.currentRoute = route;
-                if (Util.isEmpty(this.app)) {
-                    if (Util.notEmpty(route.onBefore)) route.onBefore();
-                    this.root.elem.render(this.resolveElem(route.elem, route.compProps));
-                    if (Util.notEmpty(route.onAfter)) route.onAfter();
-                } else {
-                    if (Util.notEmpty(route.onBefore)) route.onBefore();
-                    this.app.refresh();
-                }
-            }
-        }
-
-        /**
-         * Method looks for a route by the url. If the router is found then it will be returned otherwise returns null
-         * @param {string} url
-         * @param {boolean} force match route even though the previous url and the current url are the same
-         * @returns The found router or null if not found.
-         */
-        findRoute(url, force) {
-            var i = 0;
-            if(!Util.isEmpty(url) && (this.prevUrl !== this.getUrlPath(url) || force)) {
-                while(i < this.routes.length) {
-                    if(this.matches(this.routes[i].route, url))
-                        return this.routes[i];
-                    i++;
-                }
-            }
-            return null;
-        }
-
-        /**
-         * Method will look for a route by the url and if the route is found then it will be rendered 
-         * inside the root route element.
-         * @param {string} url
-         */
-        renderRoute(url) {
-            var route = this.findRoute(url, true);
-            if(!Util.isEmpty(route) && Util.isEmpty(this.app)) {
-                if (!Util.isEmpty(route.onBefore)) route.onBefore();
-                this.root.elem.render(this.resolveElem(route.elem, route.compProps));
-                this.currentRoute = route;
-                if (!Util.isEmpty(route.onAfter)) route.onAfter();
-            } else if(Util.isEmpty(this.app)) {
-                this.root.elem.render();
-            } else if(!Util.isEmpty(route) && !Util.isEmpty(this.app)) {
-                if (!Util.isEmpty(route.onBefore)) route.onBefore();
-                this.app.refresh();
-                this.currentRoute = route;
-            }
-
-            this.prevUrl = location.pathname;
-        }
-
-        /**
-         * Method matches a given url parameters and returns true if the urls matches.
-         * @param {string} url
-         * @param {string} newUrl
-         * @returns True if the given urls matches otherwise false.
-         */
-        matches(url, newUrl) {
-            if (this.useHistory) {
-                url = Util.isString(url) ? url.replace(/\*/g, '.*').replace(/\/{2,}/g, '/') : url;
-                let path = this.getUrlPath(newUrl);
-                let found = path.match(url);
-                if (!Util.isEmpty(found))
-                    found = found.join();
-                return found === path && new RegExp(url).test(newUrl);
-            } else {
-                if (Util.isString(url)) {
-                    url = url.replace(/\*/g, '.*');
-                    if (url.charAt(0) !== '#')
-                        url = `#${url}`;
-                }
-                let hash = newUrl.match(/\#{1}.*/).join();
-                let found = hash.match(url);
-                if (!Util.isEmpty(found))
-                    found = found.join();
-                return found === hash && new RegExp(url).test(newUrl);
-            }
-        }
-
-        /**
-         * Cut the protocol and domain of the url off if exist.
-         * For example https://www.example.com/example -> /example
-         * @param {string} url 
-         * @returns The path of the url.
-         */
-        getUrlPath(url) {
-            return this.useHash ? url : url.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
-        }
-
-        /**
-         * @returns The current status of the Router in an object.
-         */
-        getCurrentState() {
-            return {
-                root: this.origRoot,
-                rootElem: this.root.elem,
-                current: this.resolveElem(this.currentRoute.elem, this.currentRoute.compProps),
-                onAfter: this.currentRoute.onAfter
-            }
-        }
-
-        /**
-         * Method will try to find a route according to the given parameter. The supported parameter combinations are url, event or elem & event. 
-         * The first paramter can either be an URL or an Event or an Elem. The second parameter is an Event if the first parameter is an Elem.
-         * If the route is found, then the Router will update a new url to the browser and render the found route element.
-         * @param {string} url
-         * @param {object} url type event
-         * @param {object} url type Elem
-         * @param {object} event
-         */
-        static navigate(url, event) {
-            if(Util.isString(url))
-                Router.getInstance().navigateUrl(url);
-            else if(Util.isObject(url) && url instanceof Event) {
-                if(!Router.getInstance().autoListen || Router.getInstance().useHash)
-                    url.preventDefault();
-                Router.getInstance().navigateUrl(url.target.href);
-            } else if(Util.isObject(url) && url instanceof Elem && !Util.isEmpty(event) && Util.isObject(event) && event instanceof Event) {
-                if(!Router.getInstance().autoListen || Router.getInstance().useHash)
-                    event.preventDefault();
-                Router.getInstance().navigateUrl(url.getHref());
-            }
-        }
-
-        /**
-         * Set a root element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
-         * @param {object} elem
-         * @returns Router
-         */
-        static root(elem) {
-            Router.getInstance().setRoot({elem: elem});
-            return Router;
-        }
-
-        /**
-         * Add a new route element into the Router. Elem parameter must be an Elem object in order to the Router is able to render it.
-         * @param {string} url
-         * @param {object} elem
-         * @param {boolean} hide
-         */
-        static add(url, elem, hide) {
-            Router.getInstance().addRoute({route: url, elem: elem, hide: hide});
-            return Router;
-        }
-
-        /**
-         * Set an array of routes that the Router uses. If a root is not set then the first item in the given routes array will be the root route element.
-         * @param {array} routes
-         */
-        static routes(routes) {
-            if(!Util.isArray(routes))
-                throw "Could not set routes. Given parameter: \"" + routes + "\" is not an array."
-            Router.getInstance().setRoutes(routes);
-            return Router;
-        }
-
-        /**
-         * Method sets the Router to use an url implementation. The url implementation defaults to HTML standard that pressing a link
-         * will cause the browser reload a new page. After reload the new page is rendered. If you wish to skip reload then you should 
-         * set the parameter manual to true.
-         * @param {boolean} manual
-         * @returns Router
-         */
-        static url(manual) {
-            Router.getInstance().setUseHistory(true);
-            Router.getInstance().registerListeners();
-            if(Util.isBoolean(manual) && manual) {
-                Router.manual();
-            }
-            return Router;
-        }
-
-        /**
-         * Method sets the Router not to automatically follow url changes. If this method is invoked 
-         * the user must explicitly define a method that calls Router.navigate in order to have navigation working
-         * properly when going forward and backward in the history. The method will not 
-         * do anything if the url implementation is not used.
-         * @returns Router
-         */
-        static manual() {
-            if(Router.getInstance().useHistory) {
-                history.scrollRestoration = 'manual';
-                Router.getInstance().clearListeners();
-                Router.getInstance().setAutoListen(false);
-                Router.getInstance().registerListeners();
-            }
-            return Router;
-        }
-
-        /**
-         * Method sets the Router to use a hash implementation. When this implementation is used 
-         * there is no need to manually use Router.navigate function because change
-         * of the hash is automatically followed.
-         * @returns Router
-         */
-        static hash() {
-            Router.getInstance().setUseHistory(false);
-            Router.getInstance().setAutoListen(true);
-            Router.getInstance().registerListeners();
-            Router.getInstance().useHash = true;
-            return Router;
-        }
-
-        /**
-         * Method sets default level behavior for route naviagation. If the given value is true then the Browser auto-scrolls up 
-         * when navigating to a new resource. If set false then the Browser does not auto-scroll up. Default value is true.
-         * @param {boolean} auto 
-         * @returns Router
-         */
-        static scroll(auto) {
-            if(Util.isBoolean(auto)) {
-                Router.getInstance().setAutoScrollUp(auto);
-            }
-            return Router;
-        }
-
-        /**
-         * Set the app instance to be invoked on the Router update.
-         * @param {object} appInstance 
-         * @returns Router
-         */
-        static setApp(appInstance) {
-            if(!Util.isEmpty(appInstance))
-                Router.getInstance().setApp(appInstance);
-            return Router;
-        }
-
-        /**
-         * @returns The current status of the router.
-         */
-        static getCurrentState() {
-            return Router.getInstance().getCurrentState();
-        }
-
-        static getInstance() {
-            if(Util.isEmpty(this.instance))
-                this.instance = new Router();
-            return this.instance;
+        if (window.scrollY > 0 && ((route.scrolltop === true) || (route.scrolltop === undefined && globalScrollTop))) {
+            scrollTo(0, 0);
         }
     }
+
     return {
-        navigate: Router.navigate,
-        root: Router.root,
-        add: Router.add,
-        routes: Router.routes,
-        url: Router.url,
-        hash: Router.hash,
-        scroll: Router.scroll,
-        getCurrentState: Router.getCurrentState,
-        setApp: Router.setApp,
+        _: !!route ? RMERouterUtils.resolveRouteElem(route.elem, route.props) : null
+    }
+};
+
+
+
+/**
+ * Simple router implementation ment to be only used in cases where the route is navigated only once after the page load.
+ * The router is used via invoking the useAutoUrlRouter function. This router is not ment for the single page applications.
+ */
+const RMEOnLoadUrlRouter  = (props, { asyncTask }) => {
+    const { routes } = props;
+
+    if (!routes) {
+        return null;
+    }
+
+    const route = RMERouterUtils.findRoute(location.pathname, routes, RMERouterUtils.urlMatch);
+
+    if (Util.notEmpty(route)) {
+        if (Util.isFunction(route.onBefore)) {
+            route.onBefore(route);
+        }
+        if (Util.isFunction(route.onAfter)) {
+            asyncTask(() => route.onAfter(route));
+        }
+    }
+
+    return {
+        _: !!route ? RMERouterUtils.resolveRouteElem(route.elem, route.props) : null
+    }
+}
+
+
+
+/**
+ * The URL based router implementation. The router is used via invoking the useUrlRouter function.
+ * This router is ideal for the single page applications. Router navigation is handled by the useRouter function.
+ */
+const RMEUrlRouter = (props, { updateState, asyncTask }) => {
+    const { routes, url, prevUrl, prevRoute, skipPush, init, globalScrollTop } = props;
+
+    if (!routes) {
+        return null;
+    }
+
+    if (!init) {
+        const updateUrl = (url, skipPush) => {
+            updateState({
+                init: true,
+                url: url ?? location.pathname,
+                skipPush
+            });
+        }
+        RMERouterContext.setRouter(routes, (url) => updateUrl(url));
+        asyncTask(() => {
+            window.addEventListener('popstate', () => updateUrl(undefined, true));
+            updateUrl(undefined, true);
+        });
+    }
+
+    let route;
+
+    if (url !== prevUrl) {
+        route = RMERouterUtils.findRoute(url, routes, RMERouterUtils.urlMatch);
+        asyncTask(() => {
+            updateState({
+                prevUrl: url,
+                prevRoute: route
+            }, false);
+        });
+    } else {
+        route = prevRoute;
+    }
+
+    if (Util.notEmpty(route)) {
+        if (Util.isFunction(route.onBefore)) {
+            route.onBefore(route);
+        }
+        if (Util.isFunction(route.onAfter)) {
+            asyncTask(() => route.onAfter(route));
+        }
+        if (!route.hide && url !== prevUrl && !skipPush) {
+            history.pushState(null, null, url);
+        }
+        if (window.scrollY > 0 && ((route.scrolltop === true) || (route.scrolltop === undefined && globalScrollTop))) {
+            scrollTo(0, 0);
+        }
+    }
+
+    return {
+        _: !!route ? RMERouterUtils.resolveRouteElem(route.elem, route.props) : null
+    }
+};
+
+
+
+const RMERouterContext = (function() {
+
+    class RouterContext {
+        constructor() {
+            this.ins;
+            this.routers = [];
+        }
+
+        /**
+         * Set a router into the context store by the key and the value.
+         * @param {string} key the router key
+         * @param {Function} value the router routes and the navigation hook
+         */
+        set(key, value) {
+            if ((!!key && !!value) && !this.has(key)) {
+                this.routers.push({ key, ...value });
+            }
+        }
+
+        /**
+         * Searches fo the routers by the router key if router is found the function will return true.
+         * @param {string} key 
+         * @returns True if found otherwise false
+         */
+        has(key) {
+            return !!this.routers.find(route => route.key === key);
+        }
+
+        /**
+         * Searches the router by the url. The navigation hook of the last mathced router is returned.
+         * If no routers match then an empty function will be returned instead.
+         * @param {string} url 
+         * @returns The router navigation hook
+         */
+        get(url) {
+            let found;
+            let prevFoundRouter;
+
+            if (url.match(/^\/[^#]/) || url === '/') {
+                const urlRouters = this.routers.filter(router => router.key.match(/^:\//));
+
+                found = urlRouters.find((router, idx) => {
+                    const route = RMERouterUtils.findRoute(url, router.routes, RMERouterUtils.urlMatch);
+
+                    if (!!route) {
+                        prevFoundRouter = router;
+                    }
+                    return !!route && idx === urlRouters.length - 1;
+                });
+
+                found = found || prevFoundRouter;
+            } else {
+                const hashRouters = this.routers.filter(router => router.key.match(/^:#?/));
+
+                found = hashRouters.find((router, idx) => {
+                    const route = RMERouterUtils.findRoute(url, router.routes, RMERouterUtils.hashMatch);
+
+                    if (!!route) {
+                        prevFoundRouter = router;
+                    }
+                    return !!route && idx === hashRouters.length - 1;
+                });
+
+                found = found || prevFoundRouter;
+            }
+
+            return !!found ? found.navigateHook : () => undefined;
+        }
+
+        /**
+         * Creates a string key from the route array
+         * @param {array} routes 
+         * @returns {string} RouterContext key
+         */
+        static createContextKey(routes) {
+            return `:${routes.map(route => route.route).join(':')}`;
+        }
+
+        /**
+         * Navigate to the given url. Function attempts to find the router by the url and
+         * if found the navigation hook of the router is invoked with the url.
+         * @param {string} url 
+         */
+        static navigateTo(url) {
+            RouterContext.instance.get(RMERouterUtils.getUrlPath(url))(url);
+        }
+
+        /**
+         * Set the route array and the router navigate hook into the RouterContext store
+         * @param {array} routes the router routes
+         * @param {Function} navigateHook the router navigation hook
+         */
+        static setRouter(routes, navigateHook) {
+            RouterContext.instance.set(RouterContext.createContextKey(routes), { routes, navigateHook });
+        }
+
+        static get instance() {
+            if (!this.ins) {
+                this.ins = new RouterContext();
+            }
+            return this.ins;
+        }
+    }
+
+    return RouterContext;
+
+}());
+
+
+
+const RMERouterUtils = (function() {
+
+    /**
+     * Cut the protocol and the domain off from the url if exist.
+     * For example https://www.example.com/example -> /example
+     * @param {string} url 
+     * @returns The path of the url.
+     */
+    const getUrlPath = (url) => {
+        return url.replace(/\:{1}\/{2}/, '').match(/\/{1}.*/).join();
+    }
+
+    /**
+     * Function checks if the given URLs match and returns true if they match otherwise false is returned.
+     * @param {string} oldUrl 
+     * @param {string} newUrl 
+     * @returns True or false
+     */
+    const urlMatch = (oldUrl, newUrl) => {
+        oldUrl = Util.isString(oldUrl) ? oldUrl.replace(/\*/g, '.*').replace(/\/{2,}/g, '/') : oldUrl;
+        const path = getUrlPath(newUrl);
+        let found = path.match(oldUrl);
+        if (Util.notEmpty(found)) {
+            found = found.join();
+        }
+
+        return found === path && new RegExp(oldUrl).test(newUrl);
+    }
+
+    /**
+     * Function checks if the given URLs match and returns true if they match otherwise false is returned.
+     * @param {string} oldUrl 
+     * @param {string} newUrl 
+     * @returns True or false
+     */
+    const hashMatch = (oldUrl, newUrl) => {
+        if (Util.isString(oldUrl)) {
+            oldUrl = oldUrl.replace(/\*/g, '.*');
+            if (oldUrl.charAt(0) !== '#') {
+                oldUrl = `#${oldUrl}`;
+            }
+        }
+
+        const hash = newUrl.match(/\#{1}.*/).join();
+        let found = hash.match(oldUrl);
+        found = Util.notEmpty(found) ? found.join() : null;
+
+        return found === hash && new RegExp(oldUrl).test(newUrl);
+    }
+
+    /**
+     * Function will search for the route by the given url parameter. A route will be returned if found otherwise
+     * undefined is returned.
+     * @param {string} url to match
+     * @param {array} routes routes array
+     * @param {Function} matcherHook matcher function
+     * @see urlMatch - match by pathname
+     * @see hashMatch - match by hash
+     * @returns Found route object or undefined if not found
+     */
+    const findRoute = (url, routes, matcherHook) => {
+        return url && routes.find((route) => matcherHook(route.route, url));
+    }
+
+    /**
+     * Resolves the given element into a Template object
+     * @param {string|Function|Elem} elem 
+     * @param {object} props 
+     * @returns Template object
+     */
+    const resolveRouteElem = (elem, props) => {
+        if (Util.isFunction(elem) && RMEComponentManagerV2.hasComponent(elem.valueOf().name)) {
+            return  { [elem.valueOf().name]: props };
+        } else if (Util.isString(elem) && RMEComponentManagerV2.hasComponent(elem)) {
+            return { [elem]: props };
+        } else {
+            return { _: elem.toTemplate() };
+        }
+    }
+
+    return {
+        getUrlPath,
+        findRoute,
+        urlMatch,
+        hashMatch,
+        resolveRouteElem
     }
 }());
 
 
-/**
- * Session class is a wrapper interface for the SessionStorage and thus provides get, set, remove and clear methods of the SessionStorage.
- */
-class Session {
-    /**
-     * Save data into the Session.
-     * @param {string} key
-     * @param {*} value
-     */
-    static set(key, value) {
-        sessionStorage.setItem(key, value);
-    }
-    /**
-     * Get the saved data from the Session.
-     * @param {string} key
-     */
-    static get(key) {
-        return sessionStorage.getItem(key);
-    }
-    /**
-     * Remove data from the Session.
-     * @param {string} key
-     */
-    static remove(key) {
-        sessionStorage.removeItem(key);
-    }
-    /**
-     * Clears the Session.
-     */
-    static clear() {
-        sessionStorage.clear();
-    }
-}
 
 
+const useHashRouter = (function() {
+
+    /**
+     * The useHashRouter function creates and returns the hash based router component.
+     * The router is suitable for single page applications.
+     * @param {array} routes router routes
+     */
+    return (routes, globalScrollTop = true) => {
+        Component(RMEHashRouter);
+
+        return {
+            RMEHashRouter: {
+                routes,
+                globalScrollTop
+            }
+        };
+    }
+}());
+
+const useAutoUrlRouter = (function() {
+
+    /**
+     * The useAutoUrlRouter function creates and returns the url based router component.
+     * The router is suitable for web pages that only load one route once one the page load.
+     * @param {array} routes router routes
+     */
+    return (routes) => {
+        Component(RMEOnLoadUrlRouter);
+
+        return {
+            RMEOnLoadUrlRouter: {
+                routes
+            }
+        }
+    }
+}());
+
 /**
- * Storage class is a wrapper interface for the LocalStorage and thus provides get, set, remove and clear methods of the LocalStorage.
+ * The useUrlRouter function creates and returns the url based router component.
+ * The router is suitable for single page applications.
+ * @param {array} routes router routes
  */
-class Storage {
-    /**
-     * Save data into the local storage. 
-     * @param {string} key
-     * @param {*} value
-     */
-    static set(key, value) {
-        localStorage.setItem(key, value);
+const useUrlRouter = (function() {
+    
+    return (routes, globalScrollTop = true) => {
+        Component(RMEUrlRouter);
+
+        return {
+            RMEUrlRouter: {
+                listenLoad: false,
+                routes,
+                globalScrollTop,
+            }
+        }
     }
+}());
+
+const useRouter = (function() {
+
     /**
-     * Get the saved data from the local storage.
-     * @param {string} key
+     * The useRouter function handles the navigation of the last matched router in the RouterContext.
+     * This function is needed to handle the navigation when using the single page page application url router.
+     * The parameter url can either be a string or an event. If the url is an event then the target url is read from the event.target.href attribute.
+     * @param {string|Event} url the url to navigate to
      */
-    static get(key) {
-        return localStorage.getItem(key);
+    return (url) => {
+        if (Util.isString(url)) {
+            RMERouterContext.navigateTo(url);
+        } else if (url instanceof Event) {
+            url.preventDefault();
+            RMERouterContext.navigateTo(url.target.href);
+        }
     }
-    /**
-     * Remove data from the local storage.
-     * @param {string} key
-     */
-    static remove(key) {
-        localStorage.removeItem(key);
-    }
-    /**
-     * Clears the local storage.
-     */
-    static clear() {
-        localStorage.clear();
-    }
-}
+}());
+
+
+
 
 
 const RMETemplateFragmentHelper = (function() {
@@ -5264,7 +4658,7 @@ const RMETemplateFragmentHelper = (function() {
 
 
 
-let Template = (function() {
+const RMETemplateResolver = (function() {
     /**
      * Template class reads a JSON format notation and creates an element tree from it.
      * The Template class has only one public method resolve that takes the template as parameter and returns 
@@ -5274,160 +4668,194 @@ let Template = (function() {
         constructor() {
             this.template = {};
             this.root = null;
+            this.appName;
+            this.context;
         }
 
         /**
          * Method takes a template as parameter, starts resolving it and returns 
          * a created element tree. 
          * @param {object} template
+         * @param {Elem} Elem
+         * @param {string} appName
          * @returns Elem instance element tree.
          */
-        setTemplateAndResolve(template, parent) {
+        setTemplateAndResolve(template, parent, appName = '', context = '') {
             this.template = template;
+            this.appName = appName;
+            this.context = context;
             if (parent) {
                 this.root = parent;
-                this.resolve(this.template, this.root, 1);
+                this.resolveNextParent(this.template, this.root, 1);
             } else {
-                this.resolve(this.template, this.root, 0);
+                this.resolveRootAndTemplate();
+                this.resolveNextParent(this.template, this.root, 1);
             }
             return this.root;
+        }
+
+        /**
+         * Resolve the root and the template parameters
+         */
+        resolveRootAndTemplate() {
+            const key = Object.keys(this.template).shift();
+            this.root = this.resolveChild(key, this.template[key], null, 0, 0);
+            
+            if (Util.isFunction(this.template[key])) {
+                this.template = this.template[key].call(this.root, this.root);
+            } else {
+                this.template = this.template[key];
+            }
+        }
+
+        /**
+         * Resolves properties of the each template object and returns them in the resolved array.
+         * The array contains three arrays, attrs array, listeners array and children array.
+         * @param {object} template 
+         * @param {Elem} parent 
+         * @returns Array that contains three arrays
+         */
+        resolveTemplateProperties(template, parent) {
+            const attrs = [];
+            const listeners = [];
+            const children = [];
+
+            if (Util.isString(template) || Util.isNumber(template)) {
+                if (Util.isString(template) && Template.isMessage(template)) {
+                    attrs.push({key: 'message', val: template});
+                } else {
+                    attrs.push({key: 'text', val: template});
+                }
+            } else if (Util.isArray(template)) {
+                template.forEach(obj => {
+                    const key = Object.keys(obj).shift();
+                    const val = Object.values(obj).shift();
+                    children.push({ key, val: Template.isComponent(key) && Util.isFunction(val) ? {} : val });
+                });
+            } else if (Util.isObject(template)) {
+                Object.keys(template).forEach((key, i) => {
+                    if (Template.isAttr(key, parent)) {
+                        attrs.push({key, val: template[key]});
+                    } else if (Template.isEventKeyVal(key, template[key])) {
+                        listeners.push({parentProp: parent[key], func: template[key]});
+                    } else if (Template.isTag(Template.getElementName(key))) {
+                        children.push({key, val: template[key]});
+                    } else if (Template.isComponent(key)) {
+                        children.push({key, val: !Util.isFunction(template[key]) ? template[key] : {}});
+                    } else if (RMETemplateFragmentHelper.isFragmentKey(key)) {
+                        children.push({key, val: template[key]});
+                    }
+                });
+            }
+
+            return [attrs, listeners, children];
         }
 
         /**
          * Method resolves a given template recusively. The method and
          * parameters are used internally.
          * @param {object} template
-         * @param {object} parent
+         * @param {Elem} parent
          * @param {number} round
+         * @param {number} invoked
          */
-        resolve(template, parent, round) {
-            for (var obj in template) {
-                if (template.hasOwnProperty(obj)) {
-                    if (round === 0) {
-                        this.root = this.resolveElement(obj, template[obj]);
-                        if (this.isArray(template[obj])) {
-                            ++round;
-                            this.resolveArray(template[obj], this.root, round);
-                        } else if (!Template.isComponent(obj) && Util.isObject(template[obj])) {
-                            ++round;
-                            this.resolve(template[obj], this.root, round);
-                        } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
-                            ++round;
-                            this.resolveStringNumber(this.root, template[obj]);
-                        } else if (Util.isFunction(template[obj])) {
-                            ++round;
-                            this.resolveFunction(this.root, template[obj], round);
-                        } else if (Template.isAttr(obj, this.root)) {
-                            this.resolveAttributes(this.root, obj, this.resolveFunctionBasedAttribute(template[obj]))
-                        } else if (this.isEventKeyVal(obj, template[obj])) {
-                            this.bindEventToElement(this.root, template[obj], this.root[obj]);
-                        }
-                    } else {
-                        if (Template.isAttr(obj, parent)) {
-                            this.resolveAttributes(parent, obj, this.resolveFunctionBasedAttribute(template[obj]));
-                        } else if (this.isEventKeyVal(obj, template[obj])) {
-                            this.bindEventToElement(parent, template[obj], parent[obj]);
-                        } else {
-                            ++round;
-                            var child = this.resolveElement(obj, template[obj]);
-                            if (RMETemplateFragmentHelper.isFragment(child)) {
-                                this.resolveFragment(RMETemplateFragmentHelper.resolveFragmentValue(child, template[obj]), parent, round);
-                            } else {
-                                parent.append(child);
-                                if (this.isArray(template[obj])) {
-                                    this.resolveArray(template[obj], child, round);
-                                } else if (!Template.isComponent(obj) && Util.isObject(template[obj])) {
-                                    this.resolve(template[obj], child, round);
-                                } else if (Util.isString(template[obj]) || Util.isNumber(template[obj])) {
-                                    this.resolveStringNumber(child, template[obj]);
-                                } else if (Util.isFunction(template[obj])) {
-                                    this.resolveFunction(child, template[obj], round);
-                                }
-                            }
-                        }
+        resolveTemplate(template, parent, round, parentContext) {
+            const [attrs, listeners, children] = this.resolveTemplateProperties(template, parent);
+
+            attrs.forEach(attr => Template.resolveAttributes(parent, attr.key, this.resolveFunctionValue(attr.val, parent)));
+
+            listeners.forEach(listener => this.bindEventToElement(parent, listener.func, listener.parentProp));
+
+            children.forEach((rawChild, idx) => {
+                if (RMETemplateFragmentHelper.isFragmentKey(rawChild.key)) {
+                    this.resolveNextParent(rawChild.val, parent, round, parentContext + rawChild.key);
+                } else {
+                    const child = this.resolveChild(rawChild.key, rawChild.val, parent, round, idx, parentContext);
+                    parent.append(child);
+
+                    if (!Template.isComponent(rawChild.key)) {
+                        this.resolveNextParent(rawChild.val, child, round, parentContext);
                     }
                 }
-            }
-        }
+            });
 
-        bindEventToElement(elemInstance, sourceFunction, targetFunction) {
-            targetFunction.call(elemInstance, sourceFunction);
+            round++;
         }
 
         /**
-         * Method receives three parameters that represent pieces of the HTML tree. Method resolves
-         * given parameters accordingly and eventually HTML nodes are appended into the HTML tree.
-         * @param {*} fragment 
-         * @param {*} parent 
-         * @param {*} round 
+         * Resolves the next child element by the given parameters. The child can be a HTML element, a component or a fragment. Returns resolved child element.
+         * @param {string} key child name e.g. component name, HTML tag or fragment
+         * @param {object|array} val properties for the resolvable child
+         * @param {Elem} parent Elem
+         * @param {number} round number
+         * @param {number} invoked number
+         * @returns Elem instance child element
          */
-        resolveFragment(fragment, parent, round) {
-            if (this.isArray(fragment)) {
-                this.resolveArray(fragment, parent, round);
-            } else if (Util.isFunction(fragment)) {
-                const ret = fragment.call(parent, parent);
-                if (this.isArray(ret))
-                    this.resolveArray(ret, parent, round);
-                else
-                    Template.resolveToParent(ret, parent);
+        resolveChild(key, val, parent, round, invoked, parentContext = '') {
+            const name = Template.getElementName(key);
+            if (RMEComponentManagerV2.hasComponent(name)) {
+                const component = RMEComponentManagerV2.getComponent(name, this.resolveComponentLiteralVal(val), `${parentContext}${round}${invoked}`, this.appName);
+                if (RMETemplateFragmentHelper.isFragment(component) && Util.notEmpty(component)) {
+                    this.resolveNextParent(RMETemplateFragmentHelper.resolveFragmentValue(component, val), parent, round);
+                    return null;
+                } else if (Util.notEmpty(component)) {
+                    return this.resolveElement(key, component);
+                }
+                return component;
             } else {
-                this.resolve(fragment, parent, round);
+                return Template.resolveStringNumber(this.resolveElement(key, val), val);
             }
+        }
+
+        /**
+         * Resolves component literal values and converts it to a properties object that the component understands.
+         * The given parameter is returned as is if the parameter is not a string nor a number literal.
+         * @param {string|number} val 
+         * @returns Resolved properties object or the given value if the value was not a string nor a number.
+         */
+        resolveComponentLiteralVal(val) {
+            if (Util.isString(val) && Template.isMessage(val)) {
+                return { message: val };
+            } else if (Util.isString(val) || Util.isNumber(val)) {
+                return { text: val };
+            } else {
+                return val
+            }
+        }
+
+        /**
+         * Resolves next parent element and its' attributes.
+         * @param {object} obj 
+         * @param {Elem} parent 
+         * @param {number} round 
+         * @param {string} parentContext 
+         */
+        resolveNextParent(obj, parent, round, parentContext = '') {
+            const arr = Array.of(this.resolveFunctionValue(obj, parent)).flat();
+            const parentTag = Util.isEmpty(parent) ? parentContext : parentContext + parent.getTagName().toLowerCase();
+            arr.forEach((item, i) => this.resolveTemplate(item, parent, round, `${this.context}${parentTag}[${i}]`));
+        }
+
+        /**
+         * Bind event listener from the source function to the target function.
+         * @param {Elem} elemInstance 
+         * @param {function} sourceFunction 
+         * @param {function} targetFunction 
+         */
+        bindEventToElement(elemInstance, sourceFunction, targetFunction) {
+            targetFunction.call(elemInstance, sourceFunction);
         }
 
         /**
          * Method resolves function based attribute values. If the given attribute value
          * is type function then the function is invoked and its return value will be returned otherwise
          * the given attribute value is returned.
-         * @param {*} attr 
+         * @param {*} value
+         * @param {Elem} parent
          * @returns Resolved attribute value.
          */
-        resolveFunctionBasedAttribute(attrValue) {
-            return Util.isFunction(attrValue) ? attrValue.call() : attrValue;
-        }
-
-
-        /**
-         * Checks if the given parameter is an Array.
-         * 
-         * @param {*} nextValue 
-         * @returns True if the given value is an Array.
-         */
-        isArray(nextValue) {
-            return Util.isArray(nextValue) || (!Util.isEmpty(nextValue) && Util.isArray(nextValue._rme_type_));
-        }
-
-        /**
-         * Method resolves a given array template elements.
-         * @param {array} array
-         * @param {parent} parent
-         * @param {round}
-         */
-        resolveArray(nextValue, parent, round) {
-            let array = nextValue._rme_type_ || nextValue;
-            if (nextValue._rme_props_) {
-                this.resolve(nextValue._rme_props_, parent, round);
-            }
-            let i = 0;                
-            while (i < array.length) {
-                let o = array[i];
-                for (let key in o) {
-                    if (o.hasOwnProperty(key)) {
-                        if (Util.isObject(o[key])) {
-                            this.resolve(o, parent, round);
-                        } else if (Util.isString(o[key]) || Util.isNumber(o[key])) {
-                            let el = this.resolveElement(key);
-                            this.resolveStringNumber(el, o[key]);
-                            parent.append(el);
-                        } else if (Util.isFunction(o[key])) {
-                            let el = this.resolveElement(key);
-                            this.resolveFunction(el, o[key]);
-                            parent.append(el);
-                        }
-                    }
-                }
-                i++;
-            }
+        resolveFunctionValue(value, parent) {
+            return Util.isFunction(value) ? value.call(parent, parent) : value;
         }
 
         /**
@@ -5435,31 +4863,13 @@ let Template = (function() {
          * @param {object} elem 
          * @param {*} value 
          */
-        resolveStringNumber(elem, value) {
-            if(Util.isString(value) && this.isMessage(value))
-                this.resolveMessage(elem, value);
-            else
+        static resolveStringNumber(elem, value) {
+            if (Util.isString(value) && Template.isMessage(value)) {
+                Template.resolveMessage(elem, value);
+            } else if (Util.isString(value) || Util.isNumber(value)) {
                 elem.setText(value);
-        }
-    
-        /**
-         * Resolves function based tempalte implementation.
-         * @param {object} elem
-         * @param {func} func
-         */
-        resolveFunction(elem, func, round) {
-            let ret = func.call(elem, elem);
-            if (!Util.isEmpty(ret)) {
-                if (Util.isString(ret) && this.isMessage(ret)) {
-                    this.resolveMessage(elem, ret);
-                } else if (Util.isString(ret) || Util.isNumber(ret)) {
-                    elem.setText(ret);
-                } else if(this.isArray(ret)) {
-                    this.resolveArray(ret, elem, round)
-                } else if (Util.isObject(ret)) {
-                    this.resolve(ret, elem, round);
-                }
             }
+            return elem;
         }
 
         /**
@@ -5468,33 +4878,26 @@ let Template = (function() {
          * @param {string} message 
          * @returns True if the given message is actually a message otherwise returns false.
          */
-        isMessage(message) {
-            message = this.normalizeMessageString(message);
-            return Util.notEmpty(Messages.message(message)) && Messages.message(message) != message;
+        static isMessage(message) {
+            message = Template.normalizeMessageString(message);
+            return Util.notEmpty(RMEMessagesResolver.message(message)) && RMEMessagesResolver.message(message) != message;
         }
 
         /**
-         * Resolves an element and some basic attributes from a give tag. Method throws an exception if 
-         * the element could not be resolved.
+         * Resolves a element (HTML tag) and some basic attributes from the given tag.
          * @param {string} tag
          * @param {object} obj
          * @returns Null or resolved Elem instance elemenet.
          */
         resolveElement(tag, obj) {
             let resolved = null;
-            var match = [];
-            var el = Template.getElementName(tag);
-            if (RMEComponentManager.hasComponent(el)) {
-                el = el.replace(/component:/, "");
-                resolved = RMEComponentManager.getComponent(el, obj);
-                if (Util.isEmpty(resolved))
-                    return resolved;
-            } else if (Util.isEmpty(el)) {
-                throw `Template resolver could not find element: ${el} from the given tag: ${tag}`;
-            } else if (RMETemplateFragmentHelper.isFragmentKey(el)) {
-                return 'fragment'
-            } else {
+            let match = [];
+            let el = Template.getElementName(tag);
+
+            if (Util.isString(el) && Template.isTag(el)) {
                 resolved = new Elem(el);
+            } else {
+                resolved = obj // for component parent element
             }
 
             match = tag.match(/[a-z0-9]+\#[a-zA-Z0-9\-]+/); //find id
@@ -5507,7 +4910,7 @@ let Template = (function() {
 
             match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_\/\.&%@!?£$+¤|;\\<\\>\\{}"]+\]/g); //find attributes
             if (!Util.isEmpty(match))
-                resolved = this.addAttributes(resolved, match);
+                resolved = Template.addAttributes(resolved, match);
 
             return resolved;
         }
@@ -5528,7 +4931,7 @@ let Template = (function() {
          * @param {array} elem
          * @returns The given elem instance.
          */
-        addAttributes(elem, attrArray) {
+        static addAttributes(elem, attrArray) {
             let i = 0;
             let start = "[";
             let eq = "=";
@@ -5537,7 +4940,7 @@ let Template = (function() {
                 var attr = attrArray[i];
                 let key = attr.substring(attr.indexOf(start) +1, attr.indexOf(eq));
                 let val = attr.substring(attr.indexOf(eq) +1, attr.indexOf(end));
-                this.resolveAttributes(elem, key, val);
+                Template.resolveAttributes(elem, key, val);
                 i++;
             }
             return elem;
@@ -5549,25 +4952,25 @@ let Template = (function() {
          * @param {string} key
          * @param {string} val
          */
-        resolveAttributes(elem, key, val) {
+        static resolveAttributes(elem, key, val) {
             switch (key) {
                 case 'id':
                     elem.setId(val);
                     break;
                 case 'class':
-                    elem.addClasses(val || '');
+                    elem.addClasses(val || '');
                     break;
                 case 'text':
-                    elem.setText(val || '');
+                    elem.setText(val || '');
                     break;
                 case 'message':
-                    this.resolveMessage(elem, val);
+                    Template.resolveMessage(elem, val);
                     break;
                 case 'placeholder':
-                    this.resolvePlaceholder(elem, key, val);
+                    Template.resolvePlaceholder(elem, key, val);
                     break;
                 case 'content':
-                    this.resolveContent(elem, key, val);
+                    Template.resolveContent(elem, key, val);
                     break;
                 case 'tabIndex':
                     elem.setTabIndex(val);
@@ -5609,7 +5012,7 @@ let Template = (function() {
                     elem.setMinLength(val);
                     break;
                 default: 
-                    this.resolveDefault(elem, key, val);
+                    Template.resolveDefault(elem, key, val);
             }
         }
 
@@ -5619,10 +5022,10 @@ let Template = (function() {
          * @param {string} key 
          * @param {*} val 
          */
-        resolvePlaceholder(elem, key, val) {
-            const params = this.getMessageParams(val);
-            const message = this.normalizeMessageString(val);
-            elem.setAttribute(key, this.isMessage(val) ? Messages.message(message, params) : val);
+        static resolvePlaceholder(elem, key, val) {
+            const params = Template.getMessageParams(val);
+            const message = Template.normalizeMessageString(val);
+            elem.setAttribute(key, Template.isMessage(val) ? RMEMessagesResolver.message(message, params) : val);
         }
 
         /**
@@ -5632,7 +5035,7 @@ let Template = (function() {
          * @param {string} key 
          * @param {*} val 
          */
-        resolveDefault(elem, key, val) {
+        static resolveDefault(elem, key, val) {
             if(key.indexOf("data") === 0 && key.length > "data".length)
                 elem.setData(key.replace(/[A-Z]/, key.charAt(4).toLowerCase()).replace("data", ""), val);
             else
@@ -5645,7 +5048,7 @@ let Template = (function() {
          * @param {string} key 
          * @param {string} val 
          */
-        resolveContent(elem, key, val) {
+        static resolveContent(elem, key, val) {
             if(elem.getTagName().toLowerCase() === "meta")
                 elem.setAttribute(key, val);
             else
@@ -5658,11 +5061,11 @@ let Template = (function() {
          * @param {object} elem 
          * @param {string} message 
          */
-        resolveMessage(elem, message) {
+        static resolveMessage(elem, message) {
             if(Util.isEmpty(message))
                 throw "message must not be empty";
 
-            elem.message(this.normalizeMessageString(message), this.getMessageParams(message));
+            elem.message(Template.normalizeMessageString(message), Template.getMessageParams(message));
         }
 
         /**
@@ -5670,8 +5073,8 @@ let Template = (function() {
          * @param {string} message 
          * @returns Message params in the array or null if no params found.
          */
-        getMessageParams(message) {
-            let match = this.getMessageParameterString(message);
+        static getMessageParams(message) {
+            let match = Template.getMessageParameterString(message);
             match = match && match.join().replace(/({|}|:|;)/g, match.join()).split(match.join());
             return match && match.filter(Util.notEmpty);
         }
@@ -5681,7 +5084,7 @@ let Template = (function() {
          * @param {string} message 
          * @returns The match array or null.
          */
-        getMessageParameterString(message) {
+        static getMessageParameterString(message) {
             return message.match(/\:?(\{.*\}\;?)/g);
         }
 
@@ -5690,8 +5093,8 @@ let Template = (function() {
          * @param {string} message 
          * @returns The normalized message string.
          */
-        normalizeMessageString(message) {
-            const params = this.getMessageParameterString(message);
+        static normalizeMessageString(message) {
+            const params = Template.getMessageParameterString(message);
             return Util.notEmpty(params) ? message.replace(params.join(), '') : message;
         }
 
@@ -5701,7 +5104,7 @@ let Template = (function() {
          * @param {function} val
          * @returns True if the given key val is event listener key val.
          */
-        isEventKeyVal(key, val) {
+        static isEventKeyVal(key, val) {
             return key.indexOf("on") === 0 && Util.isFunction(val);
         }
 
@@ -5722,28 +5125,19 @@ let Template = (function() {
          * @returns True if the component exist or the key contains component keyword and exist, otherwise false.
          */
         static isComponent(key) {
-            return RMEComponentManager.hasComponent(Template.getElementName(key));
+            return RMEComponentManagerV2.hasComponent(Template.getElementName(key));
         }
 
         /**
          * Method takes a template as parameter, starts resolving it and 
          * returns a created element tree.
-         * @param {object} template
-         * @returns Elem instance element tree.
+         * @param {object} template - JSON notation template object
+         * @param {Elem} Elem - Elem object (optional)
+         * @param {string} appName - App instance name (optional)
+         * @returns Element tree of Elem instance objects.
          */
-        static resolveTemplate(template) {
-            return Template.create().setTemplateAndResolve(template);
-        }
-
-        /**
-         * Method takes a template and a parent element as parameter and it resolves the given template
-         * into the given parent.
-         * @param {*} template
-         * @param {*} parent
-         * @returns Elem instance element tree.
-         */
-        static resolveToParent(template, parent) {
-            return Template.create().setTemplateAndResolve(template, parent);
+        static resolve(template, parent, appName, context) {
+            return Template.create().setTemplateAndResolve(template, parent, appName, context);
         }
 
         /**
@@ -5753,38 +5147,32 @@ let Template = (function() {
          * @param {object} oldProps
          */
         static updateElemProps(elem, props, oldProps) {
-            let mashed = Template.mashElemProps(props, oldProps);
-            const templater = Template.create();
-            for (let p in mashed) {
-                if (mashed.hasOwnProperty(p)) {
-                    if (templater.isEventKeyVal(p, mashed[p])) {
-                        elem[p].call(elem, mashed[p]); //element event attribute -> elem, event function
-                    } else if (p === 'class') {
-                        elem.updateClasses(mashed[p] || '');
-                    } else if (p === 'value') {
-                        elem.setAttribute(p, mashed[p]);
-                        elem.setValue(mashed[p]);
-                    } else {
-                        templater.resolveAttributes(elem, p, mashed[p]);
-                    }
+            const combined = Template.combineProps(props, oldProps);
+            Object.keys(combined).forEach((prop) => {
+                if (Template.isEventKeyVal(prop, combined[prop])) {
+                    elem[prop].call(elem, combined[prop]); // element event attribute -> elem, event function
+                } else if (prop === 'class') {
+                    elem.updateClasses(combined[prop] || '');
+                } else if (prop === 'value') {
+                    elem.setAttribute(prop, combined[prop]);
+                    elem.setValue(combined[prop]);
+                } else {
+                    Template.resolveAttributes(elem, prop, combined[prop]);
                 }
-            }
+            });
         }
 
-        static mashElemProps(newProps, oldProps) {
-            let props = {};
-            for (let p in oldProps) {
-                if (oldProps.hasOwnProperty(p)) {
-                    if (!newProps[p] && oldProps[p]) {
-                        props[p] = p === 'style' ? '' : undefined
-                    }
+        static combineProps(newProps, oldProps) {
+            Object.keys(oldProps).forEach(prop => {
+                if (oldProps[prop] && !newProps[prop]) { // if no new prop but old exist
+                    oldProps[prop] = prop === 'style' ? '' : undefined;
                 }
-            }
-            props = {
-                ...props,
+            });
+
+            return {
+                ...oldProps,
                 ...newProps
             }
-            return props;
         }
 
         static create() {
@@ -5879,7 +5267,7 @@ let Template = (function() {
                 return true;
             else if (key === "form" && (Template.isElem(elem.getTagName(), ["button", "fieldset", "input", "label", "meter", "object", "output", "select", "textarea"])))
                 return true;
-            else if (key.indexOf("data") === 0 && (!RMEComponentManager.hasComponent(key) && !Template.isElem(elem.getTagName(), ["data"]) || Template.isElem(elem.getTagName(), ["object"])))
+            else if (key.indexOf("data") === 0 && (!RMEComponentManagerV2.hasComponent(key) && !Template.isElem(elem.getTagName(), ["data"]) || Template.isElem(elem.getTagName(), ["object"])))
                 return true;
 
             let attrs = {
@@ -5972,14 +5360,12 @@ let Template = (function() {
         }
 
     }
-    return {
-        resolve: Template.resolveTemplate,
-        isTemplate: Template.isTemplate,
-        isTag: Template.isTag,
-        updateElemProps: Template.updateElemProps,
-        resolveToParent: Template.resolveToParent
-    }
+
+    return Template;
+
 }());
+
+
 
 
 /**
@@ -6157,176 +5543,4 @@ class Tree {
     }
 }
 
-
-/**
- * General Utility methods.
- */
-class Util {
-    /**
-     * Checks is a given value empty.
-     * @param {*} value
-     * @returns True if the give value is null, undefined, an empty string or an array and lenght of the array is 0.
-     */
-    static isEmpty(value) {
-        return (value === null || value === undefined || value === "") || (Util.isArray(value) && value.length === 0);
-    }
-
-    /**
-     * Checks is the given value not empty. This function is a negation to the Util.isEmpty function.
-     * @param {*} value 
-     * @returns True if the value is not empty otherwise false.
-     */
-    static notEmpty(value) {
-        return !Util.isEmpty(value)
-    }
-
-    /**
-     * Get the type of the given value.
-     * @param {*} value
-     * @returns The type of the given value.
-     */
-    static getType(value) {
-        return typeof value;
-    }
-
-    /**
-     * Checks is a given value is a given type.
-     * @param {*} value
-     * @param {string} type
-     * @returns True if the given value is the given type otherwise false.
-     */
-    static isType(value, type) {
-        return (Util.getType(value) === type);
-    }
-
-    /**
-     * Checks is a given parameter a function.
-     * @param {*} func 
-     * @returns True if the given parameter is fuction otherwise false.
-     */
-    static isFunction(func) {
-        return Util.isType(func, "function");
-    }
-
-    /**
-     * Checks is a given parameter a boolean.
-     * @param {*} boolean
-     * @returns True if the given parameter is boolean otherwise false.
-     */
-    static isBoolean(boolean) {
-        return Util.isType(boolean, "boolean");
-    }
-
-    /**
-     * Checks is a given parameter a string.
-     * @param {*} string
-     * @returns True if the given parameter is string otherwise false.
-     */
-    static isString(string) {
-        return Util.isType(string, "string");
-    }
-
-    /**
-     * Checks is a given parameter a number.
-     * @param {*} number
-     * @returns True if the given parameter is number otherwise false.
-     */
-    static isNumber(number) {
-        return Util.isType(number, "number");
-    }
-
-    /**
-     * Checks is a given parameter a symbol.
-     * @param {*} symbol
-     * @returns True if the given parameter is symbol otherwise false.
-     */
-    static isSymbol(symbol) {
-        return Util.isType(symbol, "symbol");
-    }
-
-    /**
-     * Checks is a given parameter a object.
-     * @param {*} object
-     * @returns True if the given parameter is object otherwise false.
-     */
-    static isObject(object) {
-        return Util.isType(object, "object");
-    }
-
-    /**
-     * Checks is a given parameter an array.
-     * @param {*} array
-     * @returns True if the given parameter is array otherwise false.
-     */
-    static isArray(array) {
-        return Array.isArray(array);
-    }
-
-    /**
-     * Sets a timeout where the given callback function will be called once after the given milliseconds of time. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The timeout object.
-     */
-    static setTimeout(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setTimeout(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes a timeout that was created by setTimeout method.
-     * @param {object} timeoutObject
-     */
-    static clearTimeout(timeoutObject) {
-        window.clearTimeout(timeoutObject);
-    }
-
-    /**
-     * Sets an interval where the given callback function will be called in intervals after milliseconds of time has passed. Params are passed to callback function.
-     * @param {function} callback
-     * @param {number} milliseconds
-     * @param {*} params
-     * @returns The interval object.
-     */
-    static setInterval(callback, milliseconds, ...params) {
-        if(!Util.isFunction(callback)) {
-            throw "callback not fuction";
-        }
-        return window.setInterval(callback, milliseconds, params);
-    }
-
-    /**
-     * Removes an interval that was created by setInterval method.
-     */
-    static clearInterval(intervalObject) {
-        window.clearInterval(intervalObject);
-    }
-
-    /**
-     * Encodes a string to Base64.
-     * @param {string} string
-     * @returns The base64 encoded string.
-     */
-    static encodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.btoa(string);
-    }
-
-    /**
-     * Decodes a base 64 encoded string.
-     * @param {string} string
-     * @returns The base64 decoded string.
-     */
-    static decodeBase64String(string) {
-        if(!Util.isString(string)) {
-            throw "the given parameter is not a string: " +string;
-        }
-        return window.atob(string);
-    }
-}
 

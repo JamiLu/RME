@@ -1,3 +1,3 @@
-import configure, { script, ready } from './functions';
+import { script, ready } from './functions';
 
-export { configure, script, ready }
+export { script, ready }

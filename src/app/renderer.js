@@ -17,16 +17,37 @@ class RMEElemRenderer {
      * @param {object} newStage
      * @returns The merged stage.
      */
-    merge(oldStage, newStage) {
+    merge(newStage) {
+        this.updateEventListeners(this.root, newStage);
+
+        const [ oldChildren, newChildren ] = this.getChildren(this.root, newStage);
+
         if (Util.isEmpty(this.root.getChildren())) {
-            this.root.append(newStage);
-            this.mergedStage = newStage;
+            this.root.render(newChildren);
         } else {
-            this.render(this.root, oldStage, newStage, 0);
-            this.mergedStage = oldStage;
+            let i = 0;
+            while (i < newChildren.length || i < oldChildren.length) {
+                this.render(this.root, newStage, oldChildren[i], newChildren[i], i);
+                i++;
+            }
+            
             this.removeToBeRemoved();
         }
-        return this.mergedStage;
+
+        return this.root;
+    }
+
+    /**
+     * Get children of the oldNode and the newNode. Returns an array that contains two arrays where one is old children and another is new children
+     * @param {Elem} oldNode
+     * @param {Elem} newNode 
+     * @returns Array that contains two arrays
+     */
+    getChildren(oldNode, newNode) {
+        return [
+            Array.of(oldNode.getChildren()).flat(),
+            Array.of(newNode.getChildren()).flat()
+        ]
     }
 
     /**
@@ -36,13 +57,13 @@ class RMEElemRenderer {
      * @param {object} newNode 
      * @param {number} index 
      */
-    render(parent, oldNode, newNode, index) {
+    render(parent, newParent, oldNode, newNode, index) {
         if (!oldNode && newNode) {
             parent.append(newNode.duplicate());
         } else if (oldNode && !newNode) {
             this.tobeRemoved.push({parent: parent, child: this.wrap(parent.dom().children[index])});
         } else if (this.hasNodeChanged(oldNode, newNode)) {
-            if (oldNode.getTagName() !== newNode.getTagName() || (oldNode.dom().children.length > 0 || newNode.dom().children.length > 0)) {
+            if (oldNode.getTagName() !== newNode.getTagName() || (oldNode.dom().children.length > 0 || newNode.dom().children.length > 0)) {
                 this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
             } else {
                 oldNode.setProps({
@@ -51,15 +72,23 @@ class RMEElemRenderer {
                 });
             }
         } else {
-            this.updateEventListeners(oldNode, newNode);
+            if (parent.dom().children.length > newParent.dom().children.length) {
+                let i = 0;
+                const [ oldChildren, newChildren ] = this.getChildren(parent, newParent);
+                while (i < newChildren.length) {
+                    this.updateEventListeners(oldChildren[i], newChildren[i]);
+                    i++;
+                }
+            }
             
             let i = 0;
             let oldLength = oldNode ? oldNode.dom().children.length : 0;
             let newLength = newNode ? newNode.dom().children.length : 0;
             
-            while(i < newLength || i < oldLength) {
+            while (i < newLength || i < oldLength) {
                 this.render(
                     this.wrap(parent.dom().children[index]),
+                    this.wrap(newParent.dom().children[index]),
                     oldNode ? this.wrap(oldNode.dom().children[i]) : null,
                     newNode ? this.wrap(newNode.dom().children[i]) : null,
                     i);
@@ -127,7 +156,7 @@ class RMEElemRenderer {
      * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
      */
     hasNodeChanged(oldNode, newNode) {
-        return !Util.isEmpty(oldNode) && !Util.isEmpty(newNode) && oldNode.getProps(true) !== newNode.getProps(true);
+        return !!oldNode && !!newNode && oldNode.getProps(true) !== newNode.getProps(true);
     }
 
     /**
@@ -136,8 +165,7 @@ class RMEElemRenderer {
      * @returns the Wrapped Elem object.
      */
     wrap(node) {
-        if (!Util.isEmpty(node))
-            return Elem.wrap(node);
+        if (node) return Elem.wrap(node);
     }
 
 }

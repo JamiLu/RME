@@ -1,5 +1,3 @@
-import Component, { bindState, bindGetters } from './component';
+import Component from './component';
 
 export default Component;
-
-export { bindState, bindGetters }

@@ -1,17 +1,16 @@
-import { App } from '../src/index';
-import '../demo/clickerExample/clickAndShowComponents'
-import '../demo/todoExample/todoComponents';
-import '../demo/formExample/formComponents';
-import '../demo/filterExample/filterComponents';
+import { createApp } from '../src/index';
+import { ClickAndShowExample } from '../demo/clickerExample/clickAndShowComponents'
+import { TodoExample } from '../demo/todoExample/todoComponents';
+import { FormExample } from '../demo/formExample/formComponents';
+import { FilterExample } from '../demo/filterExample/filterComponents';
 
-App.root('#app').create({
-    'div.w3-container': [
-        {ClickAndShowExample: {}},
-
-        {TodoExample: {}},
-
-        {FormExample: {}},
-        
-        {FilterExample: {}}
-    ]
+createApp({
+    '#app': {
+        'div.w3-container': {
+            ClickAndShowExample,
+            TodoExample,
+            FormExample,
+            FilterExample
+        }
+    }
 });

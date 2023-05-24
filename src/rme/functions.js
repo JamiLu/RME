@@ -1,53 +1,6 @@
 import Util from '../util';
-import Template from '../template';
+import RMETemplateResolver from '../template';
 import Tree from '../tree';
-
-/**
- * The configure function will configure given Components. Advantage of this function is that the Compoments can be given in 
- * any order and they will be recognized automatically.
- * 
- * Example use case would be to invoke configure(App.get(), Router, Messages);
- * 
- * This function can be conbined with a createApp('#app', AppComponent) function as follows:
- * configure(createApp('#app', AppComponent), Router, Messages); This is probably the shortest way to 
- * create the RME application.
- * @param {*} params comma separated list of components
- */
-const configure = (function() {
-
-    return (...params) => {
-        let config = {};
-        params.forEach(param => {
-            if (param.routes) {
-                config = {
-                    ...config,
-                    router: param
-                }
-            } else if (param.load) {
-                config = {
-                    ...config,
-                    messages: param
-                }
-            } else if (param.name) {
-                config = {
-                    ...config,
-                    app: param
-                }
-            } 
-        });
-
-        if (Util.notEmpty(config.router))
-            config.router.setApp(config.app);
-
-        if (Util.notEmpty(config.messages))
-            config.messages.setApp(config.app);
-
-        if (Util.notEmpty(config.app))
-            config.app.setRouter(config.router);
-    }
-
-})();
-
 
 /**
  * Adds a script file on runtime into the head of the current html document where the method is called on.
@@ -79,7 +32,7 @@ const script = (function() {
 
     return (source, options) => {
         if (Util.notEmpty(source)) {
-            addScript(Template.resolve({
+            addScript(RMETemplateResolver.resolve({
                 script: {
                     src: source,
                     ...options
@@ -111,7 +64,5 @@ const ready = (function() {
     }
 
 })();
-
-export default configure;
 
 export { script, ready }
