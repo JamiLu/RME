@@ -5,7 +5,7 @@ import CSS from './css';
 import Elem from './elem';
 import Tree from './tree';
 import { useMessage, useMessages } from './messages';
-import { useHashRouter, useUrlRouter, useAutoUrlRouter, useRouter } from './router';
+import { useHashRouter, useUrlRouter, useOnLoadUrlRouter, useRouter } from './router';
 import Http, { Fetch } from './http';
 import Key from './key';
 import Browser from './browser';
@@ -22,7 +22,7 @@ export {
     useMessages,
     useHashRouter,
     useUrlRouter,
-    useAutoUrlRouter,
+    useOnLoadUrlRouter,
     useRouter,
     Elem,
     Tree,
