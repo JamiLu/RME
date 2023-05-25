@@ -3895,7 +3895,6 @@ const RMEMessagesResolver = (function() {
      * using of translated content.
      */
     class Messages {
-        static ins;
         constructor() {
             this.ins = this;
             this.messages = [];

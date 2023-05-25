@@ -5136,8 +5136,6 @@ var RMEMessagesResolver = function () {
     return Messages;
   }();
 
-  _defineProperty(Messages, "ins", void 0);
-
   return {
     lang: Messages.lang,
     message: Messages.message,
