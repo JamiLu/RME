@@ -4270,7 +4270,7 @@ const RMEUrlRouter = (props, { updateState, asyncTask }) => {
         const updateUrl = (url, skipPush) => {
             updateState({
                 init: true,
-                url: url ?? location.pathname,
+                url: url ? url : location.pathname,
                 skipPush
             });
         }

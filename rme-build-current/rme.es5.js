@@ -5336,7 +5336,7 @@ var RMEUrlRouter = function RMEUrlRouter(props, _ref6) {
     var updateUrl = function updateUrl(url, skipPush) {
       updateState({
         init: true,
-        url: url !== null && url !== void 0 ? url : location.pathname,
+        url: url ? url : location.pathname,
         skipPush: skipPush
       });
     };
