@@ -15,7 +15,7 @@ class RMEAppComponent {
         this.prevResult;
     }
 
-    render(props) {
+    render(props, parent) {
         const [getState, setState] = this.store;
 
         const nextProps = {
@@ -48,7 +48,7 @@ class RMEAppComponent {
 
         if (this.shouldUpdate) {
             result = this.renderHook(nextProps, ops);
-            result = RMETemplateResolver.isTemplate(result) ? RMETemplateResolver.resolve(result, null, this.appName, this.parentContext) : result;
+            result = RMETemplateResolver.isTemplate(result) ? RMETemplateResolver.resolve(result, parent, this.appName, this.parentContext) : result;
         } else {
             result = this.prevResult;
         }
