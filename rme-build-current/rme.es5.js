@@ -1326,7 +1326,7 @@ var RMEAppComponent = /*#__PURE__*/function () {
 
   _createClass(RMEAppComponent, [{
     key: "render",
-    value: function render(props) {
+    value: function render(props, parent) {
       var _this4 = this;
 
       var _this$store = _slicedToArray(this.store, 2),
@@ -1360,7 +1360,7 @@ var RMEAppComponent = /*#__PURE__*/function () {
 
       if (this.shouldUpdate) {
         result = this.renderHook(nextProps, ops);
-        result = RMETemplateResolver.isTemplate(result) ? RMETemplateResolver.resolve(result, null, this.appName, this.parentContext) : result;
+        result = RMETemplateResolver.isTemplate(result) ? RMETemplateResolver.resolve(result, parent, this.appName, this.parentContext) : result;
       } else {
         result = this.prevResult;
       }
@@ -1466,9 +1466,9 @@ var RMEComponentManagerV2 = function () {
       }
     }, {
       key: "getComponent",
-      value: function getComponent(name, props) {
-        var parentContext = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '';
-        var appName = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '';
+      value: function getComponent(name, props, parent) {
+        var parentContext = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '';
+        var appName = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : '';
         var component = this.componentInstanceMap[appName + name + parentContext];
 
         if (!component) {
@@ -1476,7 +1476,7 @@ var RMEComponentManagerV2 = function () {
           this.componentInstanceMap[appName + name + parentContext] = component;
         }
 
-        return component.render(props);
+        return component.render(props, parent);
       }
     }]);
 
@@ -5819,7 +5819,7 @@ var RMETemplateResolver = function () {
       key: "resolveRootAndTemplate",
       value: function resolveRootAndTemplate() {
         var key = Object.keys(this.template).shift();
-        this.root = this.resolveChild(key, this.template[key], null, 0, 0);
+        this.root = Template.resolveStringNumber(this.resolveElement(key, this.template), this.template);
 
         if (Util.isFunction(this.template[key])) {
           this.template = this.template[key].call(this.root, this.root);
@@ -5926,25 +5926,18 @@ var RMETemplateResolver = function () {
           if (RMETemplateFragmentHelper.isFragmentKey(rawChild.key)) {
             _this12.resolveNextParent(rawChild.val, parent, round, parentContext + rawChild.key);
           } else {
-            var child = _this12.resolveChild(rawChild.key, rawChild.val, parent, round, idx, parentContext);
-
-            parent.append(child);
-
-            if (!Template.isComponent(rawChild.key)) {
-              _this12.resolveNextParent(rawChild.val, child, round, parentContext);
-            }
+            _this12.resolveChild(rawChild.key, rawChild.val, parent, round, idx, parentContext);
           }
         });
         round++;
       }
       /**
-       * Resolves the next child element by the given parameters. The child can be a HTML element, a component or a fragment. Returns resolved child element.
+       * Resolves the next child element by the given parameters. The child can be a HTML element, a component or a fragment. Appends resolved the resolved child to the parent.
        * @param {string} key child name e.g. component name, HTML tag or fragment
        * @param {object|array} val properties for the resolvable child
        * @param {Elem} parent Elem
        * @param {number} round number
        * @param {number} invoked number
-       * @returns Elem instance child element
        */
 
     }, {
@@ -5954,18 +5947,17 @@ var RMETemplateResolver = function () {
         var name = Template.getElementName(key);
 
         if (RMEComponentManagerV2.hasComponent(name)) {
-          var component = RMEComponentManagerV2.getComponent(name, this.resolveComponentLiteralVal(val), "".concat(parentContext).concat(round).concat(invoked), this.appName);
+          var component = RMEComponentManagerV2.getComponent(name, this.resolveComponentLiteralVal(val), parent, "".concat(parentContext).concat(round).concat(invoked), this.appName);
 
           if (RMETemplateFragmentHelper.isFragment(component) && Util.notEmpty(component)) {
             this.resolveNextParent(RMETemplateFragmentHelper.resolveFragmentValue(component, val), parent, round);
-            return null;
           } else if (Util.notEmpty(component)) {
-            return this.resolveElement(key, component);
+            this.resolveElement(key, component);
           }
-
-          return component;
         } else {
-          return Template.resolveStringNumber(this.resolveElement(key, val), val);
+          var child = Template.resolveStringNumber(this.resolveElement(key, val), val);
+          parent.append(child);
+          this.resolveNextParent(val, child, round, parentContext);
         }
       }
       /**

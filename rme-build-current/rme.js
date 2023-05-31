@@ -1058,7 +1058,7 @@ class RMEAppComponent {
         this.prevResult;
     }
 
-    render(props) {
+    render(props, parent) {
         const [getState, setState] = this.store;
 
         const nextProps = {
@@ -1091,7 +1091,7 @@ class RMEAppComponent {
 
         if (this.shouldUpdate) {
             result = this.renderHook(nextProps, ops);
-            result = RMETemplateResolver.isTemplate(result) ? RMETemplateResolver.resolve(result, null, this.appName, this.parentContext) : result;
+            result = RMETemplateResolver.isTemplate(result) ? RMETemplateResolver.resolve(result, parent, this.appName, this.parentContext) : result;
         } else {
             result = this.prevResult;
         }
@@ -1161,14 +1161,14 @@ const RMEComponentManagerV2 = (function() {
             }
         }
 
-        getComponent(name, props, parentContext = '', appName = '') {
+        getComponent(name, props, parent, parentContext = '', appName = '') {
             let component = this.componentInstanceMap[appName + name + parentContext];
             if (!component) {
                 component = new RMEAppComponent(this.componentFunctionMap[name], appName, parentContext);
                 this.componentInstanceMap[appName + name + parentContext] = component;
             }
             
-            return component.render(props);
+            return component.render(props, parent);
         }
 
     }
@@ -4699,7 +4699,7 @@ const RMETemplateResolver = (function() {
          */
         resolveRootAndTemplate() {
             const key = Object.keys(this.template).shift();
-            this.root = this.resolveChild(key, this.template[key], null, 0, 0);
+            this.root = Template.resolveStringNumber(this.resolveElement(key, this.template), this.template);
             
             if (Util.isFunction(this.template[key])) {
                 this.template = this.template[key].call(this.root, this.root);
@@ -4770,12 +4770,7 @@ const RMETemplateResolver = (function() {
                 if (RMETemplateFragmentHelper.isFragmentKey(rawChild.key)) {
                     this.resolveNextParent(rawChild.val, parent, round, parentContext + rawChild.key);
                 } else {
-                    const child = this.resolveChild(rawChild.key, rawChild.val, parent, round, idx, parentContext);
-                    parent.append(child);
-
-                    if (!Template.isComponent(rawChild.key)) {
-                        this.resolveNextParent(rawChild.val, child, round, parentContext);
-                    }
+                    this.resolveChild(rawChild.key, rawChild.val, parent, round, idx, parentContext);
                 }
             });
 
@@ -4783,27 +4778,26 @@ const RMETemplateResolver = (function() {
         }
 
         /**
-         * Resolves the next child element by the given parameters. The child can be a HTML element, a component or a fragment. Returns resolved child element.
+         * Resolves the next child element by the given parameters. The child can be a HTML element, a component or a fragment. Appends resolved the resolved child to the parent.
          * @param {string} key child name e.g. component name, HTML tag or fragment
          * @param {object|array} val properties for the resolvable child
          * @param {Elem} parent Elem
          * @param {number} round number
          * @param {number} invoked number
-         * @returns Elem instance child element
          */
         resolveChild(key, val, parent, round, invoked, parentContext = '') {
             const name = Template.getElementName(key);
             if (RMEComponentManagerV2.hasComponent(name)) {
-                const component = RMEComponentManagerV2.getComponent(name, this.resolveComponentLiteralVal(val), `${parentContext}${round}${invoked}`, this.appName);
+                const component = RMEComponentManagerV2.getComponent(name, this.resolveComponentLiteralVal(val), parent, `${parentContext}${round}${invoked}`, this.appName);
                 if (RMETemplateFragmentHelper.isFragment(component) && Util.notEmpty(component)) {
                     this.resolveNextParent(RMETemplateFragmentHelper.resolveFragmentValue(component, val), parent, round);
-                    return null;
                 } else if (Util.notEmpty(component)) {
-                    return this.resolveElement(key, component);
+                    this.resolveElement(key, component);
                 }
-                return component;
             } else {
-                return Template.resolveStringNumber(this.resolveElement(key, val), val);
+                const child = Template.resolveStringNumber(this.resolveElement(key, val), val);
+                parent.append(child);
+                this.resolveNextParent(val, child, round, parentContext);
             }
         }
 
