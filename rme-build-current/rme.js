@@ -4168,7 +4168,7 @@ const ready = (function() {
  * This router is ment for the single page applications.
  */
 const RMEHashRouter = (props, { asyncTask, updateState }) => {
-    const { routes, url = location.hash, prevUrl, prevRoute, globalScrollTop, init } = props;
+    const { routes, url = location.hash, prevUrl, prevRoute, didChange, globalScrollTop, init } = props;
 
     if (!routes) {
         return null;
@@ -4177,14 +4177,16 @@ const RMEHashRouter = (props, { asyncTask, updateState }) => {
     if (!init) {
         RMERouterContext.setRouter(routes, (url) => {
             updateState({
-                url: url
+                url: url,
+                didChange: true
             });
         });
         asyncTask(() => {
             window.addEventListener('hashchange', () => {
                 updateState({
                     init: true,
-                    url: location.hash
+                    url: location.hash,
+                    didChange: true
                 });
             });
         });
@@ -4214,9 +4216,10 @@ const RMEHashRouter = (props, { asyncTask, updateState }) => {
         if (route.hide) {
             location.href = prevUrl;
         }
-        if (window.scrollY > 0 && ((route.scrolltop === true) || (route.scrolltop === undefined && globalScrollTop))) {
+        if (didChange && window.scrollY > 0 && ((route.scrolltop === true) || (route.scrolltop === undefined && globalScrollTop))) {
             scrollTo(0, 0);
         }
+        asyncTask(() => updateState({ didChange: false }, false));
     }
 
     return {
@@ -4260,24 +4263,25 @@ const RMEOnLoadUrlRouter  = (props, { asyncTask }) => {
  * This router is ideal for the single page applications. Router navigation is handled by the useRouter function.
  */
 const RMEUrlRouter = (props, { updateState, asyncTask }) => {
-    const { routes, url, prevUrl, prevRoute, skipPush, init, globalScrollTop } = props;
+    const { routes, url, prevUrl, prevRoute, skipPush, init, didChange, globalScrollTop } = props;
 
     if (!routes) {
         return null;
     }
 
     if (!init) {
-        const updateUrl = (url, skipPush) => {
+        const updateUrl = (url, skipPush, didChange) => {
             updateState({
                 init: true,
                 url: url ? url : location.pathname,
-                skipPush
+                skipPush,
+                didChange
             });
         }
-        RMERouterContext.setRouter(routes, (url) => updateUrl(url));
+        RMERouterContext.setRouter(routes, (url) => updateUrl(url, false, true));
         asyncTask(() => {
-            window.addEventListener('popstate', () => updateUrl(undefined, true));
-            updateUrl(undefined, true);
+            window.addEventListener('popstate', () => updateUrl(undefined, true, true));
+            updateUrl(undefined, true, true);
         });
     }
 
@@ -4305,9 +4309,10 @@ const RMEUrlRouter = (props, { updateState, asyncTask }) => {
         if (!route.hide && url !== prevUrl && !skipPush) {
             history.pushState(null, null, url);
         }
-        if (window.scrollY > 0 && ((route.scrolltop === true) || (route.scrolltop === undefined && globalScrollTop))) {
+        if (didChange && window.scrollY > 0 && ((route.scrolltop === true) || (route.scrolltop === undefined && globalScrollTop))) {
             scrollTo(0, 0);
         }
+        asyncTask(() => updateState({ didChange: false }, false));
     }
 
     return {
