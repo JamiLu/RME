@@ -10,9 +10,9 @@ Links
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v2.0.1/rme.js](https://github.com/JamiLu/RME/releases/download/v2.0.2/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v2.0.1/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v2.0.2/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v2.0.1/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v2.0.2/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v2.0.3/rme.js](https://github.com/JamiLu/RME/releases/download/v2.0.3/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v2.0.3/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v2.0.3/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v2.0.3/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v2.0.3/rme.es5.min.js)
 
 NPM
 ---
@@ -46,20 +46,12 @@ import {
 } from 'rme.js'
 ```
 
-DEV project commands
----
-Some run commands that has been defined for this dev project.
-
- - `npm run docs` will open documentation on the browser.
- - `npm run demo` will open rme demo on the browser.
- - `npm run calculator` will open rme made calculator on the browser.
-
 Basics
 -----
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v2.0.2/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v2.0.3/rme.es5.min.js"></script>`
 
 __Or use NPM__
 
@@ -78,7 +70,7 @@ const Clicker = () => ({
     'div.bar-item': {
         button: {
             text: 'Add one',
-            onClick: () => setValue(val => val+1)
+            onClick: () => setValue(val => val + 1)
         }
     }
 });
