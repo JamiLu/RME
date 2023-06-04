@@ -1326,7 +1326,7 @@ var RMEAppComponent = /*#__PURE__*/function () {
 
   _createClass(RMEAppComponent, [{
     key: "render",
-    value: function render(props, parent) {
+    value: function render(props, parent, componentLiteral) {
       var _this4 = this;
 
       var _this$store = _slicedToArray(this.store, 2),
@@ -1360,7 +1360,7 @@ var RMEAppComponent = /*#__PURE__*/function () {
 
       if (this.shouldUpdate) {
         result = this.renderHook(nextProps, ops);
-        result = RMETemplateResolver.isTemplate(result) ? RMETemplateResolver.resolve(result, parent, this.appName, this.parentContext) : result;
+        result = RMETemplateResolver.isTemplate(result) ? RMETemplateResolver.resolve(result, parent, this.appName, this.parentContext, componentLiteral) : result;
       } else {
         result = this.prevResult;
       }
@@ -1466,9 +1466,9 @@ var RMEComponentManagerV2 = function () {
       }
     }, {
       key: "getComponent",
-      value: function getComponent(name, props, parent) {
-        var parentContext = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '';
-        var appName = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : '';
+      value: function getComponent(name, props, parent, componentLiteral) {
+        var parentContext = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : '';
+        var appName = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : '';
         var component = this.componentInstanceMap[appName + name + parentContext];
 
         if (!component) {
@@ -1476,7 +1476,7 @@ var RMEComponentManagerV2 = function () {
           this.componentInstanceMap[appName + name + parentContext] = component;
         }
 
-        return component.render(props, parent);
+        return component.render(props, parent, componentLiteral);
       }
     }]);
 
@@ -5805,6 +5805,8 @@ var RMETemplateResolver = function () {
      * @param {object} template
      * @param {Elem} Elem
      * @param {string} appName
+     * @param {string} context
+     * @param {string} componentLiteral
      * @returns Elem instance element tree.
      */
 
@@ -5814,12 +5816,19 @@ var RMETemplateResolver = function () {
       value: function setTemplateAndResolve(template, parent) {
         var appName = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '';
         var context = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '';
+        var componentLiteral = arguments.length > 4 ? arguments[4] : undefined;
         this.template = template;
         this.appName = appName;
         this.context = context;
 
         if (parent) {
           this.root = parent;
+
+          if (componentLiteral) {
+            var key = Object.keys(this.template).shift();
+            this.template = _defineProperty({}, "".concat(key).concat(componentLiteral), this.template[key]);
+          }
+
           this.resolveNextParent(this.template, this.root, 1);
         } else {
           this.resolveRootAndTemplate();
@@ -5964,18 +5973,27 @@ var RMETemplateResolver = function () {
         var name = Template.getElementName(key);
 
         if (RMEComponentManagerV2.hasComponent(name)) {
-          var component = RMEComponentManagerV2.getComponent(name, this.resolveComponentLiteralVal(val), parent, "".concat(parentContext).concat(round).concat(invoked), this.appName);
+          var component = RMEComponentManagerV2.getComponent(name, this.resolveComponentLiteralVal(val), parent, this.cutComponentLiteral(name, key), "".concat(parentContext).concat(round).concat(invoked), this.appName);
 
           if (RMETemplateFragmentHelper.isFragment(component) && Util.notEmpty(component)) {
             this.resolveNextParent(RMETemplateFragmentHelper.resolveFragmentValue(component, val), parent, round);
-          } else if (Util.notEmpty(component)) {
-            this.resolveElement(key, component);
           }
         } else {
           var child = Template.resolveStringNumber(this.resolveElement(key, val), val);
           parent.append(child);
           this.resolveNextParent(val, child, round, parentContext);
         }
+      }
+      /**
+       * Cuts of the Component name and returns literal params if present.
+       * @param {string} key Component key
+       * @returns Literal params match array if params are found
+       */
+
+    }, {
+      key: "cutComponentLiteral",
+      value: function cutComponentLiteral(name, key) {
+        return key.match("[^".concat(name, "].*"));
       }
       /**
        * Resolves component literal values and converts it to a properties object that the component understands.
@@ -6363,13 +6381,15 @@ var RMETemplateResolver = function () {
        * @param {object} template - JSON notation template object
        * @param {Elem} Elem - Elem object (optional)
        * @param {string} appName - App instance name (optional)
+       * @param {string} context - Component position
+       * @param {string} componentLiteral - Component literal attributes
        * @returns Element tree of Elem instance objects.
        */
 
     }, {
       key: "resolve",
-      value: function resolve(template, parent, appName, context) {
-        return Template.create().setTemplateAndResolve(template, parent, appName, context);
+      value: function resolve(template, parent, appName, context, componentLiteral) {
+        return Template.create().setTemplateAndResolve(template, parent, appName, context, componentLiteral);
       }
       /**
        * Method will apply the properties given to the element. Old properties are overridden.
