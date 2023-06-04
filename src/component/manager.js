@@ -21,14 +21,14 @@ const RMEComponentManagerV2 = (function() {
             }
         }
 
-        getComponent(name, props, parent, parentContext = '', appName = '') {
+        getComponent(name, props, parent, componentLiteral, parentContext = '', appName = '') {
             let component = this.componentInstanceMap[appName + name + parentContext];
             if (!component) {
                 component = new RMEAppComponent(this.componentFunctionMap[name], appName, parentContext);
                 this.componentInstanceMap[appName + name + parentContext] = component;
             }
             
-            return component.render(props, parent);
+            return component.render(props, parent, componentLiteral);
         }
 
     }
