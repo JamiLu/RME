@@ -1120,6 +1120,7 @@ class RMEAppComponent {
  * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
  * Resolve components Component(Comp, Comp2);
  * @param {function} components commma separated list of components
+ * @returns The given component function or a list of component functions if a list was given.
  */
 const Component = (function() {
 
@@ -1132,6 +1133,8 @@ const Component = (function() {
     return (...components) => {
         components.forEach(component => 
             !Util.isEmpty(component.valueOf().name) && resolveComponent(component));
+
+        return components.length === 0 ? components[0] : components;
     }
 
 })();
@@ -4933,8 +4936,7 @@ const RMETemplateResolver = (function() {
          * @returns Element tag without attributes.
          */
         cutAttributesIfFound(tag) {
-            const idx = tag.indexOf('[');
-            return tag.substring(0, idx > 0 ? idx : tag.length);
+            return tag.replace(/\[.+\]/g, '');
         }
 
         /**

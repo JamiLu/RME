@@ -1418,6 +1418,7 @@ var RMEAppComponent = /*#__PURE__*/function () {
  * Class component example: class Comp2 {.... render(props) { return {h1: 'Hello'}}};
  * Resolve components Component(Comp, Comp2);
  * @param {function} components commma separated list of components
+ * @returns The given component function or a list of component functions if a list was given.
  */
 
 
@@ -1436,6 +1437,7 @@ var Component = function () {
     components.forEach(function (component) {
       return !Util.isEmpty(component.valueOf().name) && resolveComponent(component);
     });
+    return components.length === 0 ? components[0] : components;
   };
 }();
 /**
@@ -6109,8 +6111,7 @@ var RMETemplateResolver = function () {
     }, {
       key: "cutAttributesIfFound",
       value: function cutAttributesIfFound(tag) {
-        var idx = tag.indexOf('[');
-        return tag.substring(0, idx > 0 ? idx : tag.length);
+        return tag.replace(/\[.+\]/g, '');
       }
       /**
        * Adds resolved attributes to an element.
