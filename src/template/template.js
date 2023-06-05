@@ -274,8 +274,7 @@ const RMETemplateResolver = (function() {
          * @returns Element tag without attributes.
          */
         cutAttributesIfFound(tag) {
-            const idx = tag.indexOf('[');
-            return tag.substring(0, idx > 0 ? idx : tag.length);
+            return tag.replace(/\[.+\]/g, '');
         }
 
         /**
