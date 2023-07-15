@@ -20,9 +20,11 @@ class RMEElemRenderer {
     merge(newStage) {
         this.updateEventListeners(this.root, newStage);
 
-        const [ oldChildren, newChildren ] = this.getChildren(this.root, newStage);
+        // const [ oldChildren, newChildren ] = this.getChildren(this.root, newStage);
+        const oldChildren = this.root.getChildren();
+        const newChildren = newStage.getChildren();
 
-        if (Util.isEmpty(this.root.getChildren())) {
+        if (Util.isEmpty(oldChildren)) {
             this.root.render(newChildren);
         } else {
             let i = 0;
@@ -43,12 +45,12 @@ class RMEElemRenderer {
      * @param {Elem} newNode 
      * @returns Array that contains two arrays
      */
-    getChildren(oldNode, newNode) {
-        return [
-            Array.of(oldNode.getChildren()).flat(),
-            Array.of(newNode.getChildren()).flat()
-        ]
-    }
+    // getChildren(oldNode, newNode) {
+    //     return [
+    //         Array.of(oldNode.getChildren()).flat(),
+    //         Array.of(newNode.getChildren()).flat()
+    //     ]
+    // }
 
     /**
      * Function is called recusively and goes through a oldStage and a newStage simultaneosly in recursion and comparing them and updating changed content.
@@ -58,23 +60,32 @@ class RMEElemRenderer {
      * @param {number} index 
      */
     render(parent, newParent, oldNode, newNode, index) {
+        console.log('o', oldNode, 'n ', newNode);
         if (!oldNode && newNode) {
+            console.log('append');
             parent.append(newNode.duplicate());
         } else if (oldNode && !newNode) {
-            this.tobeRemoved.push({parent: parent, child: this.wrap(parent.dom().children[index])});
+            this.tobeRemoved.push({parent: parent, child: oldNode}); //this.wrap(parent.dom().children[index])
         } else if (this.hasNodeChanged(oldNode, newNode)) {
+            // console.log('node changed',  oldNode, newNode);
             if (oldNode.getTagName() !== newNode.getTagName() || (oldNode.dom().children.length > 0 || newNode.dom().children.length > 0)) {
-                this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
+                console.log('a', oldNode.getTagName(), newNode.getTagName());
+                // this.wrap(parent.dom().children[index]).replace(newNode.duplicate());
+                oldNode.replace(newNode.duplicate());
+                // parent.remove()
             } else {
+                console.log('b');
                 oldNode.setProps({
-                    ...this.getBrowserSetStyle(parent, index), 
+                    ...this.getBrowserSetStyle(oldNode),
                     ...newNode.getProps()
                 });
             }
         } else {
             if (parent.dom().children.length > newParent.dom().children.length) {
                 let i = 0;
-                const [ oldChildren, newChildren ] = this.getChildren(parent, newParent);
+                // const [ oldChildren, newChildren ] = this.getChildren(parent, newParent);
+                const oldChildren = parent.getChildren();
+                const newChildren = newParent.getChildren();
                 while (i < newChildren.length) {
                     this.updateEventListeners(oldChildren[i], newChildren[i]);
                     i++;
@@ -87,10 +98,10 @@ class RMEElemRenderer {
             
             while (i < newLength || i < oldLength) {
                 this.render(
-                    this.wrap(parent.dom().children[index]),
-                    this.wrap(newParent.dom().children[index]),
-                    oldNode ? this.wrap(oldNode.dom().children[i]) : null,
-                    newNode ? this.wrap(newNode.dom().children[i]) : null,
+                    parent.getChildren()[index], // this.wrap(parent.dom().children[index]),
+                    newParent.getChildren()[index], // this.wrap(newParent.dom().children[index]),
+                    oldNode ? oldNode.getChildren()[i] : null, // oldNode ? this.wrap(oldNode.dom().children[i]) : null,
+                    newNode ? newNode.getChildren()[i] : null, // newNode ? this.wrap(newNode.dom().children[i]) : null,
                     i);
                 i++;
             }
@@ -98,14 +109,15 @@ class RMEElemRenderer {
     }
 
     /**
-     * Get browser set style of the node if present from the parent in the specific index.
-     * @param {object} parent 
-     * @param {number} index 
+     * Get browser set style of the node if present
+     * @param {Elem} oldNode 
      * @returns Properties object containing the style attribute of the node in the shadow three.
      */
-    getBrowserSetStyle(parent, index) {
-        const props = this.wrap(parent.dom().children[index]).getProps();
-        return props.style ? {style: props.style} : null
+    getBrowserSetStyle(oldNode) {
+        const props = oldNode.getProps();
+        return props.style ? { style: props.style } : null;
+        // const props = this.wrap(parent.dom().children[index]).getProps();
+        // return props.style ? {style: props.style} : null
     }
 
     /**
@@ -114,9 +126,10 @@ class RMEElemRenderer {
      * @param {object} newNode 
      */
     updateEventListeners(oldNode, newNode) {
-        const listeners = this.getEventListeners(newNode);
-        if (Object.keys(listeners).length > 0) {
-            oldNode.setProps({...oldNode.getProps(), ...listeners});
+        // const listeners = this.getEventListeners(newNode);
+        if (newNode.hasListeners()) {
+            // oldNode.setProps({ ...oldNode.getProps(), ...newNode.getListeners() });
+            oldNode.updateListeners(newNode.listeners);
         }
     }
 
@@ -125,15 +138,15 @@ class RMEElemRenderer {
      * @param {object} node 
      * @returns An object containing defined event listeners
      */
-    getEventListeners(node) {
-        const props = node.getProps();
-        for (let p in props) {
-            if (props.hasOwnProperty(p) && p.indexOf('on') !== 0) {
-                delete props[p]
-            }
-        }
-        return props;
-    }
+    // getEventListeners(node) {
+    //     const props = node.getProps();
+    //     for (let p in props) {
+    //         if (props.hasOwnProperty(p) && p.indexOf('on') !== 0) {
+    //             delete props[p]
+    //         }
+    //     }
+    //     return props;
+    // }
 
     /**
      * Function removes all the marked as to be removed elements which did not come in the new stage by starting from the last to the first.
@@ -156,7 +169,8 @@ class RMEElemRenderer {
      * @returns True if the given Elem objects are the same and nothing is changed otherwise false is returned.
      */
     hasNodeChanged(oldNode, newNode) {
-        return !!oldNode && !!newNode && oldNode.getProps(true) !== newNode.getProps(true);
+        // console.log('changed', oldNode, newNode);
+        return !!oldNode && !!newNode && !(oldNode.equals(newNode)); //oldNode.getProps(true) !== newNode.getProps(true);
     }
 
     /**
@@ -164,9 +178,9 @@ class RMEElemRenderer {
      * @param {object} node 
      * @returns the Wrapped Elem object.
      */
-    wrap(node) {
-        if (node) return Elem.wrap(node);
-    }
+    // wrap(node) {
+    //     if (node) return Elem.wrap(node);
+    // }
 
 }
 

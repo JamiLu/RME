@@ -1,8 +1,9 @@
-import Elem from '../elem';
+// import Elem from '../elem';
 import RMEMessagesResolver from '../messages';
 import Util from '../util';
 import RMEComponentManagerV2 from '../component/manager';
 import RMETemplateFragmentHelper from './fragment';
+import RMETemplateElement from './RMETemplateElement';
 
 const RMETemplateResolver = (function() {
     /**
@@ -99,6 +100,9 @@ const RMETemplateResolver = (function() {
                     }
                 });
             }
+            // parent.setPr(attrs, listeners);
+            parent.setAttributes(attrs);
+            parent.setListeners(listeners);
 
             return [attrs, listeners, children];
         }
@@ -248,7 +252,8 @@ const RMETemplateResolver = (function() {
             let el = Template.getElementName(tag);
 
             if (Util.isString(el) && Template.isTag(el)) {
-                resolved = new Elem(el);
+                resolved = new RMETemplateElement(el, obj);
+                // console.log('RESOLVED', resolved, obj);
             } else {
                 resolved = obj // for component parent element
             }
@@ -540,7 +545,7 @@ const RMETemplateResolver = (function() {
          */
         static isTemplate(object) {
             let isTemplate = false;
-            if(Util.isObject(object) && !Util.isArray(object) && !(object instanceof Elem)) {
+            if(Util.isObject(object) && !Util.isArray(object) && !(object instanceof RMETemplateElement)) {
                 for(var p in object) {
                     isTemplate = object.hasOwnProperty(p) && Template.isTagOrComponent(p);
                     if(isTemplate)

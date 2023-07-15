@@ -4,7 +4,7 @@ import RMEElemTemplater from './templater';
 import RMEMessagesResolver from '../messages';
 import Util from '../util';
 
-let Elem = (function() {
+
     /**
      * Elem class is a wrapper class for HTMLDocument element JavaScript object. This object constructor 
      * takes one parameter that can be either type of a string or a HTMLDocument. If the parameter is type of the string
@@ -1716,7 +1716,6 @@ let Elem = (function() {
     }
 
 
-    return Elem;
-}());
+
 
 export default Elem;
