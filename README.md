@@ -67,8 +67,8 @@ Create the application by the `createApp` function.
 createApp({
     '#app': {
         'div.container': {
-            ClickAndShowExample, // Component functions must be created before you can reference them here.
-            TodoExample,
+            ClickAndShowExample, // Component functions must be created before 
+            TodoExample,         // you can reference them here.
             FormExample,
             FilterExample
         }
