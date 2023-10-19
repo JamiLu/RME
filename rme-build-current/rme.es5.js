@@ -5518,9 +5518,6 @@ var RMETemplateFragmentHelper = function () {
   }();
   return new RMETemplateFragmentHelper();
 }();
-
-// import Elem from '../elem';
-
 var RMETemplateResolver = function () {
   /**
    * Template class reads a JSON format notation and creates an element tree from it.

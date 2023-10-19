@@ -4818,7 +4818,6 @@ const RMETemplateFragmentHelper = (function() {
 
 
 
-// import Elem from '../elem';
 
 const RMETemplateResolver = (function() {
     /**
