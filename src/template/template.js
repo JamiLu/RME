@@ -1,4 +1,3 @@
-// import Elem from '../elem';
 import RMEMessagesResolver from '../messages';
 import Util from '../util';
 import RMEComponentManagerV2 from '../component/manager';
