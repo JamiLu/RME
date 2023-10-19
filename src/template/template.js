@@ -101,8 +101,6 @@ const RMETemplateResolver = (function() {
                 });
             }
             parent.setParams(attrs, listeners);
-            // parent.setAttributes(attrs);
-            // parent.setListeners(listeners);
 
             return [attrs, listeners, children];
         }
@@ -253,7 +251,6 @@ const RMETemplateResolver = (function() {
 
             if (Util.isString(el) && Template.isTag(el)) {
                 resolved = new RMETemplateElement(el);
-                // console.log('RESOLVED', resolved, obj);
             } else {
                 resolved = obj // for component parent element
             }
@@ -298,7 +295,7 @@ const RMETemplateResolver = (function() {
                 let key = attr.substring(attr.indexOf(start) +1, attr.indexOf(eq));
                 let val = attr.substring(attr.indexOf(eq) +1, attr.indexOf(end));
                 Template.resolveAttributes(elem, key, val);
-                elem.addAttr(key, val);
+                elem.addInlineAttr(key, val);
                 i++;
             }
             return elem;

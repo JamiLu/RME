@@ -86,14 +86,10 @@ const RMEAppBuilder = (function() {
                     Browser.clearTimeout(this.refreshQueue);
                 }
                 this.refreshQueue = Browser.setTimeout(() => {
-                    console.time('resolve');
                     const freshStage = RMETemplateResolver.resolve({[this.root.toLiteralString()]: { ...this.rawStage }}, null, this.name);
-                    console.timeEnd('resolve');
 
                     if (this.oldStage !== freshStage.toString()) {
-                        console.time('merge');
                         this.oldStage = this.renderer.merge(freshStage).toString();
-                        console.timeEnd('merge');
                     }
                     Browser.clearTimeout(this.refreshQueue);
                 });
