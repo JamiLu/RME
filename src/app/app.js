@@ -4,6 +4,7 @@ import RMEElemRenderer from './renderer';
 import RMETemplateResolver from '../template';
 import Tree from '../tree';
 import RMEAppManager from './manager';
+import RMETemplateElement from '../template/RMETemplateElement';
 import RMETemplateFragmentHelper from '../template/fragment';
 import { ready } from '../rme';
 
@@ -73,7 +74,7 @@ const RMEAppBuilder = (function() {
          * @param {string} root 
          */
         init(root) {
-            this.root = Util.isEmpty(root) ? Tree.getBody() : Tree.getFirst(root);
+            this.root = Util.isEmpty(root) ? Tree.getBody() : new RMETemplateElement(Tree.getFirst(root).dom());
             this.renderer = new RMEElemRenderer(this.root);
             this.ready = true;
             this.refresh();

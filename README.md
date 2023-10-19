@@ -10,9 +10,9 @@ Links
 
 Download
 -----
-- [https://github.com/JamiLu/RME/releases/download/v2.0.6/rme.js](https://github.com/JamiLu/RME/releases/download/v2.0.6/rme.js)
-- [https://github.com/JamiLu/RME/releases/download/v2.0.6/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v2.0.6/rme.es5.js)
-- [https://github.com/JamiLu/RME/releases/download/v2.0.6/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v2.0.6/rme.es5.min.js)
+- [https://github.com/JamiLu/RME/releases/download/v2.0.7/rme.js](https://github.com/JamiLu/RME/releases/download/v2.0.7/rme.js)
+- [https://github.com/JamiLu/RME/releases/download/v2.0.7/rme.es5.js](https://github.com/JamiLu/RME/releases/download/v2.0.7/rme.es5.js)
+- [https://github.com/JamiLu/RME/releases/download/v2.0.7/rme.es5.min.js](https://github.com/JamiLu/RME/releases/download/v2.0.7/rme.es5.min.js)
 
 NPM
 ---
@@ -51,7 +51,7 @@ Basics
 
 Download a script file and place it to a project folder or simply use a github online url as follows. 
 
-`<script src="https://github.com/JamiLu/RME/releases/download/v2.0.6/rme.es5.min.js"></script>`
+`<script src="https://github.com/JamiLu/RME/releases/download/v2.0.7/rme.es5.min.js"></script>`
 
 __Or use NPM__
 
@@ -60,6 +60,37 @@ __Or use NPM__
 `import { createApp, Component, useValue, Key } from 'rme.js'`
 
 Then simply copy paste code clips below to your js file and voilà. 
+
+Create the application by the `createApp` function.
+
+```javascript
+createApp({
+    '#app': {
+        'div.container': {
+            ClickAndShowExample, // Component functions must be created before you can reference them here.
+            TodoExample,
+            FormExample,
+            FilterExample
+        }
+    }
+});
+```
+
+Below is shown the exmaple `index.html`. The first selector of the create app object should match the selector where the app is desired to be created.
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+    <div id="app"></div>
+</body>
+</html>
+```
 
 The first exmaple demonstrates use case of the `useValue` function that can be used to share a value between components without passing it forward.
 
@@ -203,37 +234,6 @@ const MyTable = ({ rows = [] }) => ({
 });
 
 Component(FilterExample, MyTable);
-```
-
-Then create the application by the `createApp` function.
-
-```javascript
-createApp({
-    '#app': {
-        'div.container': {
-            ClickAndShowExample,
-            TodoExample,
-            FormExample,
-            FilterExample
-        }
-    }
-});
-```
-
-Below is shown the exmaple `index.html`. The first selector of the create app object should match the selector where the app is desired to be created.
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8" />
-    <title>Demo</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-</head>
-<body>
-    <div id="app"></div>
-</body>
-</html>
 ```
 
 Classes & Functions
