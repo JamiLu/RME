@@ -508,7 +508,7 @@ const RMETemplateResolver = (function() {
                 if (Template.isEventKeyVal(prop, combined[prop])) {
                     elem[prop].call(elem, combined[prop]); // element event attribute -> elem, event function
                 } else if (prop === 'class') {
-                    elem.updateClasses(combined[prop] || '');
+                    combined[prop] ? elem.updateClasses(combined[prop]) : elem.removeAttribute('class');
                 } else if (prop === 'value') {
                     elem.setAttribute(prop, combined[prop]);
                     elem.setValue(combined[prop]);

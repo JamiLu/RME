@@ -23,14 +23,17 @@ class RMETemplateElement extends Elem {
     }
 
     /**
-     * Update listeners of this element. If the given array has listeners the given listeners are updated.
-     * @param {array} array 
+     * Update listeners of this element to the listeners of the given element. If the given element has listeners
+     * then the listeners will be updated.
+     * @param {RMETemplateElement} elem
      */
-    updateListeners(array = []) {
-        array.forEach(listener => {
-            this[listener.parentProp.name].call(this, listener.func);
-        });
-        RMETemplateElement.Util.setListeners(this, array);
+    updateListeners(elem) {
+        if (elem.hasListeners()) {
+            elem.listeners.forEach(listener => {
+                this[listener.parentProp.name].call(this, listener.func);
+            });
+            RMETemplateElement.Util.setListeners(this, elem.listeners);
+        }
     }
 
     /**
@@ -41,6 +44,16 @@ class RMETemplateElement extends Elem {
     setParams(attrs = [], listeners = []) {
         RMETemplateElement.Util.setAttributes(this, attrs);
         RMETemplateElement.Util.setListeners(this, listeners);
+        RMETemplateElement.Util.formProps(this);
+    }
+
+    /**
+     * Overrides attributes of this element to the attributes from the given element.
+     * @param {RMETemplateElement} elem
+     */
+    updateAttributes(elem) {
+        RMETemplateElement.Util.setAttributes(this, elem.attributes, true);
+        this.inlineProps = elem.inlineProps;
         RMETemplateElement.Util.formProps(this);
     }
 
@@ -110,13 +123,20 @@ class RMETemplateElement extends Elem {
      */
     replace(index, parent, element) {
         parent.children.splice(index, 1, element);
-        this.inlineProps = {};
-        RMETemplateElement.Util.formProps(this);
+        this.inlineProps = element.inlineProps;
+        RMETemplateElement.Util.formProps(element);
         super.replace(element);
         return this;
     }
 
+    /**
+     * Set new props to this element. The html dom element properties will be updated.
+     * Previous properties will be overridden.
+     * @param {object} props
+     * @returns RMETemplateElement
+     */
     setProps(props) {
+        RMETemplateElement.Util.updateBrowserSetStyle(this, props);
         RMETemplateResolver.updateElemProps(this, props, this.props);
         return this;
     }
@@ -184,12 +204,13 @@ RMETemplateElement.Util = class RMETemplateElementUtil {
     }
 
     /**
-     * Set attributes for the give element. If the given attributes array has attributes the attirbutes will be set.
+     * Set attributes for the give element. If the given attributes array has attributes or override is true the attirbutes will be set.
      * @param {RMETemplateElement} elem 
      * @param {array} attrs 
+     * @param {boolean} override
      */
-    static setAttributes(elem, attrs) {
-        if (attrs.length > 0) {
+    static setAttributes(elem, attrs, override) {
+        if (attrs.length > 0 || override) {
             elem.attributes = attrs.filter((attr) => {
                 if (attr.key !== 'class') {
                     return attr;
@@ -210,6 +231,18 @@ RMETemplateElement.Util = class RMETemplateElementUtil {
         }, { ...elem.inlineProps, ...elem.listenerObj });
         elem.props = props;
         elem.stringProps = JSON.stringify(props);
+    }
+
+    /**
+     * Update style propety from the browser set styles if present to the new props object.
+     * @param {RMETemplateElement} elem
+     * @param {object} props
+     */
+    static updateBrowserSetStyle(elem, props) {
+        const style = elem.getAttribute('style');
+        if (style) {
+            props.style = style;
+        }
     }
 }
 
