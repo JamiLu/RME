@@ -384,7 +384,7 @@ class RMEElemRenderer {
     constructor(root) {
         this.root = root;
         this.mergedStage;
-        this.tobeRemoved = [];
+        this.pendingRemove = [];
     }
 
     /**
@@ -392,12 +392,11 @@ class RMEElemRenderer {
      * New stage has what old stage doesn't > add it.
      * New stage has what old stage has > has it changed ? yes > change|update it : no > do nothing.
      * New stage doesn't have what old stage has > remove it.
-     * @param {object} oldStage
      * @param {object} newStage
      * @returns The merged stage.
      */
     merge(newStage) {
-        this.updateEventListeners(this.root, newStage);
+        this.root.updateListeners(newStage);
 
         const oldChildren = this.root.children;
         const newChildren = newStage.children;
@@ -408,7 +407,7 @@ class RMEElemRenderer {
             i++;
         }
         
-        this.removeToBeRemoved();
+        this.clearPending();
 
         return this.root;
     }
@@ -424,18 +423,15 @@ class RMEElemRenderer {
         if (!oldNode && newNode) {
             parent.append(newNode.duplicate());
         } else if (oldNode && !newNode) {
-            this.tobeRemoved.push({ parent, child: oldNode, index });
-        } else if (oldNode.getTagName() !== newNode.getTagName() && (oldNode.children.length === 0 || newNode.children.length === 0)) {
+            this.pendingRemove.push({ parent, child: oldNode, index });
+        } else if (oldNode.getTagName() !== newNode.getTagName()) {
             oldNode.setParams(newNode.attributes, newNode.listeners);
             oldNode.replace(index, parent, newNode);
         } else {
-            if (!!oldNode && !!newNode && !oldNode.equals(newNode)) {
-                oldNode.setProps({
-                    ...this.getBrowserSetStyle(oldNode),
-                    ...newNode.getPropsObj(),
-                });
-                this.updateEventListeners(oldNode, newNode);
-                oldNode.setParams(newNode.attributes);
+            if (!!oldNode && !!newNode && oldNode.getTagName() === newNode.getTagName() && !oldNode.equals(newNode)) {
+                oldNode.setProps(newNode.getPropsObj());
+                oldNode.updateListeners(newNode);
+                oldNode.updateAttributes(newNode);
             }
             
             let i = 0;
@@ -454,39 +450,16 @@ class RMEElemRenderer {
     }
 
     /**
-     * Get browser set style of the node if present from the parent in the specific index.
-     * @param {object} parent 
-     * @param {number} index 
-     * @returns Properties object containing the style attribute of the node in the shadow three.
-     */
-    getBrowserSetStyle(oldNode) {
-        const style = oldNode.getAttribute('style');
-        return style ? { style } : null
-    }
-
-    /**
-     * Update event listeners of the old node to event listeners of the new node.
-     * @param {object} oldNode 
-     * @param {object} newNode 
-     */
-    updateEventListeners(oldNode, newNode) {
-        if (newNode.hasListeners()) {
-            oldNode.updateListeners(newNode.listeners);
-        }
-    }
-
-
-    /**
      * Function removes all the marked as to be removed elements which did not come in the new stage by starting from the last to the first.
      */
-    removeToBeRemoved() {
-        if(this.tobeRemoved.length > 0) {
-            let lastIdx = this.tobeRemoved.length - 1;
+    clearPending() {
+        if (this.pendingRemove.length > 0) {
+            let lastIdx = this.pendingRemove.length - 1;
             while (lastIdx >= 0) {
-                this.tobeRemoved[lastIdx].parent.remove(this.tobeRemoved[lastIdx].index, this.tobeRemoved[lastIdx].child);
+                this.pendingRemove[lastIdx].parent.remove(this.pendingRemove[lastIdx].index, this.pendingRemove[lastIdx].child);
                 lastIdx--;
             }
-            this.tobeRemoved = [];
+            this.pendingRemove.length = 0;
         }
     }
 
@@ -4568,14 +4541,17 @@ class RMETemplateElement extends Elem {
     }
 
     /**
-     * Update listeners of this element. If the given array has listeners the given listeners are updated.
-     * @param {array} array 
+     * Update listeners of this element to the listeners of the given element. If the given element has listeners
+     * then the listeners will be updated.
+     * @param {RMETemplateElement} elem
      */
-    updateListeners(array = []) {
-        array.forEach(listener => {
-            this[listener.parentProp.name].call(this, listener.func);
-        });
-        RMETemplateElement.Util.setListeners(this, array);
+    updateListeners(elem) {
+        if (elem.hasListeners()) {
+            elem.listeners.forEach(listener => {
+                this[listener.parentProp.name].call(this, listener.func);
+            });
+            RMETemplateElement.Util.setListeners(this, elem.listeners);
+        }
     }
 
     /**
@@ -4586,6 +4562,16 @@ class RMETemplateElement extends Elem {
     setParams(attrs = [], listeners = []) {
         RMETemplateElement.Util.setAttributes(this, attrs);
         RMETemplateElement.Util.setListeners(this, listeners);
+        RMETemplateElement.Util.formProps(this);
+    }
+
+    /**
+     * Overrides attributes of this element to the attributes from the given element.
+     * @param {RMETemplateElement} elem
+     */
+    updateAttributes(elem) {
+        RMETemplateElement.Util.setAttributes(this, elem.attributes, true);
+        this.inlineProps = elem.inlineProps;
         RMETemplateElement.Util.formProps(this);
     }
 
@@ -4655,13 +4641,20 @@ class RMETemplateElement extends Elem {
      */
     replace(index, parent, element) {
         parent.children.splice(index, 1, element);
-        this.inlineProps = {};
-        RMETemplateElement.Util.formProps(this);
+        this.inlineProps = element.inlineProps;
+        RMETemplateElement.Util.formProps(element);
         super.replace(element);
         return this;
     }
 
+    /**
+     * Set new props to this element. The html dom element properties will be updated.
+     * Previous properties will be overridden.
+     * @param {object} props
+     * @returns RMETemplateElement
+     */
     setProps(props) {
+        RMETemplateElement.Util.updateBrowserSetStyle(this, props);
         RMETemplateResolver.updateElemProps(this, props, this.props);
         return this;
     }
@@ -4729,12 +4722,13 @@ RMETemplateElement.Util = class RMETemplateElementUtil {
     }
 
     /**
-     * Set attributes for the give element. If the given attributes array has attributes the attirbutes will be set.
+     * Set attributes for the give element. If the given attributes array has attributes or override is true the attirbutes will be set.
      * @param {RMETemplateElement} elem 
      * @param {array} attrs 
+     * @param {boolean} override
      */
-    static setAttributes(elem, attrs) {
-        if (attrs.length > 0) {
+    static setAttributes(elem, attrs, override) {
+        if (attrs.length > 0 || override) {
             elem.attributes = attrs.filter((attr) => {
                 if (attr.key !== 'class') {
                     return attr;
@@ -4755,6 +4749,18 @@ RMETemplateElement.Util = class RMETemplateElementUtil {
         }, { ...elem.inlineProps, ...elem.listenerObj });
         elem.props = props;
         elem.stringProps = JSON.stringify(props);
+    }
+
+    /**
+     * Update style propety from the browser set styles if present to the new props object.
+     * @param {RMETemplateElement} elem
+     * @param {object} props
+     */
+    static updateBrowserSetStyle(elem, props) {
+        const style = elem.getAttribute('style');
+        if (style) {
+            props.style = style;
+        }
     }
 }
 
@@ -5323,7 +5329,7 @@ const RMETemplateResolver = (function() {
                 if (Template.isEventKeyVal(prop, combined[prop])) {
                     elem[prop].call(elem, combined[prop]); // element event attribute -> elem, event function
                 } else if (prop === 'class') {
-                    elem.updateClasses(combined[prop] || '');
+                    combined[prop] ? elem.updateClasses(combined[prop]) : elem.removeAttribute('class');
                 } else if (prop === 'value') {
                     elem.setAttribute(prop, combined[prop]);
                     elem.setValue(combined[prop]);

@@ -1,6 +1,6 @@
 {
   "name": "rme.js",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "description": "Functional JavaScript library for HTML 5 web sites.",
   "main": "./src/index.js",
   "keywords": [
