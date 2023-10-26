@@ -1049,7 +1049,7 @@ const Component = (function() {
         components.forEach(component => 
             !Util.isEmpty(component.valueOf().name) && resolveComponent(component));
 
-        return components.length === 0 ? components[0] : components;
+        return components.length === 1 ? components[0] : components;
     }
 
 })();
