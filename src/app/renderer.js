@@ -47,6 +47,7 @@ class RMEElemRenderer {
             oldNode.replace(index, parent, newNode);
         } else {
             if (!!oldNode && !!newNode && oldNode.getTagName() === newNode.getTagName() && !oldNode.equals(newNode)) {
+                oldNode.removeDetachedChildren(newNode);
                 oldNode.setProps(newNode.getPropsObj());
                 oldNode.updateListeners(newNode);
                 oldNode.updateAttributes(newNode);
