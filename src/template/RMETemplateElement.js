@@ -41,11 +41,12 @@ class RMETemplateElement extends Elem {
      * @param {RMETemplateElement} elem 
      */
     removeDetachedChildren(elem) {
-        if (this.children.length > 0 && elem.children.length === 0) {
+        if (elem.children.length === 0) {
             this.children.forEach((child, idx) => {
-                this.remove(idx, child);
-            })
-            this.children = elem.children;
+                if (child.dom().parentElement === null) {
+                    this.children.splice(idx, 1);
+                }
+            });
         }
     }
 
