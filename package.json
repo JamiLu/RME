@@ -1,6 +1,6 @@
 {
   "name": "rme.js",
-  "version": "2.0.10",
+  "version": "2.0.11",
   "description": "Functional JavaScript library for HTML 5 web sites.",
   "main": "./src/index.js",
   "keywords": [
@@ -15,6 +15,7 @@
     "js",
     "JavaScript"
   ],
+  "files": ["src"],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "demo": "webpack-dev-server --open --config ./webpack/webpack.demo.js",
