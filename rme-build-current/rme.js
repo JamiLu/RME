@@ -432,6 +432,7 @@ class RMEElemRenderer {
                 oldNode.setProps(newNode.getPropsObj());
                 oldNode.updateListeners(newNode);
                 oldNode.updateAttributes(newNode);
+                oldNode.removeDetachedChildren(newNode);
             }
             
             let i = 0;
@@ -4555,6 +4556,20 @@ class RMETemplateElement extends Elem {
     }
 
     /**
+     * Removes the detached children from this element if the given element does not have children.
+     * @param {RMETemplateElement} elem 
+     */
+    removeDetachedChildren(elem) {
+        if (elem.children.length === 0) {
+            this.children.forEach((child, idx) => {
+                if (child.dom().parentElement === null) {
+                    this.children.splice(idx, 1);
+                }
+            });
+        }
+    }
+
+    /**
      * Set params for this element. If the given arrays have at least one element the parameters are updated.
      * @param {array} attrs 
      * @param {array} listeners 
@@ -5136,7 +5151,7 @@ const RMETemplateResolver = (function() {
                     elem.addClasses(val || '');
                     break;
                 case 'text':
-                    elem.setText(val || '');
+                    elem.setText(val);
                     break;
                 case 'message':
                     Template.resolveMessage(elem, val);
@@ -5325,24 +5340,46 @@ const RMETemplateResolver = (function() {
          */
         static updateElemProps(elem, props, oldProps) {
             const combined = Template.combineProps(props, oldProps);
-            Object.keys(combined).forEach((prop) => {
-                if (Template.isEventKeyVal(prop, combined[prop])) {
-                    elem[prop].call(elem, combined[prop]); // element event attribute -> elem, event function
+            Object.entries(combined).forEach(([prop, value]) => {
+                if (prop === 'text') {
+                    value ? elem.setText(value) : elem.setText('');
+                } else if (Template.isEventKeyVal(prop, value)) {
+                    elem[prop].call(elem, value); // element event attribute -> elem, event function
                 } else if (prop === 'class') {
-                    combined[prop] ? elem.updateClasses(combined[prop]) : elem.removeAttribute('class');
+                    value ? elem.updateClasses(value) : elem.removeAttribute(prop);
                 } else if (prop === 'value') {
-                    elem.setAttribute(prop, combined[prop]);
-                    elem.setValue(combined[prop]);
+                    value ? elem.setAttribute(prop, value) : elem.removeAttribute(prop);
+                    elem.setValue(value);
+                } else if (prop === 'tabIndex') {
+                    value ? elem.setTabIndex(value) : elem.removeAttribute('tabindex')
+                } else if (prop === 'editable') {
+                    value ? elem.setEditable(value) : elem.removeAttribute('contenteditable');
+                } else if (prop === 'maxLength') {
+                    value ? elem.setMaxLength(value) : elem.removeAttribute('maxlength');
+                } else if (prop === 'minLength') {
+                    value ? elem.setMinLength(value) : elem.removeAttribute('minlength');
+                } else if (prop === 'data') {
+                    value? elem.setAttribute(prop, value) : elem.removeAttribute(prop);
+                } else if (prop === 'content' && elem.getTagName().toLowerCase() === 'meta') {
+                    value ? elem.setAttribute(prop, value) : elem.removeAttribute(prop);
+                } else if (prop === 'content') {
+                    elem.setContent(value);
                 } else {
-                    Template.resolveAttributes(elem, prop, combined[prop]);
+                    value ? Template.resolveAttributes(elem, prop, value) : elem.removeAttribute(prop);
                 }
             });
         }
 
+        /**
+         * Combines new and old props together. Marks old properties that are not in the new properties object as undefined.
+         * @param {object} newProps 
+         * @param {object} oldProps 
+         * @returns Combined properties object
+         */
         static combineProps(newProps, oldProps) {
             Object.keys(oldProps).forEach(prop => {
-                if (oldProps[prop] && !newProps[prop]) { // if no new prop but old exist
-                    oldProps[prop] = prop === 'style' ? '' : undefined;
+                if (oldProps[prop] && !newProps[prop]) {
+                    oldProps[prop] = undefined;
                 }
             });
 

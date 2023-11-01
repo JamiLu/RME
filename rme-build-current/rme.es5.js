@@ -497,6 +497,7 @@ var RMEElemRenderer = /*#__PURE__*/function () {
           oldNode.setProps(newNode.getPropsObj());
           oldNode.updateListeners(newNode);
           oldNode.updateAttributes(newNode);
+          oldNode.removeDetachedChildren(newNode);
         }
         var i = 0;
         var oldLength = oldNode ? oldNode.children.length : 0;
@@ -5208,6 +5209,23 @@ var RMETemplateElement = /*#__PURE__*/function (_Elem) {
     }
 
     /**
+     * Removes the detached children from this element if the given element does not have children.
+     * @param {RMETemplateElement} elem 
+     */
+  }, {
+    key: "removeDetachedChildren",
+    value: function removeDetachedChildren(elem) {
+      var _this14 = this;
+      if (elem.children.length === 0) {
+        this.children.forEach(function (child, idx) {
+          if (child.dom().parentElement === null) {
+            _this14.children.splice(idx, 1);
+          }
+        });
+      }
+    }
+
+    /**
      * Set params for this element. If the given arrays have at least one element the parameters are updated.
      * @param {array} attrs 
      * @param {array} listeners 
@@ -5668,23 +5686,23 @@ var RMETemplateResolver = function () {
     }, {
       key: "resolveTemplate",
       value: function resolveTemplate(template, parent, round, parentContext) {
-        var _this14 = this;
+        var _this15 = this;
         var _this$resolveTemplate = this.resolveTemplateProperties(template, parent),
           _this$resolveTemplate2 = _slicedToArray(_this$resolveTemplate, 3),
           attrs = _this$resolveTemplate2[0],
           listeners = _this$resolveTemplate2[1],
           children = _this$resolveTemplate2[2];
         attrs.forEach(function (attr) {
-          return Template.resolveAttributes(parent, attr.key, _this14.resolveFunctionValue(attr.val, parent));
+          return Template.resolveAttributes(parent, attr.key, _this15.resolveFunctionValue(attr.val, parent));
         });
         listeners.forEach(function (listener) {
-          return _this14.bindEventToElement(parent, listener.func, listener.parentProp);
+          return _this15.bindEventToElement(parent, listener.func, listener.parentProp);
         });
         children.forEach(function (rawChild, idx) {
           if (RMETemplateFragmentHelper.isFragmentKey(rawChild.key)) {
-            _this14.resolveNextParent(rawChild.val, parent, round, parentContext + rawChild.key);
+            _this15.resolveNextParent(rawChild.val, parent, round, parentContext + rawChild.key);
           } else {
-            _this14.resolveChild(rawChild.key, rawChild.val, parent, round, idx, parentContext);
+            _this15.resolveChild(rawChild.key, rawChild.val, parent, round, idx, parentContext);
           }
         });
         round++;
@@ -5758,12 +5776,12 @@ var RMETemplateResolver = function () {
     }, {
       key: "resolveNextParent",
       value: function resolveNextParent(obj, parent, round) {
-        var _this15 = this;
+        var _this16 = this;
         var parentContext = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '';
         var arr = Array.of(this.resolveFunctionValue(obj, parent)).flat();
         var parentTag = Util.isEmpty(parent) ? parentContext : parentContext + parent.getTagName().toLowerCase();
         arr.forEach(function (item, i) {
-          return _this15.resolveTemplate(item, parent, round, "".concat(_this15.context).concat(parentTag, "[").concat(i, "]"));
+          return _this16.resolveTemplate(item, parent, round, "".concat(_this16.context).concat(parentTag, "[").concat(i, "]"));
         });
       }
 
@@ -5901,7 +5919,7 @@ var RMETemplateResolver = function () {
             elem.addClasses(val || '');
             break;
           case 'text':
-            elem.setText(val || '');
+            elem.setText(val);
             break;
           case 'message':
             Template.resolveMessage(elem, val);
@@ -6105,26 +6123,51 @@ var RMETemplateResolver = function () {
       key: "updateElemProps",
       value: function updateElemProps(elem, props, oldProps) {
         var combined = Template.combineProps(props, oldProps);
-        Object.keys(combined).forEach(function (prop) {
-          if (Template.isEventKeyVal(prop, combined[prop])) {
-            elem[prop].call(elem, combined[prop]); // element event attribute -> elem, event function
+        Object.entries(combined).forEach(function (_ref9) {
+          var _ref10 = _slicedToArray(_ref9, 2),
+            prop = _ref10[0],
+            value = _ref10[1];
+          if (prop === 'text') {
+            value ? elem.setText(value) : elem.setText('');
+          } else if (Template.isEventKeyVal(prop, value)) {
+            elem[prop].call(elem, value); // element event attribute -> elem, event function
           } else if (prop === 'class') {
-            combined[prop] ? elem.updateClasses(combined[prop]) : elem.removeAttribute('class');
+            value ? elem.updateClasses(value) : elem.removeAttribute(prop);
           } else if (prop === 'value') {
-            elem.setAttribute(prop, combined[prop]);
-            elem.setValue(combined[prop]);
+            value ? elem.setAttribute(prop, value) : elem.removeAttribute(prop);
+            elem.setValue(value);
+          } else if (prop === 'tabIndex') {
+            value ? elem.setTabIndex(value) : elem.removeAttribute('tabindex');
+          } else if (prop === 'editable') {
+            value ? elem.setEditable(value) : elem.removeAttribute('contenteditable');
+          } else if (prop === 'maxLength') {
+            value ? elem.setMaxLength(value) : elem.removeAttribute('maxlength');
+          } else if (prop === 'minLength') {
+            value ? elem.setMinLength(value) : elem.removeAttribute('minlength');
+          } else if (prop === 'data') {
+            value ? elem.setAttribute(prop, value) : elem.removeAttribute(prop);
+          } else if (prop === 'content' && elem.getTagName().toLowerCase() === 'meta') {
+            value ? elem.setAttribute(prop, value) : elem.removeAttribute(prop);
+          } else if (prop === 'content') {
+            elem.setContent(value);
           } else {
-            Template.resolveAttributes(elem, prop, combined[prop]);
+            value ? Template.resolveAttributes(elem, prop, value) : elem.removeAttribute(prop);
           }
         });
       }
+
+      /**
+       * Combines new and old props together. Marks old properties that are not in the new properties object as undefined.
+       * @param {object} newProps 
+       * @param {object} oldProps 
+       * @returns Combined properties object
+       */
     }, {
       key: "combineProps",
       value: function combineProps(newProps, oldProps) {
         Object.keys(oldProps).forEach(function (prop) {
           if (oldProps[prop] && !newProps[prop]) {
-            // if no new prop but old exist
-            oldProps[prop] = prop === 'style' ? '' : undefined;
+            oldProps[prop] = undefined;
           }
         });
         return _objectSpread(_objectSpread({}, oldProps), newProps);
