@@ -37,6 +37,20 @@ class RMETemplateElement extends Elem {
     }
 
     /**
+     * Removes the detached children from this element if the given element does not have children.
+     * @param {RMETemplateElement} elem 
+     */
+    removeDetachedChildren(elem) {
+        if (elem.children.length === 0) {
+            this.children.forEach((child, idx) => {
+                if (child.dom().parentElement === null) {
+                    this.children.splice(idx, 1);
+                }
+            });
+        }
+    }
+
+    /**
      * Set params for this element. If the given arrays have at least one element the parameters are updated.
      * @param {array} attrs 
      * @param {array} listeners 

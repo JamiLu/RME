@@ -50,6 +50,7 @@ class RMEElemRenderer {
                 oldNode.setProps(newNode.getPropsObj());
                 oldNode.updateListeners(newNode);
                 oldNode.updateAttributes(newNode);
+                oldNode.removeDetachedChildren(newNode);
             }
             
             let i = 0;
