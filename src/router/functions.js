@@ -15,10 +15,8 @@ const useHashRouter = (function() {
      * @param {object} settings router settings
      */
     return (routes, scrollTop = true) => {
-        Component(RMEHashRouter);
-
         return {
-            RMEHashRouter: {
+            [Component(RMEHashRouter).valueOf().name]: {
                 routes,
                 globalScrollTop: scrollTop
             }
@@ -34,10 +32,8 @@ const useOnLoadUrlRouter = (function() {
      * @param {array} routes router routes
      */
     return (routes) => {
-        Component(RMEOnLoadUrlRouter);
-
         return {
-            RMEOnLoadUrlRouter: {
+            [Component(RMEOnLoadUrlRouter).valueOf().name]: {
                 routes
             }
         }
@@ -53,10 +49,8 @@ const useOnLoadUrlRouter = (function() {
 const useUrlRouter = (function() {
     
     return (routes, scrollTop = true) => {
-        Component(RMEUrlRouter);
-
         return {
-            RMEUrlRouter: {
+            [Component(RMEUrlRouter).valueOf().name]: {
                 routes,
                 globalScrollTop: scrollTop,
             }
