@@ -1,5 +1,6 @@
 import Elem from '../elem';
 import RMETemplateResolver from '.';
+import RMEMessagesResolver from '../messages';
 
 /**
  * RMETemplateElement class provides functions for the RME to handle the tree rendering.
@@ -229,6 +230,13 @@ RMETemplateElement.Util = class RMETemplateElementUtil {
                 if (attr.key !== 'class') {
                     return attr;
                 }
+            }).map((attr) => {
+                if (attr.key === 'message') {
+                    attr.val = RMEMessagesResolver.message(
+                        RMETemplateResolver.normalizeMessageString(attr.val), 
+                        RMETemplateResolver.getMessageParams(attr.val));
+                }
+                return attr;
             });
             elem.attributeString = elem.attributes.map(attr => `${attr.key}:${attr.val}`).join().trim();
         }
