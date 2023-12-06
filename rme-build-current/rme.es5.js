@@ -5104,13 +5104,10 @@ var useHashRouter = function () {
    */
   return function (routes) {
     var scrollTop = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
-    Component(RMEHashRouter);
-    return {
-      RMEHashRouter: {
-        routes: routes,
-        globalScrollTop: scrollTop
-      }
-    };
+    return _defineProperty({}, Component(RMEHashRouter).valueOf().name, {
+      routes: routes,
+      globalScrollTop: scrollTop
+    });
   };
 }();
 var useOnLoadUrlRouter = function () {
@@ -5120,12 +5117,9 @@ var useOnLoadUrlRouter = function () {
    * @param {array} routes router routes
    */
   return function (routes) {
-    Component(RMEOnLoadUrlRouter);
-    return {
-      RMEOnLoadUrlRouter: {
-        routes: routes
-      }
-    };
+    return _defineProperty({}, Component(RMEOnLoadUrlRouter).valueOf().name, {
+      routes: routes
+    });
   };
 }();
 
@@ -5138,13 +5132,10 @@ var useOnLoadUrlRouter = function () {
 var useUrlRouter = function () {
   return function (routes) {
     var scrollTop = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
-    Component(RMEUrlRouter);
-    return {
-      RMEUrlRouter: {
-        routes: routes,
-        globalScrollTop: scrollTop
-      }
-    };
+    return _defineProperty({}, Component(RMEUrlRouter).valueOf().name, {
+      routes: routes,
+      globalScrollTop: scrollTop
+    });
   };
 }();
 var useRouter = function () {
@@ -5443,6 +5434,11 @@ RMETemplateElement.Util = /*#__PURE__*/function () {
           if (attr.key !== 'class') {
             return attr;
           }
+        }).map(function (attr) {
+          if (attr.key === 'message') {
+            attr.val = RMEMessagesResolver.message(RMETemplateResolver.normalizeMessageString(attr.val), RMETemplateResolver.getMessageParams(attr.val));
+          }
+          return attr;
         });
         elem.attributeString = elem.attributes.map(function (attr) {
           return "".concat(attr.key, ":").concat(attr.val);
@@ -6123,10 +6119,10 @@ var RMETemplateResolver = function () {
       key: "updateElemProps",
       value: function updateElemProps(elem, props, oldProps) {
         var combined = Template.combineProps(props, oldProps);
-        Object.entries(combined).forEach(function (_ref9) {
-          var _ref10 = _slicedToArray(_ref9, 2),
-            prop = _ref10[0],
-            value = _ref10[1];
+        Object.entries(combined).forEach(function (_ref12) {
+          var _ref13 = _slicedToArray(_ref12, 2),
+            prop = _ref13[0],
+            value = _ref13[1];
           if (prop === 'text') {
             value ? elem.setText(value) : elem.setText('');
           } else if (Template.isEventKeyVal(prop, value)) {
