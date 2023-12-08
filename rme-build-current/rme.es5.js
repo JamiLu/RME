@@ -236,7 +236,6 @@ var createApp = function () {
     if (!match) {
       match = key.match(/\.[a-zA-Z-0-9\-]+/); // class
     }
-
     return match ? match.join() : undefined;
   };
   return function (template) {
@@ -4720,7 +4719,6 @@ var RMEHashRouter = function RMEHashRouter(props, _ref4) {
     url = _props$url === void 0 ? location.hash : _props$url,
     prevUrl = props.prevUrl,
     prevRoute = props.prevRoute,
-    didChange = props.didChange,
     globalScrollTop = props.globalScrollTop,
     init = props.init;
   if (!routes) {
@@ -4729,16 +4727,14 @@ var RMEHashRouter = function RMEHashRouter(props, _ref4) {
   if (!init) {
     RMERouterContext.setRouter(routes, function (url) {
       updateState({
-        url: url,
-        didChange: true
+        url: url
       });
     });
     asyncTask(function () {
       window.addEventListener('hashchange', function () {
         updateState({
           init: true,
-          url: location.hash,
-          didChange: true
+          url: location.hash
         });
       });
     });
@@ -4767,14 +4763,9 @@ var RMEHashRouter = function RMEHashRouter(props, _ref4) {
     if (route.hide) {
       location.href = prevUrl;
     }
-    if (didChange && window.scrollY > 0 && (route.scrolltop === true || route.scrolltop === undefined && globalScrollTop)) {
-      scrollTo(0, 0);
+    if (url !== prevUrl && window.scrollY > 0 && (route.scrolltop === true || route.scrolltop === undefined && globalScrollTop)) {
+      scrollTo(window.screenX, 0);
     }
-    asyncTask(function () {
-      return updateState({
-        didChange: false
-      }, false);
-    });
   }
   return {
     _: !!route ? RMERouterUtils.resolveRouteElem(route.elem, route.props) : null
@@ -4820,28 +4811,26 @@ var RMEUrlRouter = function RMEUrlRouter(props, _ref6) {
     prevRoute = props.prevRoute,
     skipPush = props.skipPush,
     init = props.init,
-    didChange = props.didChange,
     globalScrollTop = props.globalScrollTop;
   if (!routes) {
     return null;
   }
   if (!init) {
-    var updateUrl = function updateUrl(url, skipPush, didChange) {
+    var updateUrl = function updateUrl(url, skipPush) {
       updateState({
         init: true,
         url: url ? url : location.pathname,
-        skipPush: skipPush,
-        didChange: didChange
+        skipPush: skipPush
       });
     };
     RMERouterContext.setRouter(routes, function (url) {
-      return updateUrl(url, false, true);
+      return updateUrl(url, false);
     });
     asyncTask(function () {
       window.addEventListener('popstate', function () {
-        return updateUrl(undefined, true, true);
+        return updateUrl(undefined, true);
       });
-      updateUrl(undefined, true, true);
+      updateUrl(undefined, true);
     });
   }
   var route;
@@ -4868,14 +4857,9 @@ var RMEUrlRouter = function RMEUrlRouter(props, _ref6) {
     if (!route.hide && url !== prevUrl && !skipPush) {
       history.pushState(null, null, url);
     }
-    if (didChange && window.scrollY > 0 && (route.scrolltop === true || route.scrolltop === undefined && globalScrollTop)) {
-      scrollTo(0, 0);
+    if (url !== prevUrl && window.scrollY > 0 && (route.scrolltop === true || route.scrolltop === undefined && globalScrollTop)) {
+      scrollTo(window.screenX, 0);
     }
-    asyncTask(function () {
-      return updateState({
-        didChange: false
-      }, false);
-    });
   }
   return {
     _: !!route ? RMERouterUtils.resolveRouteElem(route.elem, route.props) : null
@@ -5830,7 +5814,6 @@ var RMETemplateResolver = function () {
         } else {
           resolved = obj; // for component parent element
         }
-
         match = tag.match(/[a-z0-9]+\#[a-zA-Z0-9\-]+/); //find id
         if (!Util.isEmpty(match)) resolved.setId(match.join().replace(/[a-z0-9]+\#/g, ""));
         match = this.cutAttributesIfFound(tag).match(/\.[a-zA-Z-0-9\-]+/g); //find classes
