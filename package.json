@@ -15,7 +15,9 @@
     "js",
     "JavaScript"
   ],
-  "files": ["src"],
+  "files": [
+    "src"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "demo": "webpack-dev-server --open --config ./webpack/webpack.demo.js",
@@ -53,6 +55,8 @@
     "html-webpack-plugin": "^5.5.3",
     "open": "^9.1.0",
     "regenerator-runtime": "^0.13.11",
+    "sass": "^1.69.5",
+    "sass-loader": "^13.3.2",
     "style-loader": "^3.3.3",
     "terser-webpack-plugin": "^5.3.9",
     "webpack": "^5.88.2",
