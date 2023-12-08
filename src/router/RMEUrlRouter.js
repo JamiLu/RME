@@ -7,25 +7,24 @@ import Util from '../util';
  * This router is ideal for the single page applications. Router navigation is handled by the useRouter function.
  */
 const RMEUrlRouter = (props, { updateState, asyncTask }) => {
-    const { routes, url, prevUrl, prevRoute, skipPush, init, didChange, globalScrollTop } = props;
+    const { routes, url, prevUrl, prevRoute, skipPush, init, globalScrollTop } = props;
 
     if (!routes) {
         return null;
     }
 
     if (!init) {
-        const updateUrl = (url, skipPush, didChange) => {
+        const updateUrl = (url, skipPush) => {
             updateState({
                 init: true,
                 url: url ? url : location.pathname,
-                skipPush,
-                didChange
+                skipPush
             });
         }
-        RMERouterContext.setRouter(routes, (url) => updateUrl(url, false, true));
+        RMERouterContext.setRouter(routes, (url) => updateUrl(url, false));
         asyncTask(() => {
-            window.addEventListener('popstate', () => updateUrl(undefined, true, true));
-            updateUrl(undefined, true, true);
+            window.addEventListener('popstate', () => updateUrl(undefined, true));
+            updateUrl(undefined, true);
         });
     }
 
@@ -53,10 +52,9 @@ const RMEUrlRouter = (props, { updateState, asyncTask }) => {
         if (!route.hide && url !== prevUrl && !skipPush) {
             history.pushState(null, null, url);
         }
-        if (didChange && window.scrollY > 0 && ((route.scrolltop === true) || (route.scrolltop === undefined && globalScrollTop))) {
-            scrollTo(0, 0);
+        if (url !== prevUrl && window.scrollY > 0 && ((route.scrolltop === true) || (route.scrolltop === undefined && globalScrollTop))) {
+            scrollTo(window.screenX, 0);
         }
-        asyncTask(() => updateState({ didChange: false }, false));
     }
 
     return {

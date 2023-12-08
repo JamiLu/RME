@@ -7,7 +7,7 @@ import Util from '../util';
  * This router is ment for the single page applications.
  */
 const RMEHashRouter = (props, { asyncTask, updateState }) => {
-    const { routes, url = location.hash, prevUrl, prevRoute, didChange, globalScrollTop, init } = props;
+    const { routes, url = location.hash, prevUrl, prevRoute, globalScrollTop, init } = props;
 
     if (!routes) {
         return null;
@@ -15,17 +15,13 @@ const RMEHashRouter = (props, { asyncTask, updateState }) => {
 
     if (!init) {
         RMERouterContext.setRouter(routes, (url) => {
-            updateState({
-                url: url,
-                didChange: true
-            });
+            updateState({ url: url });
         });
         asyncTask(() => {
             window.addEventListener('hashchange', () => {
                 updateState({
                     init: true,
                     url: location.hash,
-                    didChange: true
                 });
             });
         });
@@ -55,10 +51,9 @@ const RMEHashRouter = (props, { asyncTask, updateState }) => {
         if (route.hide) {
             location.href = prevUrl;
         }
-        if (didChange && window.scrollY > 0 && ((route.scrolltop === true) || (route.scrolltop === undefined && globalScrollTop))) {
-            scrollTo(0, 0);
+        if (url !== prevUrl && window.scrollY > 0 && ((route.scrolltop === true) || (route.scrolltop === undefined && globalScrollTop))) {
+            scrollTo(window.screenX, 0);
         }
-        asyncTask(() => updateState({ didChange: false }, false));
     }
 
     return {
