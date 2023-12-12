@@ -97,101 +97,69 @@ The first exmaple demonstrates use case of the `useValue` function that can be u
 ```javascript
 const [getValue, setValue] = useValue(0);
 
-const Clicker = () => ({
-    'div.bar-item': {
-        button: {
-            text: 'Add one',
-            onClick: () => setValue(val => val + 1)
-        }
+const UseValueExample = () => ({
+    button: {
+        text: `Press me ${getValue()}`,
+        onClick: () => setValue(val => val + 1)
     }
 });
 
-const ShowValue = () => ({
-    'div.clicker-number': `${getValue()}`
-});
-
-const ClickAndShowExample = () => ({
-    _: {
-        h2: 'Click and Show Example',
-        'div.bar': {
-            Clicker,
-            ShowValue
-        }
-    }
-});
-
-Component(Clicker, ShowValue, ClickAndShowExample);
+Component(UseValueExample);
 ```
 
 The second exmaple introduces the second parameter of the component named `ops`. The `ops` parameter is an object that has operational functions of the component.
 Below is shown the usage of the `setState`, `updateState` and `asyncTask` functions.
 
 ```javascript
-const TodoExample = ({ list = [] }, ops) => {
-
-    if (list.length === 0) {
-        ops.asyncTask(() => ops.setState({list: [{li: 'What groceries should I buy?'}] }));
-    }
-
-    return {
-        _: {
-            h2: 'Todo Example',
-            'input[type=text][placeholder=Type & Press Enter to Add]': {
-                onKeyDown: event => {
-                    if(event.key === Key.ENTER) {
-                        ops.updateState(state => ({
-                            list: state.list.concat({li: event.target.value})
-                        }));
-                        event.target.value = '';
-                    }
-                }
-            },
-            button: {
-                text: 'Clear list',
-                onClick: () => ops.setState({list: [{li: 'What groceries should I buy?'}]})
-            },
-            Lister: { list }
+const TodoExample = ({ list = [] }, ops) => ({
+    'input[type=text][placeholder=Type & Press Enter to Add]': {
+        onKeyDown: event => {
+            if(event.key === Key.ENTER) {
+                ops.updateState(state => ({
+                    list: state.list 
+                        ? state.list.concat(event.target.value) 
+                        : [event.target.value]
+                }));
+                event.target.value = '';
+            }
         }
+    },
+    button: {
+        text: 'Clear list',
+        onClick: () => ops.setState()
+    },
+    ul: {
+        li: 'What groceries should I buy?',
+        _: list.map((val) => ({ li: val }))
     }
-};
+});
 
-const Lister = ({ list }) => ({ ul: list });
-
-Component(TodoExample, Lister);
+Component(TodoExample);
 ```
 
 The third example shows the two paramters of the component function named `props` and `ops`. Below is shown the usage of the `updateState` function.
 
 ```javascript
-const FormExample = (props, ops) => ({
-    _: {
-        h2: 'Form Example',
-        TitleHeader: props,
-        Form: {
-            input: event => {
-                ops.updateState({ [event.target.name]: event.target.value });
-            }
-        }
+const FormExample = ({ fname = '', lname = '' }, ops) => ({
+    p: `Welcome ${fname} ${lname}`,
+    Form: {
+        input: event => 
+            ops.updateState({ [event.target.name]: event.target.value })
     }
 });
-
-const TitleHeader = ({ fname, lname }) => ({h5: `Welcome ${fname || ''} ${lname || ''}`});
 
 const Form = ({ input }) => ({
-    div: {
-        'label[for=fname]': 'First name',
-        'input#fname[type=text][name=fname][placeholder=First name]': {
-            onInput: input
-        },
-        br: {},
-        'label[for=lname]': 'Last name',
-        'input#lname[type=text][name=lname][placeholder=Last name]': {
-            onInput: input
-        },
-    }
+    'label[for=fname]': 'First name',
+    'input#fname[type=text][name=fname][placeholder=First name]': {
+        onInput: input
+    },
+    'label[for=lname]': 'Last name',
+    'input#lname[type=text][name=lname][placeholder=Last name]': {
+        onInput: input
+    },
 });
 
-Component(FormExample, TitleHeader, Form);
+Component(FormExample, Form);
 ```
 
 The fourth example combines the learned and demonstrates the usage.
@@ -209,18 +177,17 @@ const FilterExample = ({ rows }, ops) => {
         ops.asyncTask(() => ops.setState({rows: getCountryList()}));
     }
 
+    const filterList = (keyword) =>
+        getCountryList().filter((row) =>
+            `${row.country}${row.capital}`.toLowerCase()
+                .search(keyword) > -1);
+
     return {
-        _: {
-            h2: 'Filter Example',
-            'input[type=text][placeholder=Type to Filter Country]': {
-                onInput: event => 
-                    ops.setState({
-                        rows: getCountryList()
-                            .filter(row => `${row.country}${row.capital}`.toLowerCase().search(event.target.value) > -1)
-                    })
-            },
-            MyTable: { rows }
-        }
+        'input[type=text][placeholder=Type to Filter Country]': {
+            onInput: event => 
+                ops.setState({ rows: filterList(event.target.value) })
+        },
+        MyTable: { rows }
     }
 };
 
