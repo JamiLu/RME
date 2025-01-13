@@ -5815,11 +5815,11 @@ var RMETemplateResolver = function () {
           resolved = obj; // for component parent element
         }
         match = tag.match(/[a-z0-9]+\#[a-zA-Z0-9\-]+/); //find id
-        if (!Util.isEmpty(match)) resolved.setId(match.join().replace(/[a-z0-9]+\#/g, ""));
-        match = this.cutAttributesIfFound(tag).match(/\.[a-zA-Z-0-9\-]+/g); //find classes
-        if (!Util.isEmpty(match)) resolved.addClasses(match.join(" ").replace(/\./g, ""));
+        if (Util.notEmpty(match)) resolved.setId(match.join().replace(/[a-z0-9]+\#/g, ""));
+        match = this.cutAttributesIfFound(tag).match(/\.[a-zA-Z-0-9_\-]+/g); //find classes
+        if (Util.notEmpty(match)) resolved.addClasses(match.join(" ").replace(/\./g, ""));
         match = tag.match(/\[[a-zA-Z0-9\= \:\(\)\#\-\_\/\.&%@!?£$+¤|;\\<\\>\\{}"]+\]/g); //find attributes
-        if (!Util.isEmpty(match)) resolved = Template.addAttributes(resolved, match);
+        if (Util.notEmpty(match)) resolved = Template.addAttributes(resolved, match);
         return resolved;
       }
 
